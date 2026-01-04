@@ -14,11 +14,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // Estado da UI (Simples e Imutável)
-data class HomeUiState(
-    val isLoading: Boolean = true,
-    val books: List<BookEntity> = emptyList(),
-    val error: String? = null
-)
+//data class HomeUiState(
+//    val isLoading: Boolean = true,
+//    val books: List<BookEntity> = emptyList(),
+//    val error: String? = null
+//)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
