@@ -24,7 +24,7 @@ object NetworkModule {
     @Singleton
     fun provideJson(): Json {
         return Json {
-            ignoreUnknownKeys = true // Se a API adicionar campos novos, o app não quebra
+            ignoreUnknownKeys = true
             coerceInputValues = true
         }
     }
@@ -32,20 +32,24 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
+        // Log detalhado para ver headers e resposta do servidor
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+
         return OkHttpClient.Builder()
-            // 1. Logging (para ver o JSON no Logcat)
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
-            // 2. SEGURANÇA (Obrigatório pelo WAF Spec 3.1)
+            .addInterceptor(logging)
+            // IMPORTANTE: Interceptor do WAF
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("User-Agent", "BibliaFaladaApp")
                     .build()
                 chain.proceed(request)
             }
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            // Reduzindo timeout para falhar rápido se a internet estiver ruim
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
             .build()
     }
 

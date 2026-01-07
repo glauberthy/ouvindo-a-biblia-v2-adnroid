@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    // ADICIONADOS: Plugins necessários para processar o Banco e a Injeção
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }

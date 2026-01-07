@@ -2,19 +2,18 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // Adicione estes para ativar Hilt, KSP e Serialização no app
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
 android {
     namespace = "br.app.ide.ouvindoabiblia"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "br.app.ide.ouvindoabiblia"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -102,4 +101,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(libs.androidx.compose.ui.text.google.fonts)
+
+    implementation("androidx.compose.material:material-icons-extended")
 }
