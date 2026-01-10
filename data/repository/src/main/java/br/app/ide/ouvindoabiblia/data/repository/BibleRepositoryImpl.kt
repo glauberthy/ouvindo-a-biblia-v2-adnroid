@@ -3,6 +3,7 @@ package br.app.ide.ouvindoabiblia.data.repository
 import br.app.ide.ouvindoabiblia.data.local.dao.BibleDao
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import kotlinx.coroutines.Dispatchers
@@ -17,8 +18,9 @@ class BibleRepositoryImpl @Inject constructor(
 
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
 
-    override fun getChapters(bookId: String): Flow<List<ChapterEntity>> =
-        dao.getChaptersForBook(bookId)
+
+    override fun getChapters(bookId: String): Flow<List<ChapterWithBookInfo>> =
+        dao.getChaptersWithBookInfo(bookId)
 
     override suspend fun getBook(bookId: String): BookEntity? = dao.getBookById(bookId)
 

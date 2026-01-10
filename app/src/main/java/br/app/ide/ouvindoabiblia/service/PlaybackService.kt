@@ -28,10 +28,7 @@ class PlaybackService : MediaLibraryService() {
         mediaSession = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
             .setSessionActivity(getSingleTopActivity())
             .build()
-
-        // 2. Configura a Notificação (SEM CUSTOMIZAÇÃO DE CÓDIGO)
-        // O Media3 detectará automaticamente seu ícone se ele se chamar 'media3_notification_small_icon'
-        // Se não achar, ele usará o ícone padrão do App. Isso garante que o código compile.
+        
         val notificationProvider = DefaultMediaNotificationProvider(this)
         setMediaNotificationProvider(notificationProvider)
     }

@@ -63,11 +63,9 @@ fun ChaptersScreen(
                     onClick = {
                         // Toca o áudio
                         viewModel.playChapter(chapter)
-                        // Navega para a tela de Player
-                        // (Usando uma imagem placeholder por enquanto até termos a real)
                         onNavigateToPlayer(
                             chapter.number,
-                            "https://placehold.co/600x600/000000/FFF/png"
+                            chapter.coverUrl ?: ""
                         )
                     }
                 )

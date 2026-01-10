@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -17,6 +18,24 @@ interface BibleDao {
     // Retorna todos os livros. Flow atualiza a UI automaticamente se algo mudar.
     @Query("SELECT * FROM books ORDER BY testament DESC, book_id ASC")
     fun getAllBooks(): Flow<List<BookEntity>>
+    
+    // Seleciona tudo do capítulo (*)
+    // E pega o nome e imagem da tabela de livros
+    // Onde o ID do livro bater entre as duas tabelas.
+    @Transaction
+    @Query(
+        """
+        SELECT 
+            chapters.*, 
+            books.name as bookName, 
+            books.image_url as coverUrl 
+        FROM chapters 
+        INNER JOIN books ON chapters.book_id = books.book_id 
+        WHERE chapters.book_id = :bookId
+        ORDER BY chapters.chapter_number ASC
+    """
+    )
+    fun getChaptersWithBookInfo(bookId: String): Flow<List<ChapterWithBookInfo>>
 
     // Busca capítulos de um livro específico
     @Query("SELECT * FROM chapters WHERE book_id = :bookId ORDER BY chapter_number ASC")

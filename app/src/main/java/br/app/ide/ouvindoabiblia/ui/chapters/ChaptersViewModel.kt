@@ -3,10 +3,12 @@ package br.app.ide.ouvindoabiblia.ui.chapters
 import android.content.ComponentName
 import android.content.Context
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.navigation.toRoute
@@ -29,16 +31,19 @@ class ChaptersViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val args = savedStateHandle.toRoute<Screen.Chapters>()
+
     val bookName: String = args.bookName
 
-    // 2. Mapeamento atualizado com a URL
     val chapters: StateFlow<List<ChapterUiModel>> = repository.getChapters(args.bookId)
-        .map { entities ->
-            entities.map { entity ->
+        .map { list ->
+            list.map { item ->
                 ChapterUiModel(
-                    number = entity.number, // ou entity.capitulo, verifique sua entidade
-                    id = entity.id,
-                    url = entity.audioUrl
+                    // Dados do Capítulo (estão dentro do objeto 'chapter')
+                    number = item.chapter.number,
+                    id = item.chapter.id,
+                    url = item.chapter.audioUrl,
+                    bookName = item.bookName,
+                    coverUrl = item.coverUrl
                 )
             }
         }
@@ -69,16 +74,20 @@ class ChaptersViewModel @Inject constructor(
 
     fun playChapter(chapter: ChapterUiModel) {
         mediaController?.let { controller ->
-            // Cria o item de mídia com a URL do capítulo
-            val mediaItem = MediaItem.fromUri(chapter.url)
+            val metadata = MediaMetadata.Builder()
+                .setTitle("Capítulo ${chapter.number}")
+                .setArtist(chapter.bookName)
+                .setArtworkUri((chapter.coverUrl ?: "").toUri())
+                .build()
 
-            // Configura e toca
+            val mediaItem = MediaItem.Builder()
+                .setUri(chapter.url)
+                .setMediaMetadata(metadata)
+                .build()
+
             controller.setMediaItem(mediaItem)
             controller.prepare()
             controller.play()
-
-            // Opcional: Log para confirmar
-            android.util.Log.d("Player", "Tocando: ${chapter.url}")
         }
     }
 
@@ -89,8 +98,11 @@ class ChaptersViewModel @Inject constructor(
     }
 }
 
+// Modelo de UI (Data Class)
 data class ChapterUiModel(
     val number: Int,
     val id: Long,
-    val url: String
+    val url: String,
+    val bookName: String,
+    val coverUrl: String?
 )
