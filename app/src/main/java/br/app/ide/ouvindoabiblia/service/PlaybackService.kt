@@ -18,6 +18,7 @@ import androidx.media3.session.MediaSession
 import br.app.ide.ouvindoabiblia.MainActivity
 import coil.ImageLoader
 import coil.request.ImageRequest
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.Executors
@@ -69,6 +70,7 @@ class PlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
+    @UnstableApi
     private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
         @UnstableApi
         override fun onConnect(
@@ -77,6 +79,16 @@ class PlaybackService : MediaLibraryService() {
         ): MediaSession.ConnectionResult {
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session).build()
         }
+
+
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            // Futuramente: Ler do Banco de Dados o último capítulo tocado e restaurar aqui.
+            // Por enquanto: Retornamos erro para evitar crash, dizendo ao sistema "não tenho nada salvo".
+            return Futures.immediateFailedFuture(UnsupportedOperationException("Not implemented yet"))
+        }
     }
 
     // --- CLASSE INTERNA QUE ENSINA O MEDIA3 A USAR O COIL ---
@@ -84,7 +96,6 @@ class PlaybackService : MediaLibraryService() {
     private inner class CoilBitmapLoader : BitmapLoader {
 
         private val executor = Executors.newCachedThreadPool()
-
 
         override fun supportsMimeType(mimeType: String): Boolean {
             return true
@@ -96,7 +107,6 @@ class PlaybackService : MediaLibraryService() {
                 val request = ImageRequest.Builder(this@PlaybackService)
                     .data(uri)
                     .allowHardware(false) // Crucial para notificações
-
                     .listener(
                         onSuccess = { _, result ->
                             completer.set(result.drawable.toBitmap())

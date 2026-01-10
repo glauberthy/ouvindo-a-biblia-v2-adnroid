@@ -34,7 +34,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.TestamentFilterRow
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     windowSizeClass: WindowSizeClass,
-    onNavigateToBook: (String) -> Unit
+    onNavigateToBook: (String, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -62,7 +62,7 @@ private fun HomeContent(
     padding: PaddingValues,
     // Removi windowSizeClass daqui pois decidimos fixar em 3 colunas para visual de capa de álbum
     onIntent: (HomeIntent) -> Unit,
-    onNavigateToBook: (String) -> Unit
+    onNavigateToBook: (String, String) -> Unit
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3), // 3 Colunas fica perfeito para capas quadradas
@@ -76,7 +76,9 @@ private fun HomeContent(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     SectionHeader(title = "Continuar Ouvindo")
-                    ContinueListeningCard(book = book, onClick = { onNavigateToBook(book.id) })
+                    ContinueListeningCard(
+                        book = book,
+                        onClick = { onNavigateToBook(book.id, book.title) })
                 }
             }
         }
@@ -92,7 +94,9 @@ private fun HomeContent(
                     ) {
                         // OTIMIZAÇÃO 1: Adicionei key para a lista horizontal também!
                         items(state.favoriteBooks, key = { it.id }) { book ->
-                            FavoriteBookItem(book, onClick = { onNavigateToBook(book.id) })
+                            FavoriteBookItem(
+                                book,
+                                onClick = { onNavigateToBook(book.id, book.title) })
                         }
                     }
                 }
@@ -115,14 +119,10 @@ private fun HomeContent(
         // 5. Grid de Livros (A Parte Pesada)
         items(
             items = state.filteredBooks,
-            key = { it.id }, // Já estava aqui, excelente!
-
-            // OTIMIZAÇÃO 2: contentType
-            // Isso diz ao Compose: "Todos esses itens usam o mesmo layout".
-            // A renderização fica muito mais inteligente.
+            key = { it.id },
             contentType = { "book_grid_item" }
         ) { book ->
-            BookGridItem(book = book, onClick = { onNavigateToBook(book.id) })
+            BookGridItem(book = book, onClick = { onNavigateToBook(book.id, book.title) })
         }
     }
 }

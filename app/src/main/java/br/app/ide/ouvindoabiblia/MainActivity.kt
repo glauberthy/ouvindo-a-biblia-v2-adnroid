@@ -35,21 +35,21 @@ class MainActivity : ComponentActivity() {
                     composable<Screen.Home> {
                         HomeScreen(
                             windowSizeClass = windowSizeClass,
-                            onNavigateToBook = { bookId ->
-                                // TODO: Passar o nome real do livro aqui.
-                                // Por enquanto usamos "Capítulos" como fallback
-                                navController.navigate(Screen.Chapters(bookId, "Capítulos"))
+                            // CORREÇÃO AQUI: Adicionado 'bookName' na assinatura
+                            onNavigateToBook = { bookId, bookName ->
+                                // Agora passamos o nome real que veio da Home
+                                navController.navigate(Screen.Chapters(bookId, bookName))
                             }
                         )
                     }
 
-                    // 2. Capítulos (Agora passa o bookName corretamente)
+                    // 2. Capítulos
                     composable<Screen.Chapters> { backStackEntry ->
                         val args = backStackEntry.toRoute<Screen.Chapters>()
 
                         ChaptersScreen(
                             onBackClick = { navController.popBackStack() },
-                            viewModel = hiltViewModel(), // O Hilt injeta
+                            viewModel = hiltViewModel(),
                             onNavigateToPlayer = { chapterNum, coverUrl ->
                                 navController.navigate(
                                     Screen.Player(
