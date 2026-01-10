@@ -10,7 +10,7 @@ data class BookEntity(
     @PrimaryKey
     @ColumnInfo(name = "book_id")
     val bookId: String,
-
+    val numericId: Int,
     @ColumnInfo(name = "name")
     val name: String, // Nome formatado: "Gênesis"
 

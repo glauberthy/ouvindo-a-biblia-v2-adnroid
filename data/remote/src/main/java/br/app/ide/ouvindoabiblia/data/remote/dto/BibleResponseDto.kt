@@ -30,19 +30,21 @@ data class TestamentsDto(
 
 @Serializable
 data class BookDto(
-    @SerialName("nome_formatado")
-    val nome: String,
+    // Novo: ID numérico do JSON
+    val id: Int = 0,
 
-    @SerialName("path")
+    @SerialName("nome_formatado")
+    val name: String,
+
     val path: String,
 
+    // Novo: URL da capa (WebP)
     @SerialName("imagem_url")
-    val imageUrl: String? = null, // Pode vir nulo
+    val imageUrl: String? = null,
 
     @SerialName("total_capitulos")
     val totalChapters: Int,
 
-    @SerialName("capitulos")
     val capitulos: List<ChapterDto>
 )
 

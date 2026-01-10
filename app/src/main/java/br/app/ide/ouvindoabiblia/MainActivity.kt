@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -48,11 +49,12 @@ class MainActivity : ComponentActivity() {
 
                         ChaptersScreen(
                             onBackClick = { navController.popBackStack() },
+                            viewModel = hiltViewModel(), // O Hilt injeta
                             onNavigateToPlayer = { chapterNum, coverUrl ->
                                 navController.navigate(
                                     Screen.Player(
                                         bookId = args.bookId,
-                                        bookTitle = args.bookName, // Aqui usamos o nome que veio da Home
+                                        bookTitle = args.bookName,
                                         chapterNumber = chapterNum,
                                         coverUrl = coverUrl
                                     )

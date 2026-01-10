@@ -17,7 +17,8 @@ class BibleRepositoryImpl @Inject constructor(
 
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
 
-    override fun getChapters(bookId: String): Flow<List<ChapterEntity>> = dao.getChaptersForBook(bookId)
+    override fun getChapters(bookId: String): Flow<List<ChapterEntity>> =
+        dao.getChaptersForBook(bookId)
 
     override suspend fun getBook(bookId: String): BookEntity? = dao.getBookById(bookId)
 
@@ -37,7 +38,8 @@ class BibleRepositoryImpl @Inject constructor(
                     booksToInsert.add(
                         BookEntity(
                             bookId = slug, // ex: "genesis"
-                            name = dto.nome,
+                            numericId = dto.id,
+                            name = dto.name,
                             testament = testamentCode, // "at" ou "nt"
                             folderPath = dto.path,
                             imageUrl = dto.imageUrl,

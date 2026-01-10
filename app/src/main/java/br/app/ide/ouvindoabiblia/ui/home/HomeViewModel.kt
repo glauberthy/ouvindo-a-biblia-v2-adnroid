@@ -41,9 +41,16 @@ class HomeViewModel @Inject constructor(
         } else if (isLoading && books.isEmpty()) {
             HomeUiState.Loading
         } else {
-            val bookSummaries = books.map {
-                BookSummary(it.bookId, it.name, it.imageUrl, it.testament)
-            }
+            val bookSummaries = books
+                .sortedBy { it.numericId }
+                .map {
+                    BookSummary(
+                        id = it.bookId,
+                        title = it.name,
+                        imageUrl = it.imageUrl, // Passa a imagem
+                        testament = it.testament
+                    )
+                }
 
             val filtered = when (filter) {
                 TestamentFilter.ALL -> bookSummaries

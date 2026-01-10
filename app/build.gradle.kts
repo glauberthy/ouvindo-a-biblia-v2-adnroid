@@ -102,5 +102,5 @@ dependencies {
 
     implementation(libs.androidx.compose.ui.text.google.fonts)
 
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.material.icons.extended)
 }
