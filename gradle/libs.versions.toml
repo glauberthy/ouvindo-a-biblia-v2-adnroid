@@ -1,5 +1,5 @@
 [versions]
-# <--- VOCÊ TINHA APAGADO ESTA LINHA AQUI!
+
 kotlin = "2.0.21"
 ksp = "2.0.21-1.0.27"
 coroutines = "1.9.0"
@@ -27,7 +27,7 @@ coil = "2.7.0"
 datastore = "1.1.1"
 appcompat = "1.6.1"
 material = "1.10.0"
-
+concurrentFutures = "1.3.0"
 [libraries]
 # --- CORE & TESTING ---
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -86,6 +86,7 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 androidx-compose-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 
+androidx-concurrent-futures = { group = "androidx.concurrent", name = "concurrent-futures", version.ref = "concurrentFutures" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
