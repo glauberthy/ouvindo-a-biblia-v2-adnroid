@@ -2,8 +2,10 @@ package br.app.ide.ouvindoabiblia.ui.player
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
@@ -20,14 +25,23 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -41,7 +55,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     onBackClick: () -> Unit,
@@ -51,7 +67,9 @@ fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(
             MaterialTheme.colorScheme.surfaceVariant,
@@ -66,7 +84,7 @@ fun PlayerScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Topo: Botão Minimizar
+        // Topo: Apenas Botão Minimizar
         Row(modifier = Modifier.fillMaxWidth()) {
             IconButton(onClick = onBackClick) {
                 Icon(
@@ -75,11 +93,12 @@ fun PlayerScreen(
                     Modifier.size(32.dp)
                 )
             }
+            // Removido botão de lista daqui
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Capa (Agora usamos a do state, se disponível, senão a da navegação)
+        // Capa
         Card(
             modifier = Modifier
                 .size(300.dp)
@@ -87,7 +106,6 @@ fun PlayerScreen(
             shape = RoundedCornerShape(16.dp)
         ) {
             AsyncImage(
-                // Prioriza a imagem do capítulo atual (playlist), se não tiver, usa a da navegação
                 model = state.imageUrl.ifEmpty { coverUrl },
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
@@ -97,9 +115,7 @@ fun PlayerScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- MUDANÇA AQUI: Título e Subtítulo Dinâmicos ---
-
-        // Nome do Livro (Ex: Gênesis)
+        // Nome do Livro
         Text(
             text = state.title.ifEmpty { bookTitle },
             style = MaterialTheme.typography.headlineMedium,
@@ -110,9 +126,7 @@ fun PlayerScreen(
             textAlign = TextAlign.Center
         )
 
-        // Número do Capítulo (Ex: Capítulo 1)
-        // Antes usava "Capítulo $chapterNumber" (que era fixo 0)
-        // Agora usa state.subtitle que muda sozinho
+        // Número do Capítulo
         Text(
             text = state.subtitle.ifEmpty { "Carregando..." },
             style = MaterialTheme.typography.titleMedium,
@@ -138,9 +152,9 @@ fun PlayerScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Controles
+        // Controles de Reprodução
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -178,12 +192,91 @@ fun PlayerScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- NOVO BOTÃO DE CAPÍTULOS NA PARTE INFERIOR ---
+        TextButton(
+            onClick = { showBottomSheet = true },
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = "CAPÍTULOS",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+
+    // --- GAVETA DE CAPÍTULOS (MODAL BOTTOM SHEET) ---
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Text(
+                text = "Capítulos de ${state.title}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp)
+            )
+
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                itemsIndexed(state.chapters) { index, chapter ->
+                    val isCurrent = index == state.currentChapterIndex
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.onChapterSelected(index)
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) showBottomSheet = false
+                                }
+                            }
+                            .background(
+                                if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                                else Color.Transparent
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isCurrent) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Tocando",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                        } else {
+                            Spacer(modifier = Modifier.width(40.dp))
+                        }
+
+                        Text(
+                            text = "Capítulo ${chapter.chapter.number}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                }
+            }
+        }
     }
 }
 
 @SuppressLint("DefaultLocale")
 private fun formatTime(ms: Long): String {
+    if (ms <= 0) return "00:00"
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
