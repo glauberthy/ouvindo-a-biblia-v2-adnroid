@@ -57,9 +57,23 @@ class PlayerViewModel @Inject constructor(
             try {
                 mediaController = controllerFuture?.get()
                 setupPlayerListener()
+                // === LÓGICA NOVA DO RESUME ===
+                if (pendingBookId == "RESUME") {
+                    // Se o pedido era "RESUME", descobrimos qual o ID real que está tocando
+                    val playingId =
+                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
 
+                    if (playingId != null) {
+                        // Achamos! Carrega os dados reais deste livro (capítulos, título, etc)
+                        // Buscamos no banco para preencher a gaveta
+                        loadBookPlaylist(playingId, "", "")
+                    }
+                    // Limpa pendências
+                    pendingBookId = null
+                }
+                // === FIM LÓGICA RESUME ===
                 // Conectou! Verifica se tinha algo pendente para tocar
-                if (pendingBookId != null) {
+                else if (pendingBookId != null) {
                     loadBookPlaylist(pendingBookId!!, pendingBookTitle!!, pendingCoverUrl!!)
                     // Limpa pendências
                     pendingBookId = null
@@ -81,7 +95,14 @@ class PlayerViewModel @Inject constructor(
 
     // Chamado pela MainActivity ao entrar na tela
     fun loadBookPlaylist(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
-        // 1. Atualiza a UI visualmente de imediato (para não ficar tudo branco)
+
+        if (bookId != "RESUME") {
+            _uiState.update {
+                it.copy(title = initialBookTitle, imageUrl = initialCoverUrl)
+            }
+        }
+
+        // Atualiza a UI visualmente de imediato (para não ficar tudo branco)
         _uiState.update {
             it.copy(title = initialBookTitle, imageUrl = initialCoverUrl)
         }

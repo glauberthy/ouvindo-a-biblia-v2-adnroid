@@ -49,10 +49,14 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private fun getSingleTopActivity(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            // Esta flag diz à MainActivity: "Vá direto para o player"
+            putExtra("OPEN_PLAYER_FROM_NOTIF", true)
+        }
         return PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java),
+            intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
     }
