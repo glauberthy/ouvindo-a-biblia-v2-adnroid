@@ -6,6 +6,8 @@ sealed interface Screen {
     @Serializable
     data object Home : Screen
 
+    // A rota Chapters ainda existe se quiser usar no futuro,
+    // mas a Home vai pular ela agora.
     @Serializable
     data class Chapters(
         val bookId: String,
@@ -16,7 +18,7 @@ sealed interface Screen {
     data class Player(
         val bookId: String,
         val bookTitle: String,
-        val chapterNumber: Int,
         val coverUrl: String
+        // Removemos o chapterNumber
     ) : Screen
 }

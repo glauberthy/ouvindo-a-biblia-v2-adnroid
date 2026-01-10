@@ -1,8 +1,16 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
-// Mudamos para FastRewind/FastForward pois Replay10/Forward10 exigem biblioteca extra
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
@@ -10,7 +18,14 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -20,6 +35,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,7 +46,7 @@ import coil.compose.AsyncImage
 fun PlayerScreen(
     onBackClick: () -> Unit,
     bookTitle: String,
-    chapterNumber: Int,
+    chapterNumber: Int, // Esse valor agora é ignorado, pois vem do ViewModel
     coverUrl: String,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
@@ -62,7 +79,7 @@ fun PlayerScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Capa
+        // Capa (Agora usamos a do state, se disponível, senão a da navegação)
         Card(
             modifier = Modifier
                 .size(300.dp)
@@ -70,7 +87,8 @@ fun PlayerScreen(
             shape = RoundedCornerShape(16.dp)
         ) {
             AsyncImage(
-                model = coverUrl,
+                // Prioriza a imagem do capítulo atual (playlist), se não tiver, usa a da navegação
+                model = state.imageUrl.ifEmpty { coverUrl },
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -79,17 +97,27 @@ fun PlayerScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Textos
+        // --- MUDANÇA AQUI: Título e Subtítulo Dinâmicos ---
+
+        // Nome do Livro (Ex: Gênesis)
         Text(
-            text = bookTitle,
+            text = state.title.ifEmpty { bookTitle },
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
         )
+
+        // Número do Capítulo (Ex: Capítulo 1)
+        // Antes usava "Capítulo $chapterNumber" (que era fixo 0)
+        // Agora usa state.subtitle que muda sozinho
         Text(
-            text = "Capítulo $chapterNumber",
+            text = state.subtitle.ifEmpty { "Carregando..." },
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -118,7 +146,6 @@ fun PlayerScreen(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botão Voltar 10s (Usando FastRewind para compatibilidade)
             IconButton(onClick = { viewModel.skipBack() }, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Default.FastRewind,
@@ -127,7 +154,6 @@ fun PlayerScreen(
                 )
             }
 
-            // Play/Pause
             FilledIconButton(
                 onClick = { viewModel.togglePlayPause() },
                 modifier = Modifier.size(80.dp)
@@ -143,7 +169,6 @@ fun PlayerScreen(
                 }
             }
 
-            // Botão Avançar 10s (Usando FastForward)
             IconButton(onClick = { viewModel.skipForward() }, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Default.FastForward,
@@ -157,6 +182,7 @@ fun PlayerScreen(
     }
 }
 
+@SuppressLint("DefaultLocale")
 private fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60

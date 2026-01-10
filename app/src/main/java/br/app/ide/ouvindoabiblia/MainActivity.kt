@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,6 +16,7 @@ import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerScreen
+import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -31,31 +33,16 @@ class MainActivity : ComponentActivity() {
             OuvindoABibliaTheme {
                 NavHost(navController = navController, startDestination = Screen.Home) {
 
-                    // 1. Home
+                    // 1. Home -> Vai direto para o Player (Playlist Automática)
                     composable<Screen.Home> {
                         HomeScreen(
                             windowSizeClass = windowSizeClass,
-                            // CORREÇÃO AQUI: Adicionado 'bookName' na assinatura
-                            onNavigateToBook = { bookId, bookName ->
-                                // Agora passamos o nome real que veio da Home
-                                navController.navigate(Screen.Chapters(bookId, bookName))
-                            }
-                        )
-                    }
-
-                    // 2. Capítulos
-                    composable<Screen.Chapters> { backStackEntry ->
-                        val args = backStackEntry.toRoute<Screen.Chapters>()
-
-                        ChaptersScreen(
-                            onBackClick = { navController.popBackStack() },
-                            viewModel = hiltViewModel(),
-                            onNavigateToPlayer = { chapterNum, coverUrl ->
+                            // MUDANÇA: Agora recebe ID, NOME e CAPA
+                            onNavigateToBook = { bookId, bookName, coverUrl ->
                                 navController.navigate(
                                     Screen.Player(
-                                        bookId = args.bookId,
-                                        bookTitle = args.bookName,
-                                        chapterNumber = chapterNum,
+                                        bookId = bookId,
+                                        bookTitle = bookName,
                                         coverUrl = coverUrl
                                     )
                                 )
@@ -63,14 +50,38 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // 3. Player
+                    // 2. Player (Configurado para Playlist)
                     composable<Screen.Player> { backStackEntry ->
                         val args = backStackEntry.toRoute<Screen.Player>()
+
+                        // Obtemos o ViewModel aqui para poder iniciar a playlist
+                        val viewModel = hiltViewModel<PlayerViewModel>()
+
+                        // Carrega a playlist assim que entra na tela
+                        LaunchedEffect(args.bookId) {
+                            viewModel.loadBookPlaylist(
+                                bookId = args.bookId,
+                                initialBookTitle = args.bookTitle,
+                                initialCoverUrl = args.coverUrl
+                            )
+                        }
+
                         PlayerScreen(
                             onBackClick = { navController.popBackStack() },
                             bookTitle = args.bookTitle,
-                            chapterNumber = args.chapterNumber,
-                            coverUrl = args.coverUrl
+                            chapterNumber = 0, // O ViewModel controla isso agora
+                            coverUrl = args.coverUrl,
+                            viewModel = viewModel
+                        )
+                    }
+
+                    // 3. Capítulos (Mantido caso queira usar no futuro, mas a Home pula ele)
+                    composable<Screen.Chapters> { backStackEntry ->
+                        val args = backStackEntry.toRoute<Screen.Chapters>()
+                        ChaptersScreen(
+                            onBackClick = { navController.popBackStack() },
+                            viewModel = hiltViewModel(),
+                            onNavigateToPlayer = { _, _ -> } // Não usado neste fluxo novo
                         )
                     }
                 }

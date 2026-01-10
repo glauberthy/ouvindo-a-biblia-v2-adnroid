@@ -34,7 +34,8 @@ import br.app.ide.ouvindoabiblia.ui.home.components.TestamentFilterRow
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     windowSizeClass: WindowSizeClass,
-    onNavigateToBook: (String, String) -> Unit
+    // CORREÇÃO: Agora aceita 3 parâmetros (ID, Nome, Capa)
+    onNavigateToBook: (String, String, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -60,12 +61,12 @@ fun HomeScreen(
 private fun HomeContent(
     state: HomeUiState.Success,
     padding: PaddingValues,
-    // Removi windowSizeClass daqui pois decidimos fixar em 3 colunas para visual de capa de álbum
     onIntent: (HomeIntent) -> Unit,
-    onNavigateToBook: (String, String) -> Unit
+    // CORREÇÃO: Atualizado aqui também
+    onNavigateToBook: (String, String, String) -> Unit
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3), // 3 Colunas fica perfeito para capas quadradas
+        columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -78,7 +79,8 @@ private fun HomeContent(
                     SectionHeader(title = "Continuar Ouvindo")
                     ContinueListeningCard(
                         book = book,
-                        onClick = { onNavigateToBook(book.id, book.title) })
+                        // Passando a capa aqui também
+                        onClick = { onNavigateToBook(book.id, book.title, book.imageUrl ?: "") })
                 }
             }
         }
@@ -90,13 +92,19 @@ private fun HomeContent(
                     SectionHeader(title = "Favoritos")
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp) // Respiro visual
+                        contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
-                        // OTIMIZAÇÃO 1: Adicionei key para a lista horizontal também!
                         items(state.favoriteBooks, key = { it.id }) { book ->
                             FavoriteBookItem(
                                 book,
-                                onClick = { onNavigateToBook(book.id, book.title) })
+                                // Passando a capa aqui também
+                                onClick = {
+                                    onNavigateToBook(
+                                        book.id,
+                                        book.title,
+                                        book.imageUrl ?: ""
+                                    )
+                                })
                         }
                     }
                 }
@@ -116,13 +124,17 @@ private fun HomeContent(
             SectionHeader(title = "Livros (${state.filteredBooks.size})")
         }
 
-        // 5. Grid de Livros (A Parte Pesada)
+        // 5. Grid de Livros
         items(
             items = state.filteredBooks,
             key = { it.id },
             contentType = { "book_grid_item" }
         ) { book ->
-            BookGridItem(book = book, onClick = { onNavigateToBook(book.id, book.title) })
+            BookGridItem(
+                book = book,
+                // CORREÇÃO PRINCIPAL: Passando ID, Título e Capa
+                onClick = { onNavigateToBook(book.id, book.title, book.imageUrl ?: "") }
+            )
         }
     }
 }
