@@ -18,7 +18,7 @@ interface BibleDao {
     // Retorna todos os livros. Flow atualiza a UI automaticamente se algo mudar.
     @Query("SELECT * FROM books ORDER BY testament DESC, book_id ASC")
     fun getAllBooks(): Flow<List<BookEntity>>
-    
+
     // Seleciona tudo do capítulo (*)
     // E pega o nome e imagem da tabela de livros
     // Onde o ID do livro bater entre as duas tabelas.
@@ -59,6 +59,11 @@ interface BibleDao {
 
     @Query("DELETE FROM chapters")
     suspend fun clearChapters()
+
+
+    //Verificação rápida para saber se precisa popular o banco inicial
+    @Query("SELECT COUNT(*) FROM books")
+    suspend fun getBookCount(): Int
 
     // Uma transação garante que limpa e insere tudo de uma vez com segurança
     @Transaction

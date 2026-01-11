@@ -32,7 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ChaptersScreen(
     onBackClick: () -> Unit,
-    // Este é o parâmetro que estava faltando na sua versão anterior
+    
     onNavigateToPlayer: (Int, String) -> Unit,
     viewModel: ChaptersViewModel = hiltViewModel()
 ) {

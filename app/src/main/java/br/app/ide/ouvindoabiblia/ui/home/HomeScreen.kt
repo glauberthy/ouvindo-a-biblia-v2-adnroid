@@ -38,12 +38,11 @@ import br.app.ide.ouvindoabiblia.ui.home.components.TestamentFilterRow
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    windowSizeClass: WindowSizeClass, // Pode manter ou remover se não for usar
+    windowSizeClass: WindowSizeClass,
     onNavigateToBook: (String, String, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Removido o Scaffold daqui!
     when (val uiState = state) {
         is HomeUiState.Loading -> LoadingScreen()
         is HomeUiState.Error -> ErrorScreen(uiState.message) { viewModel.handle(HomeIntent.Retry) }
@@ -63,10 +62,10 @@ private fun HomeContent(
     onIntent: (HomeIntent) -> Unit,
     onNavigateToBook: (String, String, String) -> Unit
 ) {
-
+    // Calculando insets uma vez para evitar recomposição interna desnecessária
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val navigationBarPadding =
-        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = Modifier.fillMaxSize(),
@@ -74,14 +73,12 @@ private fun HomeContent(
             start = 16.dp,
             end = 16.dp,
             top = statusBarPadding + 16.dp,
-            bottom = navigationBarPadding + 16.dp
-
+            bottom = navBarPadding + 16.dp
         ),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-
-        ) {
-
+    ) {
+        // Título
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
                 text = "Ouvindo a Bíblia",
@@ -91,7 +88,7 @@ private fun HomeContent(
             )
         }
 
-        // 1. Sessão Continuar Ouvindo (Se houver)
+        // 1. Continuar Ouvindo
         state.continueListeningBook?.let { book ->
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
@@ -104,7 +101,7 @@ private fun HomeContent(
             }
         }
 
-        // 2. Sessão Favoritos (Se houver)
+        // 2. Favoritos
         if (state.favoriteBooks.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
@@ -113,7 +110,10 @@ private fun HomeContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
-                        items(state.favoriteBooks, key = { it.id }) { book ->
+                        items(
+                            items = state.favoriteBooks,
+                            key = { it.id } // Chave estável
+                        ) { book ->
                             FavoriteBookItem(
                                 book,
                                 onClick = {
@@ -138,15 +138,16 @@ private fun HomeContent(
             )
         }
 
-        // 4. Cabeçalho da Lista Principal
+        // 4. Header Lista
         item(span = { GridItemSpan(maxLineSpan) }) {
             SectionHeader(title = "Livros (${state.filteredBooks.size})")
         }
 
-        // 5. Grid de Livros
+        // 5. Grid Principal (Otimizado)
         items(
             items = state.filteredBooks,
-            key = { it.id },
+            // CRÍTICO: Key Estável para evitar recomposição de itens inalterados
+            key = { book -> book.id },
             contentType = { "book_grid_item" }
         ) { book ->
             BookGridItem(

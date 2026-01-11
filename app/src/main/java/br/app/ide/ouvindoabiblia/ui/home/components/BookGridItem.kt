@@ -1,20 +1,27 @@
 package br.app.ide.ouvindoabiblia.ui.home.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Card
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import br.app.ide.ouvindoabiblia.R
+import androidx.compose.ui.unit.dp
 import br.app.ide.ouvindoabiblia.ui.home.BookSummary
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
-
+import coil.size.Precision
 
 @Composable
 fun BookGridItem(
@@ -22,33 +29,47 @@ fun BookGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
+    // OTIMIZAÇÃO 1: 'Box' com 'clip' é mais leve para a GPU que 'Surface' ou 'Card'
+    // em listas longas, pois evita passadas extras de sombra/elevação.
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
-        shape = MaterialTheme.shapes.medium,
-        // Dica Pro: Desligar a sombra padrão em listas longas ajuda a GPU
-        // elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        // Mas se quiser manter a sombra, tudo bem, o impacto maior é a imagem.
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(8.dp)) // Borda arredondada leve
+            .background(MaterialTheme.colorScheme.surfaceVariant) // Cor de fundo (placeholder)
+            .clickable(onClick = onClick)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+        val context = LocalContext.current
+
+        // OTIMIZAÇÃO CRÍTICA 2: 'remember'
+        // Isso impede que o 'ImageRequest.Builder' seja recriado a cada milissegundo
+        // durante a rolagem ou animação de entrada. Economiza MUITA CPU.
+        val model = remember(book.imageUrl) {
+            ImageRequest.Builder(context)
                 .data(book.imageUrl)
-                .crossfade(true)
-                // 400px é suficiente para um grid de 3 colunas em telas HD/FullHD
-                .size(400, 400)
-                // Permite usar uma imagem um pouco maior/menor se já estiver em cache
-                .precision(coil.size.Precision.INEXACT)
-                // Removemos o listener de LOG (Debug pesa no scroll)
-                .placeholder(R.drawable.ic_launcher_foreground)
-                .error(R.drawable.ic_launcher_foreground)
-                .build(),
-            contentDescription = "Capa de ${book.title}",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            // Dica Pro 2: FilterQuality.Low é mais rápido e imperceptível em imagens pequenas
-            filterQuality = FilterQuality.Low
-        )
+                .size(300, 300) // Tamanho fixo ajuda o cache de memória
+                .precision(Precision.INEXACT)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .crossfade(false) // Sem animação para máxima velocidade
+                .build()
+        }
+
+        if (book.imageUrl == null) {
+            // Placeholder estático super leve
+            Box(Modifier
+                .fillMaxSize()
+                .background(Color.LightGray))
+        } else {
+            AsyncImage(
+                model = model,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                // Fallbacks usando ColorPainter (desenhado na CPU, zero risco de resource ID)
+                error = ColorPainter(Color.Gray),
+                placeholder = ColorPainter(Color.Transparent) // Deixa ver o fundo do Box
+            )
+        }
     }
 }
