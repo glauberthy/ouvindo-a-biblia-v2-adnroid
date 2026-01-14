@@ -1,6 +1,5 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
-// Importante: Importe a função isDark que criamos
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -43,21 +43,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 
-// Função utilitária para interpolação linear
-fun lerp(start: Float, stop: Float, fraction: Float): Float {
-    return (1 - fraction) * start + fraction * stop
-}
-
 @Composable
 fun SharedPlayerScreen(
-    expandProgress: Float, // 0f = Mini, 1f = Full
+    expandProgress: Float,
     uiState: PlayerUiState,
-    backgroundColor: Color, // <--- O PARÂMETRO QUE FALTAVA
+    backgroundColor: Color,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrev: () -> Unit,
@@ -65,42 +61,44 @@ fun SharedPlayerScreen(
     onSeek: (Long) -> Unit,
     onOpen: () -> Unit
 ) {
+    // BoxWithConstraints: Usado para calcular o tamanho da tela para a animação da capa
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
-        val maxWidth = maxWidth
         val density = LocalDensity.current
 
         // --- CÁLCULOS DE GEOMETRIA ---
 
-        // 1. Capa do Álbum
+        // Usamos 'this.maxWidth' diretamente para evitar o aviso de "scope unused"
+        val screenWidth = this.maxWidth
+
+        // 1. Tamanho da Capa
         val miniImageSize = 48.dp
-        val fullImageSize = (maxWidth * 0.85f)
-        val currentImageSize =
-            androidx.compose.ui.unit.lerp(miniImageSize, fullImageSize, expandProgress)
+        val fullImageSize = (screenWidth * 0.85f) // 85% da largura da tela
+        val currentImageSize = lerp(miniImageSize, fullImageSize, expandProgress)
 
-        // Posição X da Capa
+        // 2. Posição X (Horizontal)
         val imageStartX = 16.dp
-        val imageEndX = (maxWidth - fullImageSize) / 2
-        val currentImageX = androidx.compose.ui.unit.lerp(imageStartX, imageEndX, expandProgress)
+        val imageEndX = (screenWidth - fullImageSize) / 2 // Centralizado
+        val currentImageX = lerp(imageStartX, imageEndX, expandProgress)
 
-        // Posição Y da Capa
+        // 3. Posição Y (Vertical)
         val imageStartY = 8.dp
         val imageEndY = 100.dp
-        val currentImageY = androidx.compose.ui.unit.lerp(imageStartY, imageEndY, expandProgress)
+        val currentImageY = lerp(imageStartY, imageEndY, expandProgress)
 
-        // Arredondamento
-        val imageCorner = androidx.compose.ui.unit.lerp(4.dp, 16.dp, expandProgress)
+        // 4. Arredondamento dos Cantos
+        val imageCorner = lerp(4.dp, 16.dp, expandProgress)
+
+        // 5. Sombra da Capa (Dinâmica)
+        val imageShadow = lerp(6.dp, 16.dp, expandProgress)
 
         // --- CORES DINÂMICAS ---
-        // Se o fundo for escuro, texto branco. Se claro, texto preto.
         val isBackgroundDark = backgroundColor.isDark()
         val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
 
-        // 2. Fundo (Background)
-
-        // Fundo Gradiente (aparece conforme expande no modo Full)
-        // Começa com a cor da capa no topo e vai escurecendo para preto
+        // --- FUNDO ---
+        // Camada do gradiente Full (aparece conforme expande)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -112,9 +110,7 @@ fun SharedPlayerScreen(
                 )
         )
 
-        // --- CONTEÚDO ---
-
-        // 1. ÁREA DE TEXTO E CONTROLES FULL
+        // --- CONTEÚDO FULL (TEXTOS E BOTÕES GRANDES) ---
         if (expandProgress > 0.1f) {
             Column(
                 modifier = Modifier
@@ -124,7 +120,6 @@ fun SharedPlayerScreen(
                     .alpha(expandProgress),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Título Full
                 Text(
                     text = uiState.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -143,7 +138,7 @@ fun SharedPlayerScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Barra de Progresso
+                // Reutilizando a barra de progresso do PlayerScreen.kt
                 PlayerProgressBar(
                     currentPosition = uiState.currentPosition,
                     duration = uiState.duration,
@@ -152,17 +147,17 @@ fun SharedPlayerScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Controles Full
+                // Controles Principais
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Botão Previous
+                    // Botão Voltar (Usando SkipNext rotacionado 180 graus)
                     IconButton(onClick = onSkipPrev, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Rounded.SkipNext,
-                            contentDescription = null,
+                            contentDescription = "Voltar",
                             tint = Color.White,
                             modifier = Modifier
                                 .size(32.dp)
@@ -170,7 +165,7 @@ fun SharedPlayerScreen(
                         )
                     }
 
-                    // Botão Play/Pause Grande
+                    // Play/Pause Grande
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
@@ -180,18 +175,18 @@ fun SharedPlayerScreen(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                contentDescription = null,
+                                contentDescription = "Play/Pause",
                                 tint = Color.Black,
                                 modifier = Modifier.size(40.dp)
                             )
                         }
                     }
 
-                    // Botão Next
+                    // Botão Avançar
                     IconButton(onClick = onSkipNext, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Rounded.SkipNext,
-                            contentDescription = null,
+                            "Avançar",
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
                         )
@@ -200,7 +195,7 @@ fun SharedPlayerScreen(
             }
         }
 
-        // 2. HEADER DA TELA FULL
+        // --- HEADER DA TELA FULL (SETA P/ BAIXO) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -211,7 +206,7 @@ fun SharedPlayerScreen(
             IconButton(onClick = onCollapse, modifier = Modifier.align(Alignment.TopStart)) {
                 Icon(
                     Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = "Minimizar",
+                    "Minimizar",
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)
                 )
@@ -226,11 +221,11 @@ fun SharedPlayerScreen(
                 letterSpacing = 2.sp
             )
             IconButton(onClick = {}, modifier = Modifier.align(Alignment.TopEnd)) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = "Opções", tint = Color.White)
+                Icon(Icons.Rounded.MoreVert, "Opções", tint = Color.White)
             }
         }
 
-        // 3. ELEMENTOS DO MINI PLAYER
+        // --- CONTEÚDO MINI (TEXTO E BOTÕES PEQUENOS) ---
         if (expandProgress < 0.9f) {
             val miniAlpha = 1f - (expandProgress * 3).coerceIn(0f, 1f)
 
@@ -240,11 +235,9 @@ fun SharedPlayerScreen(
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
-                        .padding(start = 16.dp + 48.dp + 12.dp)
-                        .padding(end = 8.dp),
+                        .padding(start = 16.dp + 48.dp + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Texto Mini (Clicável)
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -256,36 +249,36 @@ fun SharedPlayerScreen(
                             text = uiState.title.ifEmpty { "Selecione..." },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = miniContentColor, // USA A COR DINÂMICA AQUI
+                            color = miniContentColor,
                             maxLines = 1
                         )
                         Text(
                             text = uiState.subtitle,
                             style = MaterialTheme.typography.bodySmall,
-                            color = miniContentColor.copy(alpha = 0.7f), // USA A COR DINÂMICA AQUI
+                            color = miniContentColor.copy(alpha = 0.7f),
                             maxLines = 1
                         )
                     }
-
-                    // Controles Mini
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Rounded.FavoriteBorder, "Favoritar", tint = miniContentColor)
+                    }
                     IconButton(onClick = onPlayPause) {
                         Icon(
                             imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = null,
-                            tint = miniContentColor // USA A COR DINÂMICA AQUI
+                            contentDescription = "Play/Pause",
+                            tint = miniContentColor
                         )
                     }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Rounded.FavoriteBorder, null, tint = miniContentColor)
-                    }
+
                     IconButton(onClick = onSkipNext) {
-                        Icon(Icons.Rounded.SkipNext, null, tint = miniContentColor)
+                        Icon(Icons.Rounded.SkipNext, "Próximo", tint = miniContentColor)
                     }
                 }
             }
         }
 
-        // 4. CAPA DO ÁLBUM
+        // --- CAPA DO ÁLBUM (COMPARTILHADA) ---
+        // Desenhada por último para ficar em cima de tudo (z-index maior)
         Surface(
             modifier = Modifier
                 .offset {
@@ -295,15 +288,22 @@ fun SharedPlayerScreen(
                     )
                 }
                 .size(currentImageSize)
-                .clickable(enabled = expandProgress < 0.5f) { onOpen() },
+                // Se o player estiver pequeno, o clique na capa abre o player
+                .clickable(enabled = expandProgress < 0.5f) { onOpen() }
+                .shadow(
+                    elevation = imageShadow,
+                    shape = RoundedCornerShape(imageCorner),
+                    spotColor = Color.Black,
+                    ambientColor = Color.Black
+                ),
             shape = RoundedCornerShape(imageCorner),
-            shadowElevation = if (expandProgress < 0.1f) 0.dp else 10.dp,
-            color = Color.DarkGray
+            color = Color.DarkGray,
+            shadowElevation = 0.dp
         ) {
             if (uiState.imageUrl.isNotEmpty()) {
                 AsyncImage(
                     model = uiState.imageUrl,
-                    contentDescription = null,
+                    contentDescription = "Capa do Livro",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )

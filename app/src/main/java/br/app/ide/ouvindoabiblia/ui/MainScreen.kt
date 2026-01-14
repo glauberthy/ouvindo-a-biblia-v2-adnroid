@@ -1,6 +1,5 @@
 package br.app.ide.ouvindoabiblia.ui
 
-// IMPORTANTE: Aqui está o import que faltava ser usado!
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -71,16 +70,15 @@ fun MainScreen(
         val navController = rememberNavController()
         val playerViewModel: PlayerViewModel = hiltViewModel()
         val playerUiState by playerViewModel.uiState.collectAsState()
-        val context = LocalContext.current // Necessário para carregar a imagem
+        val context = LocalContext.current
 
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
 
-        // --- EXTRAÇÃO DE COR (A MÁGICA) ---
+        // --- EXTRAÇÃO DE COR ---
         val defaultColor = Color(0xFFF5F5F5)
         var artworkColor by remember { mutableStateOf(defaultColor) }
 
-        // Toda vez que a imagem da capa mudar, calculamos a nova cor
         LaunchedEffect(playerUiState.imageUrl) {
             val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
             if (color != null) {
@@ -90,16 +88,16 @@ fun MainScreen(
             }
         }
 
-        // Suaviza a transição de cor
         val animatedArtworkColor by animateColorAsState(
             targetValue = artworkColor,
             label = "ColorAnim"
         )
 
+        // Se vier de uma notificação (shouldOpenPlayer), aí sim abrimos FullScreen
         LaunchedEffect(shouldOpenPlayer) {
             if (shouldOpenPlayer) {
                 playerViewModel.loadBookPlaylist("RESUME", "Retomando...", "")
-                isPlayerExpanded = true
+                isPlayerExpanded = true // Aqui mantemos true pois o usuário clicou na notificação
                 onPlayerOpened()
             }
         }
@@ -126,8 +124,8 @@ fun MainScreen(
         val playerContainerHeight by animateDpAsState(
             targetValue = when {
                 isPlayerExpanded -> screenHeight
-                hasMedia -> 64.dp
-                else -> 0.dp
+                hasMedia -> 64.dp // Se tem mídia mas não tá expandido = Mini Player (64dp)
+                else -> 0.dp // Sem mídia = Invisível
             },
             animationSpec = spring(stiffness = Spring.StiffnessLow),
             label = "Height"
@@ -147,7 +145,6 @@ fun MainScreen(
             label = "Corner"
         )
 
-        // O container usa a cor extraída quando está Mini
         val containerColor by animateColorAsState(
             targetValue = if (isPlayerExpanded) Color.Transparent else animatedArtworkColor,
             label = "ContainerColor"
@@ -228,8 +225,14 @@ fun MainScreen(
                         navController = navController,
                         windowSizeClass = windowSizeClass,
                         onPlayBook = { id, name, cover ->
+                            // AQUI ESTÁ A MUDANÇA:
+                            // 1. Carregamos o livro (Isso fará hasMedia = true)
                             playerViewModel.loadBookPlaylist(id, name, cover)
-                            isPlayerExpanded = true
+
+                            // 2. NÃO expandimos automaticamente.
+                            // isPlayerExpanded = true <-- REMOVIDO!
+
+                            // O player vai nascer como MiniPlayer (64dp) por causa da lógica do playerContainerHeight
                         }
                     )
                 }
@@ -263,7 +266,7 @@ fun MainScreen(
                     SharedPlayerScreen(
                         expandProgress = expandProgress,
                         uiState = playerUiState,
-                        backgroundColor = animatedArtworkColor, // Passando a cor aqui!
+                        backgroundColor = animatedArtworkColor,
                         onPlayPause = { playerViewModel.togglePlayPause() },
                         onSkipNext = { playerViewModel.skipToNextChapter() },
                         onSkipPrev = { playerViewModel.skipToPreviousChapter() },
