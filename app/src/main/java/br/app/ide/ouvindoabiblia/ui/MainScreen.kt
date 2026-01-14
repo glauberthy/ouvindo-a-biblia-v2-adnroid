@@ -1,14 +1,11 @@
 package br.app.ide.ouvindoabiblia.ui
 
+// IMPORTANTE: Importe o SharedPlayerScreen
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -36,6 +33,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,9 +54,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import br.app.ide.ouvindoabiblia.ui.navigation.NavigationGraph
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
-import br.app.ide.ouvindoabiblia.ui.player.MiniPlayer
-import br.app.ide.ouvindoabiblia.ui.player.PlayerScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
+import br.app.ide.ouvindoabiblia.ui.player.SharedPlayerScreen
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
@@ -91,7 +88,8 @@ fun MainScreen(
 
         val displayMetrics = LocalContext.current.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
-        val screenHeight = with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp }
+        val screenHeight =
+            with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp } // Overshoot para cobrir tudo
 
         // --- ANIMAÇÕES ---
         val bottomPadding by animateDpAsState(
@@ -115,11 +113,25 @@ fun MainScreen(
             label = "Height"
         )
 
+        // CÁLCULO DO PROGRESSO DE EXPANSÃO (0.0 a 1.0)
+        // Isso alimenta a animação "Morph" do SharedPlayerScreen
+        val expandProgress by remember {
+            derivedStateOf {
+                val minH = 64f
+                val maxH = screenHeight.value
+                val currentH = playerContainerHeight.value
+
+                // Normaliza entre 0 e 1
+                ((currentH - minH) / (maxH - minH)).coerceIn(0f, 1f)
+            }
+        }
+
         val cornerRadius by animateDpAsState(
             targetValue = if (isPlayerExpanded) 0.dp else 12.dp,
             label = "Corner"
         )
 
+        // Cor do container agora é transparente quando expandido para deixar o SharedPlayer desenhar o fundo gradiente
         val containerColor by animateColorAsState(
             targetValue = if (isPlayerExpanded) Color.Transparent else Color(0xFFF5F5F5),
             label = "ContainerColor"
@@ -192,17 +204,11 @@ fun MainScreen(
                         .padding(top = innerPadding.calculateTopPadding())
                 ) {
 
-                    // CORREÇÃO AQUI:
-                    // Removemos o padding extra do Modifier.
-                    // O conteúdo agora preenche até o topo da BottomBar (gerenciado pelo Box/innerPadding de baixo)
-                    // permitindo que o visual passe "por trás" do MiniPlayer.
-
                     val bottomBarHeight = innerPadding.calculateBottomPadding()
-
                     NavigationGraph(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = bottomBarHeight), // Apenas respeita a BottomBar
+                            .padding(bottom = bottomBarHeight),
                         navController = navController,
                         windowSizeClass = windowSizeClass,
                         onPlayBook = { id, name, cover ->
@@ -213,7 +219,7 @@ fun MainScreen(
                 }
             }
 
-            // CAMADA 2: PLAYER FLUTUANTE
+            // CAMADA 2: PLAYER FLUTUANTE (MORPH)
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -237,26 +243,19 @@ fun MainScreen(
                 color = containerColor,
                 shadowElevation = 0.dp
             ) {
+                // Se tiver altura, renderiza o SharedPlayer
                 if (playerContainerHeight > 0.dp) {
-                    AnimatedContent(
-                        targetState = isPlayerExpanded,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "PlayerContent"
-                    ) { expanded ->
-                        if (expanded) {
-                            PlayerScreen(
-                                viewModel = playerViewModel,
-                                onCollapse = { isPlayerExpanded = false }
-                            )
-                        } else {
-                            MiniPlayer(
-                                uiState = playerUiState,
-                                onPlayPause = { playerViewModel.togglePlayPause() },
-                                onOpen = { isPlayerExpanded = true },
-                                onSkipNext = { playerViewModel.skipToNextChapter() }
-                            )
-                        }
-                    }
+                    // SUBSTITUIÇÃO: Em vez de trocar telas, usamos UMA tela que muda de forma
+                    SharedPlayerScreen(
+                        expandProgress = expandProgress,
+                        uiState = playerUiState,
+                        onPlayPause = { playerViewModel.togglePlayPause() },
+                        onSkipNext = { playerViewModel.skipToNextChapter() },
+                        onSkipPrev = { playerViewModel.skipToPreviousChapter() },
+                        onSeek = { playerViewModel.seekTo(it) },
+                        onCollapse = { isPlayerExpanded = false },
+                        onOpen = { isPlayerExpanded = true }
+                    )
                 }
             }
         }
