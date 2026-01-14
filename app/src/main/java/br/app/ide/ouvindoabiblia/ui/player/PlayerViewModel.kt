@@ -12,6 +12,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.common.util.concurrent.ListenableFuture
@@ -39,7 +40,7 @@ class PlayerViewModel @Inject constructor(
     private var mediaController: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
-    // Variáveis para guardar o pedido se o serviço ainda não estiver conectado
+    // Variáveis pendentes (Mantive sua lógica original)
     private var pendingBookId: String? = null
     private var pendingBookTitle: String? = null
     private var pendingCoverUrl: String? = null
@@ -57,32 +58,22 @@ class PlayerViewModel @Inject constructor(
             try {
                 mediaController = controllerFuture?.get()
                 setupPlayerListener()
-                // === LÓGICA NOVA DO RESUME ===
+
+                // === LÓGICA DE RESUME (SUA ORIGINAL) ===
                 if (pendingBookId == "RESUME") {
-                    // Se o pedido era "RESUME", descobrimos qual o ID real que está tocando
                     val playingId =
                         mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
-
                     if (playingId != null) {
-                        // Achamos! Carrega os dados reais deste livro (capítulos, título, etc)
-                        // Buscamos no banco para preencher a gaveta
                         loadBookPlaylist(playingId, "", "")
                     }
-                    // Limpa pendências
                     pendingBookId = null
-                }
-                // === FIM LÓGICA RESUME ===
-                // Conectou! Verifica se tinha algo pendente para tocar
-                else if (pendingBookId != null) {
+                } else if (pendingBookId != null) {
                     loadBookPlaylist(pendingBookId!!, pendingBookTitle!!, pendingCoverUrl!!)
-                    // Limpa pendências
                     pendingBookId = null
                     pendingBookTitle = null
                     pendingCoverUrl = null
                 } else {
-                    // Se não tinha nada pendente, apenas atualiza a tela com o que já está tocando
                     updateStateFromPlayer()
-                    // Tenta carregar a lista de capítulos do livro atual para a gaveta funcionar
                     loadCurrentBookChaptersList()
                 }
 
@@ -93,21 +84,11 @@ class PlayerViewModel @Inject constructor(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    // Chamado pela MainActivity ao entrar na tela
     fun loadBookPlaylist(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
-
         if (bookId != "RESUME") {
-            _uiState.update {
-                it.copy(title = initialBookTitle, imageUrl = initialCoverUrl)
-            }
+            _uiState.update { it.copy(title = initialBookTitle, imageUrl = initialCoverUrl) }
         }
 
-        // Atualiza a UI visualmente de imediato (para não ficar tudo branco)
-        _uiState.update {
-            it.copy(title = initialBookTitle, imageUrl = initialCoverUrl)
-        }
-
-        // 2. Se o serviço ainda não conectou, guarda para depois
         if (mediaController == null) {
             pendingBookId = bookId
             pendingBookTitle = initialBookTitle
@@ -115,26 +96,18 @@ class PlayerViewModel @Inject constructor(
             return
         }
 
-        // 3. A LÓGICA DO CRACHÁ (Evita reiniciar se for o mesmo livro)
-        // Lemos os extras do áudio atual para ver o ID
         val playingBookId =
             mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
 
         if (playingBookId == bookId) {
-//            Log.d("PlayerVM", "O livro $bookId já está tocando. Mantendo reprodução.")
-
-            // Mesmo sem reiniciar o áudio, precisamos buscar a lista de capítulos
-            // para que a gaveta (Bottom Sheet) funcione corretamente.
             viewModelScope.launch {
                 val chapters = repository.getChapters(bookId).first()
                 _uiState.update { it.copy(chapters = chapters) }
-                updateStateFromPlayer() // Sincroniza qual capítulo está em negrito
+                updateStateFromPlayer()
             }
             return
         }
 
-        // 4. Se for um livro diferente, carrega a playlist do zero
-//        Log.d("PlayerVM", "Trocando de livro: $playingBookId -> $bookId")
         viewModelScope.launch {
             val chapters = repository.getChapters(bookId).first()
             if (chapters.isNotEmpty()) {
@@ -143,7 +116,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // Função auxiliar: Recupera a lista de capítulos se o usuário reabrir o app já tocando
     private fun loadCurrentBookChaptersList() {
         val playingBookId =
             mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
@@ -155,17 +127,11 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun setupPlaylist(
-        chapters: List<br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo>,
-        bookId: String
-    ) {
+    private fun setupPlaylist(chapters: List<ChapterWithBookInfo>, bookId: String) {
         val controller = mediaController ?: return
-
-        // Atualiza a lista na UI (Gaveta)
         _uiState.update { it.copy(chapters = chapters) }
 
         val mediaItems = chapters.map { chapterInfo ->
-            // --- AQUI FAZEMOS A "TATUAGEM" DO ID ---
             val extras = Bundle()
             extras.putString("book_id", bookId)
 
@@ -173,7 +139,7 @@ class PlayerViewModel @Inject constructor(
                 .setTitle(chapterInfo.bookName)
                 .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
                 .setArtworkUri(Uri.parse(chapterInfo.coverUrl))
-                .setExtras(extras) // <--- Anexa o ID no áudio
+                .setExtras(extras)
                 .build()
 
             MediaItem.Builder()
@@ -183,13 +149,12 @@ class PlayerViewModel @Inject constructor(
                 .build()
         }
 
-        // Define a playlist e começa do índice 0
         controller.setMediaItems(mediaItems, 0, 0L)
         controller.prepare()
         controller.play()
     }
 
-    // Sincroniza o estado do Player com a UI (Textos, Play/Pause, Barra)
+    // --- ATUALIZADO: Agora lê Shuffle e Repeat ---
     private fun updateStateFromPlayer() {
         mediaController?.let { player ->
             val mediaItem = player.currentMediaItem
@@ -203,7 +168,11 @@ class PlayerViewModel @Inject constructor(
                     title = mediaItem?.mediaMetadata?.title?.toString() ?: state.title,
                     subtitle = subtitle,
                     imageUrl = mediaItem?.mediaMetadata?.artworkUri?.toString() ?: state.imageUrl,
-                    currentChapterIndex = player.currentMediaItemIndex
+                    currentChapterIndex = player.currentMediaItemIndex,
+
+                    // LENDO ESTADOS NOVOS DO PLAYER
+                    isShuffleEnabled = player.shuffleModeEnabled,
+                    repeatMode = player.repeatMode
                 )
             }
         }
@@ -222,6 +191,15 @@ class PlayerViewModel @Inject constructor(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 updateStateFromPlayer()
             }
+
+            // Listener importante para quando o usuário clica em shuffle/repeat
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                updateStateFromPlayer()
+            }
+
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                updateStateFromPlayer()
+            }
         })
     }
 
@@ -238,7 +216,8 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // --- Ações da UI ---
+    // --- CONTROLES DE UI ---
+
     fun togglePlayPause() {
         mediaController?.let { if (it.isPlaying) it.pause() else it.play() }
     }
@@ -248,15 +227,49 @@ class PlayerViewModel @Inject constructor(
         _uiState.update { it.copy(currentPosition = positionMs) }
     }
 
-    fun skipForward() {
+    // Pular +10s
+    fun fastForward() {
         mediaController?.let { it.seekTo(it.currentPosition + 10_000) }
     }
 
-    fun skipBack() {
+    // Voltar -10s
+    fun rewind() {
         mediaController?.let { it.seekTo(it.currentPosition - 10_000) }
     }
 
-    // Usado pela Gaveta de Capítulos
+    // NOVO: Pular para próxima FAIXA (Capítulo)
+    fun skipToNextChapter() {
+        if (mediaController?.hasNextMediaItem() == true) {
+            mediaController?.seekToNextMediaItem()
+        }
+    }
+
+    // NOVO: Voltar para FAIXA anterior
+    fun skipToPreviousChapter() {
+        if (mediaController?.hasPreviousMediaItem() == true) {
+            mediaController?.seekToPreviousMediaItem()
+        }
+    }
+
+    // NOVO: Aleatório
+    fun toggleShuffle() {
+        mediaController?.let {
+            it.shuffleModeEnabled = !it.shuffleModeEnabled
+        }
+    }
+
+    // NOVO: Repetir (Ciclo: OFF -> ONE -> ALL -> OFF)
+    fun toggleRepeat() {
+        mediaController?.let {
+            val newMode = when (it.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
+                Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
+                else -> Player.REPEAT_MODE_OFF
+            }
+            it.repeatMode = newMode
+        }
+    }
+
     fun onChapterSelected(index: Int) {
         mediaController?.seekTo(index, 0L)
         if (mediaController?.isPlaying == false) mediaController?.play()

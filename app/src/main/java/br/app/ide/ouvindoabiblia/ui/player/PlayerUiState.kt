@@ -1,5 +1,7 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
+import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+
 data class PlayerUiState(
     val title: String = "",
     val subtitle: String = "",
@@ -8,8 +10,14 @@ data class PlayerUiState(
     val duration: Long = 0L,
     val currentPosition: Long = 0L,
     val isBuffering: Boolean = false,
-    val currentChapterIndex: Int = 0, // Para destacar qual está tocando
-    val chapters: List<br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo> = emptyList() // A lista para exibir
+
+    // --- NOVOS CAMPOS PARA A UI ---
+    val isShuffleEnabled: Boolean = false,
+    val repeatMode: Int = 0, // 0 = OFF, 1 = ONE, 2 = ALL
+
+    // Lista e índice
+    val currentChapterIndex: Int = 0,
+    val chapters: List<ChapterWithBookInfo> = emptyList()
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
