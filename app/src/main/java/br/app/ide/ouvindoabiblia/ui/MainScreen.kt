@@ -75,6 +75,7 @@ fun MainScreen(
         val playerUiState by playerViewModel.uiState.collectAsState()
 
         var isPlayerExpanded by remember { mutableStateOf(false) }
+        val hasMedia = playerUiState.title.isNotEmpty()
 
         LaunchedEffect(shouldOpenPlayer) {
             if (shouldOpenPlayer) {
@@ -88,14 +89,13 @@ fun MainScreen(
             isPlayerExpanded = false
         }
 
-        // Altura "Nuclear": Garante cobertura total da Status Bar
         val displayMetrics = LocalContext.current.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
         val screenHeight = with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp }
 
         // --- ANIMAÇÕES ---
         val bottomPadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 116.dp, // 116dp (Sua preferência)
+            targetValue = if (isPlayerExpanded) 0.dp else 116.dp,
             animationSpec = spring(stiffness = Spring.StiffnessLow),
             label = "BottomPadding"
         )
@@ -106,7 +106,11 @@ fun MainScreen(
         )
 
         val playerContainerHeight by animateDpAsState(
-            targetValue = if (isPlayerExpanded) screenHeight else 64.dp,
+            targetValue = when {
+                isPlayerExpanded -> screenHeight
+                hasMedia -> 64.dp
+                else -> 0.dp
+            },
             animationSpec = spring(stiffness = Spring.StiffnessLow),
             label = "Height"
         )
@@ -121,9 +125,8 @@ fun MainScreen(
             label = "ContainerColor"
         )
 
-        // Sombra DURA: Elevation baixa (2dp) + Cor (Controlada no shadow modifier)
         val elevation by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 2.dp,
+            targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 2.dp,
             label = "Elevation"
         )
 
@@ -186,11 +189,20 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
+                        .padding(top = innerPadding.calculateTopPadding())
                 ) {
 
+                    // CORREÇÃO AQUI:
+                    // Removemos o padding extra do Modifier.
+                    // O conteúdo agora preenche até o topo da BottomBar (gerenciado pelo Box/innerPadding de baixo)
+                    // permitindo que o visual passe "por trás" do MiniPlayer.
+
+                    val bottomBarHeight = innerPadding.calculateBottomPadding()
+
                     NavigationGraph(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = bottomBarHeight), // Apenas respeita a BottomBar
                         navController = navController,
                         windowSizeClass = windowSizeClass,
                         onPlayBook = { id, name, cover ->
@@ -215,7 +227,6 @@ fun MainScreen(
                         },
                         orientation = Orientation.Vertical
                     )
-                    // SOMBRA DURA: SpotColor Black + Elevation Baixa
                     .shadow(
                         elevation = elevation,
                         shape = RoundedCornerShape(cornerRadius),
@@ -226,26 +237,25 @@ fun MainScreen(
                 color = containerColor,
                 shadowElevation = 0.dp
             ) {
-                AnimatedContent(
-                    targetState = isPlayerExpanded,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "PlayerContent"
-                ) { expanded ->
-                    if (expanded) {
-                        PlayerScreen(
-                            viewModel = playerViewModel,
-                            onCollapse = { isPlayerExpanded = false }
-                        )
-                    } else {
-                        // MINI PLAYER: Sem Box extra bloqueando cliques
-                        // O draggable do pai já cuida do swipe.
-                        // O clique é tratado internamente no MiniPlayer (Colunas de texto).
-                        MiniPlayer(
-                            uiState = playerUiState,
-                            onPlayPause = { playerViewModel.togglePlayPause() },
-                            onOpen = { isPlayerExpanded = true },
-                            onSkipNext = { playerViewModel.skipToNextChapter() }
-                        )
+                if (playerContainerHeight > 0.dp) {
+                    AnimatedContent(
+                        targetState = isPlayerExpanded,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "PlayerContent"
+                    ) { expanded ->
+                        if (expanded) {
+                            PlayerScreen(
+                                viewModel = playerViewModel,
+                                onCollapse = { isPlayerExpanded = false }
+                            )
+                        } else {
+                            MiniPlayer(
+                                uiState = playerUiState,
+                                onPlayPause = { playerViewModel.togglePlayPause() },
+                                onOpen = { isPlayerExpanded = true },
+                                onSkipNext = { playerViewModel.skipToNextChapter() }
+                            )
+                        }
                     }
                 }
             }
