@@ -106,4 +106,6 @@ dependencies {
     implementation(libs.androidx.concurrent.futures)
 
     implementation(libs.material)
+
+    implementation(libs.androidx.palette.ktx)
 }

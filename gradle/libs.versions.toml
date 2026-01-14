@@ -5,6 +5,7 @@ ksp = "2.0.21-1.0.27"
 coroutines = "1.9.0"
 # Mantenha o AGP original do seu Android Studio
 agp = "8.13.2"
+paletteKtx = "1.0.0"
 uiTextGoogleFonts = "1.7.6"
 # Core e Compose
 coreKtx = "1.15.0"
@@ -14,6 +15,7 @@ espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2024.12.01"
+palette = "1.0.0"
 
 # Bibliotecas
 navigationCompose = "2.8.5"
@@ -31,6 +33,7 @@ concurrentFutures = "1.3.0"
 [libraries]
 # --- CORE & TESTING ---
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-palette-ktx = { module = "androidx.palette:palette-ktx", version.ref = "paletteKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -87,6 +90,7 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 androidx-compose-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 
 androidx-concurrent-futures = { group = "androidx.concurrent", name = "concurrent-futures", version.ref = "concurrentFutures" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

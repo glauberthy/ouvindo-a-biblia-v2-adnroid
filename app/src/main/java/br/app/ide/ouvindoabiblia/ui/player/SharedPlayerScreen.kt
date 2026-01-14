@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
+// Importante: Importe a função isDark que criamos
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,11 +44,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 
 // Função utilitária para interpolação linear
-// Mantemos esta pois ela é específica de animação e não existe no outro arquivo
 fun lerp(start: Float, stop: Float, fraction: Float): Float {
     return (1 - fraction) * start + fraction * stop
 }
@@ -56,6 +57,7 @@ fun lerp(start: Float, stop: Float, fraction: Float): Float {
 fun SharedPlayerScreen(
     expandProgress: Float, // 0f = Mini, 1f = Full
     uiState: PlayerUiState,
+    backgroundColor: Color, // <--- O PARÂMETRO QUE FALTAVA
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrev: () -> Unit,
@@ -90,23 +92,22 @@ fun SharedPlayerScreen(
         // Arredondamento
         val imageCorner = androidx.compose.ui.unit.lerp(4.dp, 16.dp, expandProgress)
 
-        // 2. Fundo (Background)
-        val miniColor = Color(0xFFF5F5F5)
+        // --- CORES DINÂMICAS ---
+        // Se o fundo for escuro, texto branco. Se claro, texto preto.
+        val isBackgroundDark = backgroundColor.isDark()
+        val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
 
-        // Fundo Base
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(miniColor)
-        )
-        // Fundo Gradiente (aparece conforme expande)
+        // 2. Fundo (Background)
+
+        // Fundo Gradiente (aparece conforme expande no modo Full)
+        // Começa com a cor da capa no topo e vai escurecendo para preto
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(expandProgress)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color(0xFF424242), Color(0xFF121212))
+                        colors = listOf(backgroundColor, Color(0xFF121212))
                     )
                 )
         )
@@ -142,7 +143,7 @@ fun SharedPlayerScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Barra de Progresso (Reutiliza a do PlayerScreen.kt)
+                // Barra de Progresso
                 PlayerProgressBar(
                     currentPosition = uiState.currentPosition,
                     duration = uiState.duration,
@@ -157,9 +158,8 @@ fun SharedPlayerScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Botão Previous (SkipNext rotacionado)
+                    // Botão Previous
                     IconButton(onClick = onSkipPrev, modifier = Modifier.size(48.dp)) {
-                        // CORREÇÃO DO ERRO DE ROTATE AQUI:
                         Icon(
                             imageVector = Icons.Rounded.SkipNext,
                             contentDescription = null,
@@ -244,7 +244,7 @@ fun SharedPlayerScreen(
                         .padding(end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Texto Mini
+                    // Texto Mini (Clicável)
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -256,13 +256,13 @@ fun SharedPlayerScreen(
                             text = uiState.title.ifEmpty { "Selecione..." },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black,
+                            color = miniContentColor, // USA A COR DINÂMICA AQUI
                             maxLines = 1
                         )
                         Text(
                             text = uiState.subtitle,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
+                            color = miniContentColor.copy(alpha = 0.7f), // USA A COR DINÂMICA AQUI
                             maxLines = 1
                         )
                     }
@@ -270,22 +270,22 @@ fun SharedPlayerScreen(
                     // Controles Mini
                     IconButton(onClick = onPlayPause) {
                         Icon(
-                            if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            null,
-                            tint = Color.Black
+                            imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = null,
+                            tint = miniContentColor // USA A COR DINÂMICA AQUI
                         )
                     }
                     IconButton(onClick = {}) {
-                        Icon(Icons.Rounded.FavoriteBorder, null, tint = Color.Black)
+                        Icon(Icons.Rounded.FavoriteBorder, null, tint = miniContentColor)
                     }
                     IconButton(onClick = onSkipNext) {
-                        Icon(Icons.Rounded.SkipNext, null, tint = Color.Black)
+                        Icon(Icons.Rounded.SkipNext, null, tint = miniContentColor)
                     }
                 }
             }
         }
 
-        // 4. CAPA DO ÁLBUM (ANIMADA)
+        // 4. CAPA DO ÁLBUM
         Surface(
             modifier = Modifier
                 .offset {
@@ -318,8 +318,3 @@ fun SharedPlayerScreen(
         }
     }
 }
-
-// *** IMPORTANTE ***
-// Removi as funções PlayerProgressBar e formatTime daqui.
-// O código agora usará as que já existem no arquivo PlayerScreen.kt
-// (desde que estejam no mesmo pacote br.app.ide.ouvindoabiblia.ui.player).

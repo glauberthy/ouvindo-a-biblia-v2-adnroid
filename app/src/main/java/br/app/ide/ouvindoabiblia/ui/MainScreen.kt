@@ -1,6 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui
 
-// IMPORTANTE: Importe o SharedPlayerScreen
+// IMPORTANTE: Aqui está o import que faltava ser usado!
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -57,6 +57,7 @@ import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.player.SharedPlayerScreen
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
+import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
 
@@ -70,9 +71,30 @@ fun MainScreen(
         val navController = rememberNavController()
         val playerViewModel: PlayerViewModel = hiltViewModel()
         val playerUiState by playerViewModel.uiState.collectAsState()
+        val context = LocalContext.current // Necessário para carregar a imagem
 
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
+
+        // --- EXTRAÇÃO DE COR (A MÁGICA) ---
+        val defaultColor = Color(0xFFF5F5F5)
+        var artworkColor by remember { mutableStateOf(defaultColor) }
+
+        // Toda vez que a imagem da capa mudar, calculamos a nova cor
+        LaunchedEffect(playerUiState.imageUrl) {
+            val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
+            if (color != null) {
+                artworkColor = color
+            } else {
+                artworkColor = defaultColor
+            }
+        }
+
+        // Suaviza a transição de cor
+        val animatedArtworkColor by animateColorAsState(
+            targetValue = artworkColor,
+            label = "ColorAnim"
+        )
 
         LaunchedEffect(shouldOpenPlayer) {
             if (shouldOpenPlayer) {
@@ -88,10 +110,8 @@ fun MainScreen(
 
         val displayMetrics = LocalContext.current.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
-        val screenHeight =
-            with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp } // Overshoot para cobrir tudo
+        val screenHeight = with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp }
 
-        // --- ANIMAÇÕES ---
         val bottomPadding by animateDpAsState(
             targetValue = if (isPlayerExpanded) 0.dp else 116.dp,
             animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -113,15 +133,11 @@ fun MainScreen(
             label = "Height"
         )
 
-        // CÁLCULO DO PROGRESSO DE EXPANSÃO (0.0 a 1.0)
-        // Isso alimenta a animação "Morph" do SharedPlayerScreen
         val expandProgress by remember {
             derivedStateOf {
                 val minH = 64f
                 val maxH = screenHeight.value
                 val currentH = playerContainerHeight.value
-
-                // Normaliza entre 0 e 1
                 ((currentH - minH) / (maxH - minH)).coerceIn(0f, 1f)
             }
         }
@@ -131,9 +147,9 @@ fun MainScreen(
             label = "Corner"
         )
 
-        // Cor do container agora é transparente quando expandido para deixar o SharedPlayer desenhar o fundo gradiente
+        // O container usa a cor extraída quando está Mini
         val containerColor by animateColorAsState(
-            targetValue = if (isPlayerExpanded) Color.Transparent else Color(0xFFF5F5F5),
+            targetValue = if (isPlayerExpanded) Color.Transparent else animatedArtworkColor,
             label = "ContainerColor"
         )
 
@@ -219,7 +235,7 @@ fun MainScreen(
                 }
             }
 
-            // CAMADA 2: PLAYER FLUTUANTE (MORPH)
+            // CAMADA 2: PLAYER FLUTUANTE
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -243,12 +259,11 @@ fun MainScreen(
                 color = containerColor,
                 shadowElevation = 0.dp
             ) {
-                // Se tiver altura, renderiza o SharedPlayer
                 if (playerContainerHeight > 0.dp) {
-                    // SUBSTITUIÇÃO: Em vez de trocar telas, usamos UMA tela que muda de forma
                     SharedPlayerScreen(
                         expandProgress = expandProgress,
                         uiState = playerUiState,
+                        backgroundColor = animatedArtworkColor, // Passando a cor aqui!
                         onPlayPause = { playerViewModel.togglePlayPause() },
                         onSkipNext = { playerViewModel.skipToNextChapter() },
                         onSkipPrev = { playerViewModel.skipToPreviousChapter() },
