@@ -11,11 +11,11 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets // IMPORTANTE
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars // IMPORTANTE
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,7 +68,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
-import br.app.ide.ouvindoabiblia.ui.theme.isDark // <--- ALTERADO: Import necessário
+import br.app.ide.ouvindoabiblia.ui.theme.isDark
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
 
@@ -87,67 +87,12 @@ fun MainScreen(
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
 
-        // Extração de cor (Movido para cima para ser usado no SideEffect)
-        val defaultColor = MaterialTheme.colorScheme.surfaceVariant
-        var artworkColor by remember { mutableStateOf(defaultColor) }
-
-        LaunchedEffect(playerUiState.imageUrl) {
-            val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
-            if (color != null) artworkColor = color else artworkColor = defaultColor
-        }
-
-        val animatedArtworkColor by animateColorAsState(
-            targetValue = artworkColor,
-            label = "ColorAnim"
-        )
-
-        // --- CONTROLE DA BARRA DE STATUS ---
-        val view = LocalView.current
-        val isSystemDark = isSystemInDarkTheme()
-
-        if (!view.isInEditMode) {
-            SideEffect {
-                val window = (view.context as Activity).window
-                val controller = WindowCompat.getInsetsController(window, view)
-
-                // <--- ALTERADO: Lógica inteligente de contraste --->
-                val useDarkIcons = if (isPlayerExpanded) {
-                    // Se player aberto: Verifica se a capa é escura.
-                    // Se a capa NÃO for escura (isDark = false), usamos ícones pretos (true)
-                    !animatedArtworkColor.isDark()
-                } else {
-                    // Se na Home: Verifica o tema do sistema
-                    !isSystemDark
-                }
-
-                controller.isAppearanceLightStatusBars = useDarkIcons
-                // <--- FIM DA ALTERAÇÃO --->
-            }
-        }
-
-        LaunchedEffect(shouldOpenPlayer) {
-            if (shouldOpenPlayer) {
-                playerViewModel.loadBookPlaylist("RESUME", "Retomando...", "")
-                isPlayerExpanded = true
-                onPlayerOpened()
-            }
-        }
-
-        BackHandler(enabled = isPlayerExpanded) { isPlayerExpanded = false }
-
+        // --- 1. MOVIDO PARA CIMA: Cálculos de Dimensão e Progresso ---
+        // (Precisamos saber o progresso ANTES de configurar a Status Bar)
         val displayMetrics = LocalContext.current.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
         val screenHeight = with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp }
 
-        val bottomPadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 116.dp,
-            animationSpec = spring(stiffness = Spring.StiffnessLow),
-            label = "BottomPadding"
-        )
-        val sidePadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 16.dp,
-            label = "SidePadding"
-        )
         val playerContainerHeight by animateDpAsState(
             targetValue = when {
                 isPlayerExpanded -> screenHeight
@@ -167,6 +112,67 @@ fun MainScreen(
             }
         }
 
+        // --- 2. EXTRAÇÃO DE COR ---
+        val defaultColor = MaterialTheme.colorScheme.surfaceVariant
+        var artworkColor by remember { mutableStateOf(defaultColor) }
+
+        LaunchedEffect(playerUiState.imageUrl) {
+            val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
+            if (color != null) artworkColor = color else artworkColor = defaultColor
+        }
+
+        val animatedArtworkColor by animateColorAsState(
+            targetValue = artworkColor,
+            label = "ColorAnim"
+        )
+
+        // --- 3. CONTROLE DA BARRA DE STATUS (AGORA SINCRONIZADO) ---
+        val view = LocalView.current
+        val isSystemDark = isSystemInDarkTheme()
+
+        if (!view.isInEditMode) {
+            SideEffect {
+                val window = (view.context as Activity).window
+                val controller = WindowCompat.getInsetsController(window, view)
+
+                // --- A MUDANÇA SUTIL QUE FAZ TODA DIFERENÇA ---
+                // Só consideramos que estamos no "Modo Player" se a animação
+                // estiver acima de 95% (quase tocando o topo).
+                val isVisuallyExpanded = expandProgress > 0.90f
+
+                val useDarkIcons = if (isVisuallyExpanded) {
+                    // Player chegou no topo: Usa a inteligência da cor da capa
+                    !animatedArtworkColor.isDark()
+                } else {
+                    // Player está embaixo ou subindo: Usa o tema da Home
+                    !isSystemDark
+                }
+
+                controller.isAppearanceLightStatusBars = useDarkIcons
+            }
+        }
+
+        // --- LÓGICA DE ABERTURA ---
+        LaunchedEffect(shouldOpenPlayer) {
+            if (shouldOpenPlayer) {
+                playerViewModel.loadBookPlaylist("RESUME", "Retomando...", "")
+                isPlayerExpanded = true
+                onPlayerOpened()
+            }
+        }
+
+        BackHandler(enabled = isPlayerExpanded) { isPlayerExpanded = false }
+
+        // --- ANIMAÇÕES RESTANTES ---
+        val bottomPadding by animateDpAsState(
+            targetValue = if (isPlayerExpanded) 0.dp else 116.dp,
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+            label = "BottomPadding"
+        )
+        val sidePadding by animateDpAsState(
+            targetValue = if (isPlayerExpanded) 0.dp else 16.dp,
+            label = "SidePadding"
+        )
         val cornerRadius by animateDpAsState(
             targetValue = if (isPlayerExpanded) 0.dp else 12.dp,
             label = "Corner"
@@ -184,9 +190,7 @@ fun MainScreen(
 
             // CAMADA 1: NAVEGAÇÃO
             Scaffold(
-               
                 contentWindowInsets = WindowInsets.navigationBars,
-
                 bottomBar = {
                     NavigationBar(
                         containerColor = DeepBlueDark,
@@ -245,8 +249,6 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        // IMPORTANTE: Removemos o "top = innerPadding" antigo.
-                        // Mantemos apenas o padding de baixo (BottomBar).
                         .padding(bottom = innerPadding.calculateBottomPadding())
                 ) {
                     NavigationGraph(

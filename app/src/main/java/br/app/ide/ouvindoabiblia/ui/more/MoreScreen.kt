@@ -24,19 +24,40 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
+import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
-    onNavigateToItem: (String) -> Unit // Callback para quando clicar num item
+    onNavigateToItem: (String) -> Unit
 ) {
     Scaffold(
-        topBar = { CenterAlignedTopAppBar(title = { Text("Mais Opções") }) }
+        containerColor = CreamBackground, // Mantém a identidade visual
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Mais Opções",
+                        color = DeepBlueDark,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = CreamBackground,
+                    scrolledContainerColor = CreamBackground,
+                    titleContentColor = DeepBlueDark
+                )
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -44,6 +65,8 @@ fun MoreScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
+            Spacer(modifier = Modifier.size(16.dp))
+
             MoreMenuItem(
                 icon = Icons.Default.Info,
                 title = "Sobre o App",
@@ -65,16 +88,27 @@ fun MoreScreen(
                 onClick = { onNavigateToItem("proposito") }
             )
 
-            // Versão do App (Rodapé)
+            // Rodapé
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "Versão 1.0.0",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+            Column(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(32.dp)
-            )
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Ouvindo a Bíblia",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = DeepBlueDark.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Versão 1.0.0",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LavenderGray
+                )
+            }
         }
     }
 }
@@ -86,27 +120,34 @@ fun MoreMenuItem(icon: ImageVector, title: String, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(16.dp),
+                .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = DeepBlueDark, // Azul Profundo
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = DeepBlueDark, // Azul Profundo
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(14.dp),
+                tint = LavenderGray // Cinza Lavanda
             )
         }
-        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(
+            thickness = 0.5.dp,
+            color = LavenderGray.copy(alpha = 0.3f),
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
     }
 }
