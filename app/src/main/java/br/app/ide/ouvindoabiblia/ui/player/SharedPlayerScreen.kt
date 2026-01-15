@@ -61,49 +61,53 @@ fun SharedPlayerScreen(
     onSeek: (Long) -> Unit,
     onOpen: () -> Unit
 ) {
-    // BoxWithConstraints: Usado para calcular o tamanho da tela para a animação da capa
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
         val density = LocalDensity.current
 
-        // --- CÁLCULOS DE GEOMETRIA ---
-
-        // Usamos 'this.maxWidth' diretamente para evitar o aviso de "scope unused"
         val screenWidth = this.maxWidth
-
-        // 1. Tamanho da Capa
         val miniImageSize = 48.dp
-        val fullImageSize = (screenWidth * 0.85f) // 85% da largura da tela
+        val fullImageSize = (screenWidth * 0.85f)
         val currentImageSize = lerp(miniImageSize, fullImageSize, expandProgress)
 
-        // 2. Posição X (Horizontal)
         val imageStartX = 16.dp
-        val imageEndX = (screenWidth - fullImageSize) / 2 // Centralizado
+        val imageEndX = (screenWidth - fullImageSize) / 2
         val currentImageX = lerp(imageStartX, imageEndX, expandProgress)
 
-        // 3. Posição Y (Vertical)
         val imageStartY = 8.dp
         val imageEndY = 100.dp
         val currentImageY = lerp(imageStartY, imageEndY, expandProgress)
 
-        // 4. Arredondamento dos Cantos
         val imageCorner = lerp(4.dp, 16.dp, expandProgress)
-
-        // 5. Sombra da Capa (Dinâmica)
         val imageShadow = lerp(6.dp, 16.dp, expandProgress)
 
-        // --- CORES DINÂMICAS ---
+        // --- LÓGICA DE CORES HÍBRIDA ---
         val isBackgroundDark = backgroundColor.isDark()
+
+        // 1. HEADER (Topo): Precisa ser inteligente.
+        // Se a capa é CLARA, ícones do topo ficam PRETOS.
+        // Se a capa é ESCURA, ícones do topo ficam BRANCOS.
+        val headerContentColor = if (isBackgroundDark) Color.White else Color.Black
+
+        // 2. MINI PLAYER: Segue a mesma lógica do header.
         val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
 
-        // --- FUNDO ---
-        // Camada do gradiente Full (aparece conforme expande)
+        // 3. PLAYER CONTROLS (Baixo):
+        // Como vamos restaurar o degradê ESCURO no fundo, os botões de play
+        // SEMPRE devem ser BRANCOS para ter contraste com o fundo azul profundo.
+        val playerControlsColor = Color.White
+        val playerSecondaryColor = Color.LightGray
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(expandProgress)
                 .background(
+                    // --- CORREÇÃO: O DEGRADÊ VOLTOU ---
+                    // Começa com a cor da capa (seja clara ou escura)
+                    // Termina sempre no Azul Profundo (0xFF22223B)
+                    // Isso garante que os botões de baixo sempre tenham fundo escuro.
                     Brush.verticalGradient(
                         colors = listOf(backgroundColor, Color(0xFF22223B))
                     )
@@ -120,25 +124,26 @@ fun SharedPlayerScreen(
                     .alpha(expandProgress),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // TÍTULO E SUBTÍTULO
+                // Usamos Branco/Cinza Claro aqui porque o fundo já estará escurecendo devido ao degradê
                 Text(
                     text = uiState.title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = playerControlsColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = uiState.subtitle,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.LightGray,
+                    color = playerSecondaryColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Reutilizando a barra de progresso do PlayerScreen.kt
                 PlayerProgressBar(
                     currentPosition = uiState.currentPosition,
                     duration = uiState.duration,
@@ -147,25 +152,25 @@ fun SharedPlayerScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Controles Principais
+                // CONTROLES DE MÍDIA
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Botão Voltar (Usando SkipNext rotacionado 180 graus)
                     IconButton(onClick = onSkipPrev, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Rounded.SkipNext,
                             contentDescription = "Voltar",
-                            tint = Color.White,
+                            tint = playerControlsColor, // Branco (no fundo escuro)
                             modifier = Modifier
                                 .size(32.dp)
                                 .rotate(180f)
                         )
                     }
 
-                    // Play/Pause Grande
+                    // Botão Play sempre BRANCO (círculo) com ícone PRETO
+                    // Isso garante destaque máximo no fundo escuro
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
@@ -182,12 +187,11 @@ fun SharedPlayerScreen(
                         }
                     }
 
-                    // Botão Avançar
                     IconButton(onClick = onSkipNext, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Rounded.SkipNext,
                             "Avançar",
-                            tint = Color.White,
+                            tint = playerControlsColor, // Branco
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -196,6 +200,9 @@ fun SharedPlayerScreen(
         }
 
         // --- HEADER DA TELA FULL (SETA P/ BAIXO) ---
+        // AQUI ESTÁ A CORREÇÃO PRINCIPAL QUE VOCÊ PEDIU
+        // Esses botões ficam no TOPO, onde a cor ainda é a da capa (clara ou escura).
+        // Por isso usamos 'headerContentColor' (Inteligente).
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,13 +214,13 @@ fun SharedPlayerScreen(
                 Icon(
                     Icons.Rounded.KeyboardArrowDown,
                     "Minimizar",
-                    tint = Color.White,
+                    tint = headerContentColor, // <--- CORRIGIDO (Preto se fundo claro)
                     modifier = Modifier.size(32.dp)
                 )
             }
             Text(
                 text = "TOCANDO AGORA",
-                color = Color.White.copy(alpha = 0.7f),
+                color = headerContentColor.copy(alpha = 0.7f), // <--- CORRIGIDO
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -221,11 +228,17 @@ fun SharedPlayerScreen(
                 letterSpacing = 2.sp
             )
             IconButton(onClick = {}, modifier = Modifier.align(Alignment.TopEnd)) {
-                Icon(Icons.Rounded.MoreVert, "Opções", tint = Color.White)
+                Icon(
+                    Icons.Rounded.MoreVert,
+                    "Opções",
+                    tint = headerContentColor // <--- CORRIGIDO
+                )
             }
         }
 
-        // --- CONTEÚDO MINI (TEXTO E BOTÕES PEQUENOS) ---
+        // --- CONTEÚDO MINI (BARRA INFERIOR) ---
+        // Aqui também usamos a cor inteligente, pois o mini player é pintado
+        // inteiramente com a cor da capa (sem degradê forte).
         if (expandProgress < 0.9f) {
             val miniAlpha = 1f - (expandProgress * 3).coerceIn(0f, 1f)
 
@@ -277,8 +290,7 @@ fun SharedPlayerScreen(
             }
         }
 
-        // --- CAPA DO ÁLBUM (COMPARTILHADA) ---
-        // Desenhada por último para ficar em cima de tudo (z-index maior)
+        // --- CAPA DO ÁLBUM ---
         Surface(
             modifier = Modifier
                 .offset {
@@ -288,7 +300,6 @@ fun SharedPlayerScreen(
                     )
                 }
                 .size(currentImageSize)
-                // Se o player estiver pequeno, o clique na capa abre o player
                 .clickable(enabled = expandProgress < 0.5f) { onOpen() }
                 .shadow(
                     elevation = imageShadow,
