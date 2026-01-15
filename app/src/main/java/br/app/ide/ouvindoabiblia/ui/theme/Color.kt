@@ -2,11 +2,10 @@ package br.app.ide.ouvindoabiblia.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val md_theme_light_primary = Color(0xFF000000) // Preto para textos principais
-val md_theme_light_onPrimary = Color(0xFFFFFFFF)
-val md_theme_light_background = Color(0xFFF5F5F5) // Um cinza muito claro para o fundo
-val md_theme_light_surface = Color(0xFFFFFFFF) // Branco para cartões
-val md_theme_light_onSurface = Color(0xFF000000)
-val md_theme_light_surfaceVariant = Color(0xFFEEEEEE) // Cinza claro para fundos de itens de lista
-val md_theme_light_onSurfaceVariant = Color(0xFF444444) // Cinza escuro para subtítulos
-val DeezerRed = Color(0xFFEF5466) // Vermelho destaque (ex: ícone de notificação)
+// Paleta "Ouvindo a Bíblia" (Baseado na Paleta 1)
+val CreamBackground = Color(0xFFF2E9E4) // Fundo Claro (Papel antigo)
+val DeepBlueDark = Color(0xFF22223B)    // Fundo Escuro / Texto Principal
+val SlateBlue = Color(0xFF4A4E69)       // Superfícies Intermediárias / Player Fallback
+val LavenderGray = Color(0xFF9A8C98)    // Ícones Inativos / Texto Secundário
+val RosyBeige = Color(0xFFC9ADA7)       // Destaques sutis
+val ErrorRed = Color(0xFFEF5466)        // Cor de erro

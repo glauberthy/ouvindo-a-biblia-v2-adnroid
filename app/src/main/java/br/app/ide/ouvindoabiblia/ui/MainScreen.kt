@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -8,11 +9,15 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets // IMPORTANTE
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars // IMPORTANTE
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -31,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -44,8 +50,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -55,6 +63,9 @@ import br.app.ide.ouvindoabiblia.ui.navigation.NavigationGraph
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.player.SharedPlayerScreen
+import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
+import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 
@@ -75,17 +86,28 @@ fun MainScreen(
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
 
-        // --- EXTRAÇÃO DE COR ---
-        val defaultColor = Color(0xFFF5F5F5)
+        // --- CONTROLE DA BARRA DE STATUS ---
+        val view = LocalView.current
+        val isSystemDark = isSystemInDarkTheme()
+
+        if (!view.isInEditMode) {
+            SideEffect {
+                val window = (view.context as Activity).window
+                val controller = WindowCompat.getInsetsController(window, view)
+
+                // Ícones ESCUROS apenas se: Sistema Claro E Player Fechado
+                val useDarkIcons = !isSystemDark && !isPlayerExpanded
+                controller.isAppearanceLightStatusBars = useDarkIcons
+            }
+        }
+
+        // Extração de cor
+        val defaultColor = MaterialTheme.colorScheme.surfaceVariant
         var artworkColor by remember { mutableStateOf(defaultColor) }
 
         LaunchedEffect(playerUiState.imageUrl) {
             val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
-            if (color != null) {
-                artworkColor = color
-            } else {
-                artworkColor = defaultColor
-            }
+            if (color != null) artworkColor = color else artworkColor = defaultColor
         }
 
         val animatedArtworkColor by animateColorAsState(
@@ -93,18 +115,15 @@ fun MainScreen(
             label = "ColorAnim"
         )
 
-        // Se vier de uma notificação (shouldOpenPlayer), aí sim abrimos FullScreen
         LaunchedEffect(shouldOpenPlayer) {
             if (shouldOpenPlayer) {
                 playerViewModel.loadBookPlaylist("RESUME", "Retomando...", "")
-                isPlayerExpanded = true // Aqui mantemos true pois o usuário clicou na notificação
+                isPlayerExpanded = true
                 onPlayerOpened()
             }
         }
 
-        BackHandler(enabled = isPlayerExpanded) {
-            isPlayerExpanded = false
-        }
+        BackHandler(enabled = isPlayerExpanded) { isPlayerExpanded = false }
 
         val displayMetrics = LocalContext.current.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
@@ -115,17 +134,15 @@ fun MainScreen(
             animationSpec = spring(stiffness = Spring.StiffnessLow),
             label = "BottomPadding"
         )
-
         val sidePadding by animateDpAsState(
             targetValue = if (isPlayerExpanded) 0.dp else 16.dp,
             label = "SidePadding"
         )
-
         val playerContainerHeight by animateDpAsState(
             targetValue = when {
                 isPlayerExpanded -> screenHeight
-                hasMedia -> 64.dp // Se tem mídia mas não tá expandido = Mini Player (64dp)
-                else -> 0.dp // Sem mídia = Invisível
+                hasMedia -> 64.dp
+                else -> 0.dp
             },
             animationSpec = spring(stiffness = Spring.StiffnessLow),
             label = "Height"
@@ -144,12 +161,10 @@ fun MainScreen(
             targetValue = if (isPlayerExpanded) 0.dp else 12.dp,
             label = "Corner"
         )
-
         val containerColor by animateColorAsState(
             targetValue = if (isPlayerExpanded) Color.Transparent else animatedArtworkColor,
             label = "ContainerColor"
         )
-
         val elevation by animateDpAsState(
             targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 2.dp,
             label = "Elevation"
@@ -159,10 +174,16 @@ fun MainScreen(
 
             // CAMADA 1: NAVEGAÇÃO
             Scaffold(
+                // --- A SOLUÇÃO PURE COMPOSE ---
+                // "WindowInsets.navigationBars" diz para o Scaffold aplicar padding APENAS
+                // na barra de navegação inferior. Ele IGNORA a Status Bar no topo,
+                // permitindo que o nosso conteúdo (Home ou Player) desenhe atrás dela.
+                contentWindowInsets = WindowInsets.navigationBars,
+
                 bottomBar = {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 8.dp
+                        containerColor = DeepBlueDark,
+                        tonalElevation = 0.dp
                     ) {
                         val items = listOf(
                             BottomNavItem("Início", Icons.Default.Home, Screen.Home),
@@ -178,19 +199,24 @@ fun MainScreen(
                             val isSelected = currentDestination?.hierarchy?.any {
                                 it.route?.contains(item.screen::class.simpleName ?: "") == true
                             } == true
+                            val selectedColor = CreamBackground
+                            val unselectedColor = LavenderGray
+
                             NavigationBarItem(
                                 icon = {
                                     Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.title,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
+                                        item.icon,
+                                        item.title,
+                                        modifier = Modifier.size(26.dp),
+                                        tint = if (isSelected) selectedColor else unselectedColor
                                     )
                                 },
                                 label = {
                                     Text(
-                                        text = item.title,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
+                                        item.title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) selectedColor else unselectedColor
                                     )
                                 },
                                 selected = isSelected,
@@ -203,9 +229,7 @@ fun MainScreen(
                                         restoreState = true
                                     }
                                 },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = Color.Transparent
-                                )
+                                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
                             )
                         }
                     }
@@ -214,25 +238,16 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = innerPadding.calculateTopPadding())
+                        // IMPORTANTE: Removemos o "top = innerPadding" antigo.
+                        // Mantemos apenas o padding de baixo (BottomBar).
+                        .padding(bottom = innerPadding.calculateBottomPadding())
                 ) {
-
-                    val bottomBarHeight = innerPadding.calculateBottomPadding()
                     NavigationGraph(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = bottomBarHeight),
+                        modifier = Modifier.fillMaxSize(),
                         navController = navController,
                         windowSizeClass = windowSizeClass,
                         onPlayBook = { id, name, cover ->
-                            // AQUI ESTÁ A MUDANÇA:
-                            // 1. Carregamos o livro (Isso fará hasMedia = true)
                             playerViewModel.loadBookPlaylist(id, name, cover)
-
-                            // 2. NÃO expandimos automaticamente.
-                            // isPlayerExpanded = true <-- REMOVIDO!
-
-                            // O player vai nascer como MiniPlayer (64dp) por causa da lógica do playerContainerHeight
                         }
                     )
                 }
@@ -253,8 +268,8 @@ fun MainScreen(
                         orientation = Orientation.Vertical
                     )
                     .shadow(
-                        elevation = elevation,
-                        shape = RoundedCornerShape(cornerRadius),
+                        elevation,
+                        RoundedCornerShape(cornerRadius),
                         spotColor = Color.Black,
                         ambientColor = Color.Black
                     ),

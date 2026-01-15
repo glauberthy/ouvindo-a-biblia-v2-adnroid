@@ -12,45 +12,51 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// 1. Definição das cores baseadas no design das imagens
-//private val DeezerRed = Color(0xFFEF5466)
-private val LightBackground = Color(0xFFF5F5F5)
-private val LightSurface = Color(0xFFFFFFFF)
-private val DarkBackground = Color(0xFF121212)
-private val DarkSurface = Color(0xFF1E1E1E)
-
-// 2. Esquema de cores para o modo claro (Baseado na imagem enviada)
+// 1. Esquema de cores CLARO (Papel/Creme)
 private val LightColors = lightColorScheme(
-    primary = Color.Black,
-    onPrimary = Color.White,
-    primaryContainer = Color.White,
-    onPrimaryContainer = Color.Black,
-    secondary = DeezerRed,
+    primary = DeepBlueDark,         // Texto principal e ícones ativos (Azul Escuro)
+    onPrimary = CreamBackground,    // Texto sobre botões primários
+    primaryContainer = DeepBlueDark,
+    onPrimaryContainer = CreamBackground,
+
+    secondary = SlateBlue,          // Elementos secundários
     onSecondary = Color.White,
-    background = LightBackground,
-    onBackground = Color.Black,
-    surface = LightSurface,
-    onSurface = Color.Black,
-    surfaceVariant = Color(0xFFEEEEEE), // Cinza claro para os cards
-    onSurfaceVariant = Color(0xFF444444), // Para textos secundários
-    error = DeezerRed
+
+    tertiary = RosyBeige,           // Destaques
+
+    background = CreamBackground,   // O fundo Creme (Isabella)
+    onBackground = DeepBlueDark,    // Texto sobre o fundo
+
+    surface = CreamBackground,      // Superfícies (Cards, BottomBar no modo padrão)
+    onSurface = DeepBlueDark,
+
+    surfaceVariant = Color(0xFFEBE0DB), // Um pouco mais escuro que o creme para variações
+    onSurfaceVariant = SlateBlue,       // Texto secundário
+
+    error = ErrorRed
 )
 
-// 3. Esquema de cores para o modo escuro
+// 2. Esquema de cores ESCURO (Azul Profundo Sofisticado)
 private val DarkColors = darkColorScheme(
-    primary = Color.White,
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF333333),
-    onPrimaryContainer = Color.White,
-    secondary = DeezerRed,
-    onSecondary = Color.White,
-    background = DarkBackground,
-    onBackground = Color.White,
-    surface = DarkSurface,
-    onSurface = Color.White,
-    surfaceVariant = Color(0xFF2C2C2C),
-    onSurfaceVariant = Color(0xFFBDBDBD),
-    error = DeezerRed
+    primary = CreamBackground,      // Texto principal (Creme sobre escuro)
+    onPrimary = DeepBlueDark,
+
+    primaryContainer = SlateBlue,
+    onPrimaryContainer = CreamBackground,
+
+    secondary = RosyBeige,
+    onSecondary = DeepBlueDark,
+
+    background = DeepBlueDark,      // O fundo Azul Profundo
+    onBackground = CreamBackground,
+
+    surface = DeepBlueDark,         // Superfícies alinhadas ao fundo
+    onSurface = CreamBackground,
+
+    surfaceVariant = SlateBlue,     // Cards mais claros que o fundo
+    onSurfaceVariant = LavenderGray, // Texto secundário (Lavanda)
+
+    error = ErrorRed
 )
 
 @Composable
@@ -69,7 +75,8 @@ fun OuvindoABibliaTheme(
             // Define a cor da barra de status como transparente para efeito Edge-to-Edge
             window.statusBarColor = Color.Transparent.toArgb()
 
-            // Controla a cor dos ícones da barra de status (escuros no modo light, claros no dark)
+            // Controla a cor dos ícones da barra de status
+            // Se o tema for escuro, os ícones devem ser claros (isAppearanceLightStatusBars = false)
             val controller = WindowCompat.getInsetsController(window, view)
             controller.isAppearanceLightStatusBars = !darkTheme
         }
@@ -77,7 +84,7 @@ fun OuvindoABibliaTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = AppTypography, // Certifique-se que o arquivo Type.kt esteja correto
+        typography = AppTypography,
         content = content
     )
 }

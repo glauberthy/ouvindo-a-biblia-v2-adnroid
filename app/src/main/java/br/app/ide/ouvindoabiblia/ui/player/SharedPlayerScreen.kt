@@ -105,7 +105,7 @@ fun SharedPlayerScreen(
                 .alpha(expandProgress)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(backgroundColor, Color(0xFF121212))
+                        colors = listOf(backgroundColor, Color(0xFF22223B))
                     )
                 )
         )
