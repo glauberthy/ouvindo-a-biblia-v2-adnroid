@@ -10,6 +10,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import br.app.ide.ouvindoabiblia.ui.MainScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         // 1. Isso garante que a barra seja transparente (o conteúdo passa por baixo)
@@ -29,10 +31,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
-
-            // REMOVIDO: O bloco SideEffect/LocalView/WindowCompat.
-            // MOTIVO: A MainScreen.kt já está fazendo isso de forma mais inteligente
-            // (considerando se o player está aberto ou fechado).
 
             MainScreen(
                 windowSizeClass = windowSizeClass,
