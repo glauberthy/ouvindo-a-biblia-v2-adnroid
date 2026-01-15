@@ -115,7 +115,7 @@ fun SharedPlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 100.dp + fullImageSize + 32.dp)
+                    .padding(top = 85.dp + fullImageSize + 32.dp)
                     .padding(horizontal = 24.dp)
                     .alpha(expandProgress),
                 horizontalAlignment = Alignment.CenterHorizontally

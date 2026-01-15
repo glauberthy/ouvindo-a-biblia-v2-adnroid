@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import androidx.annotation.OptIn
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.core.graphics.drawable.toBitmap
@@ -50,7 +51,6 @@ class PlaybackService : MediaLibraryService() {
 
     private fun getSingleTopActivity(): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {
-            // Esta flag diz à MainActivity: "Vá direto para o player"
             putExtra("OPEN_PLAYER_FROM_NOTIF", true)
         }
         return PendingIntent.getActivity(
@@ -64,6 +64,29 @@ class PlaybackService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
     }
+
+    // --- NOVO MÉTODO ADICIONADO: DETECTA QUANDO O APP É REMOVIDO DOS RECENTES ---
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // 1. Para o player se estiver tocando
+        if (player.isPlaying) {
+            player.pause()
+        }
+        player.stop()
+
+        // 2. Remove a notificação da barra de status imediatamente
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+
+        // 3. Mata o serviço (isso vai chamar o onDestroy abaixo)
+        stopSelf()
+
+        super.onTaskRemoved(rootIntent)
+    }
+    // --------------------------------------------------------------------------
 
     override fun onDestroy() {
         mediaSession?.run {
@@ -89,13 +112,10 @@ class PlaybackService : MediaLibraryService() {
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            // Futuramente: Ler do Banco de Dados o último capítulo tocado e restaurar aqui.
-            // Por enquanto: Retornamos erro para evitar crash, dizendo ao sistema "não tenho nada salvo".
             return Futures.immediateFailedFuture(UnsupportedOperationException("Not implemented yet"))
         }
     }
 
-    // --- CLASSE INTERNA QUE ENSINA O MEDIA3 A USAR O COIL ---
     @UnstableApi
     private inner class CoilBitmapLoader : BitmapLoader {
 
@@ -110,7 +130,7 @@ class PlaybackService : MediaLibraryService() {
 
                 val request = ImageRequest.Builder(this@PlaybackService)
                     .data(uri)
-                    .allowHardware(false) // Crucial para notificações
+                    .allowHardware(false)
                     .listener(
                         onSuccess = { _, result ->
                             completer.set(result.drawable.toBitmap())

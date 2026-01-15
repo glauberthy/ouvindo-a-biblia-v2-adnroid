@@ -240,7 +240,7 @@ fun MainScreen(
                         .fillMaxSize()
                         // IMPORTANTE: Removemos o "top = innerPadding" antigo.
                         // Mantemos apenas o padding de baixo (BottomBar).
-                        .padding(bottom = innerPadding.calculateBottomPadding())
+                        .padding(bottom = innerPadding.calculateBottomPadding() + if (hasMedia) 0.dp else 0.dp)
                 ) {
                     NavigationGraph(
                         modifier = Modifier.fillMaxSize(),
