@@ -68,6 +68,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
+import br.app.ide.ouvindoabiblia.ui.theme.isDark // <--- ALTERADO: Import necessário
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
 
@@ -86,22 +87,7 @@ fun MainScreen(
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
 
-        // --- CONTROLE DA BARRA DE STATUS ---
-        val view = LocalView.current
-        val isSystemDark = isSystemInDarkTheme()
-
-        if (!view.isInEditMode) {
-            SideEffect {
-                val window = (view.context as Activity).window
-                val controller = WindowCompat.getInsetsController(window, view)
-
-                // Ícones ESCUROS apenas se: Sistema Claro E Player Fechado
-                val useDarkIcons = !isSystemDark && !isPlayerExpanded
-                controller.isAppearanceLightStatusBars = useDarkIcons
-            }
-        }
-
-        // Extração de cor
+        // Extração de cor (Movido para cima para ser usado no SideEffect)
         val defaultColor = MaterialTheme.colorScheme.surfaceVariant
         var artworkColor by remember { mutableStateOf(defaultColor) }
 
@@ -114,6 +100,30 @@ fun MainScreen(
             targetValue = artworkColor,
             label = "ColorAnim"
         )
+
+        // --- CONTROLE DA BARRA DE STATUS ---
+        val view = LocalView.current
+        val isSystemDark = isSystemInDarkTheme()
+
+        if (!view.isInEditMode) {
+            SideEffect {
+                val window = (view.context as Activity).window
+                val controller = WindowCompat.getInsetsController(window, view)
+
+                // <--- ALTERADO: Lógica inteligente de contraste --->
+                val useDarkIcons = if (isPlayerExpanded) {
+                    // Se player aberto: Verifica se a capa é escura.
+                    // Se a capa NÃO for escura (isDark = false), usamos ícones pretos (true)
+                    !animatedArtworkColor.isDark()
+                } else {
+                    // Se na Home: Verifica o tema do sistema
+                    !isSystemDark
+                }
+
+                controller.isAppearanceLightStatusBars = useDarkIcons
+                // <--- FIM DA ALTERAÇÃO --->
+            }
+        }
 
         LaunchedEffect(shouldOpenPlayer) {
             if (shouldOpenPlayer) {
@@ -174,10 +184,7 @@ fun MainScreen(
 
             // CAMADA 1: NAVEGAÇÃO
             Scaffold(
-                // --- A SOLUÇÃO PURE COMPOSE ---
-                // "WindowInsets.navigationBars" diz para o Scaffold aplicar padding APENAS
-                // na barra de navegação inferior. Ele IGNORA a Status Bar no topo,
-                // permitindo que o nosso conteúdo (Home ou Player) desenhe atrás dela.
+               
                 contentWindowInsets = WindowInsets.navigationBars,
 
                 bottomBar = {
@@ -240,7 +247,7 @@ fun MainScreen(
                         .fillMaxSize()
                         // IMPORTANTE: Removemos o "top = innerPadding" antigo.
                         // Mantemos apenas o padding de baixo (BottomBar).
-                        .padding(bottom = innerPadding.calculateBottomPadding() + if (hasMedia) 0.dp else 0.dp)
+                        .padding(bottom = innerPadding.calculateBottomPadding())
                 ) {
                     NavigationGraph(
                         modifier = Modifier.fillMaxSize(),
