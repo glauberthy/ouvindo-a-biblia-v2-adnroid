@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,13 +27,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.ui.components.BookFilterBar
 import br.app.ide.ouvindoabiblia.ui.home.components.BookGridItem
 import br.app.ide.ouvindoabiblia.ui.home.components.ContinueListeningCard
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.FavoriteBookItem
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.SectionHeader
-import br.app.ide.ouvindoabiblia.ui.home.components.TestamentFilterRow
+import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,13 +64,14 @@ private fun HomeContent(
     onIntent: (HomeIntent) -> Unit,
     onNavigateToBook: (String, String, String) -> Unit
 ) {
-    // Calculando insets uma vez para evitar recomposição interna desnecessária
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CreamBackground), // <--- GARANTIA DE FUNDO CREME
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -84,7 +87,9 @@ private fun HomeContent(
                 text = "Ouvindo a Bíblia",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                // Cor Azul Escuro para contraste com o Creme
+                color = br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
@@ -110,10 +115,7 @@ private fun HomeContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
-                        items(
-                            items = state.favoriteBooks,
-                            key = { it.id } // Chave estável
-                        ) { book ->
+                        items(items = state.favoriteBooks, key = { it.id }) { book ->
                             FavoriteBookItem(
                                 book,
                                 onClick = {
@@ -130,11 +132,20 @@ private fun HomeContent(
             }
         }
 
-        // 3. Filtros
+        // --- 3. FILTROS
         item(span = { GridItemSpan(maxLineSpan) }) {
-            TestamentFilterRow(
-                selected = state.selectedFilter,
-                onSelect = { onIntent(HomeIntent.SelectFilter(it)) }
+
+            BookFilterBar(
+                selectedOption = state.selectedFilter.name,
+                onOptionSelected = { filterString ->
+                    val newFilter = when (filterString) {
+                        "AT" -> TestamentFilter.AT
+                        "NT" -> TestamentFilter.NT
+                        else -> TestamentFilter.ALL
+                    }
+                    onIntent(HomeIntent.SelectFilter(newFilter))
+                },
+                modifier = Modifier.padding(vertical = 8.dp)
             )
         }
 
@@ -143,10 +154,9 @@ private fun HomeContent(
             SectionHeader(title = "Livros (${state.filteredBooks.size})")
         }
 
-        // 5. Grid Principal (Otimizado)
+        // 5. Grid Principal
         items(
             items = state.filteredBooks,
-            // CRÍTICO: Key Estável para evitar recomposição de itens inalterados
             key = { book -> book.id },
             contentType = { "book_grid_item" }
         ) { book ->
