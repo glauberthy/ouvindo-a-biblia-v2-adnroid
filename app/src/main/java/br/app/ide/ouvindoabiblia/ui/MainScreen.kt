@@ -216,18 +216,16 @@ fun MainScreen(
                             NavigationBarItem(
                                 icon = {
                                     Icon(
-                                        item.icon,
-                                        item.title,
-                                        modifier = Modifier.size(26.dp),
-                                        tint = if (isSelected) selectedColor else unselectedColor
+                                        imageVector = item.icon,
+                                        contentDescription = item.title,
+                                        modifier = Modifier.size(26.dp)
                                     )
                                 },
                                 label = {
                                     Text(
-                                        item.title,
+                                        text = item.title,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) selectedColor else unselectedColor
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     )
                                 },
                                 selected = isSelected,
@@ -240,7 +238,17 @@ fun MainScreen(
                                         restoreState = true
                                     }
                                 },
-                                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
+                              
+                                colors = NavigationBarItemDefaults.colors(
+                                    // Quando ESTÁ selecionado (Ativo)
+                                    selectedIconColor = CreamBackground, // Creme
+                                    selectedTextColor = CreamBackground, // Creme
+                                    indicatorColor = Color.Transparent,  // Remove a bolha oval de fundo
+
+                                    // Quando NÃO ESTÁ selecionado (Inativo)
+                                    unselectedIconColor = LavenderGray.copy(alpha = 0.6f), // Cinza meio transparente
+                                    unselectedTextColor = LavenderGray.copy(alpha = 0.6f)  // Texto mais apagado
+                                )
                             )
                         }
                     }

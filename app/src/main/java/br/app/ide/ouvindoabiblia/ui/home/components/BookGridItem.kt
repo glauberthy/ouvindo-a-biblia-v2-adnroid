@@ -29,46 +29,41 @@ fun BookGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // OTIMIZAÇÃO 1: 'Box' com 'clip' é mais leve para a GPU que 'Surface' ou 'Card'
-    // em listas longas, pois evita passadas extras de sombra/elevação.
+    val context = LocalContext.current
+
+    // OTIMIZAÇÃO DE MEMÓRIA E CPU
+    // Usamos remember para não recriar o Builder a cada frame.
+    val imageRequest = remember(book.imageUrl) {
+        ImageRequest.Builder(context)
+            .data(book.imageUrl)
+            .size(500) // Perfeito: Tamanho nativo da sua imagem
+            .precision(Precision.INEXACT) // Mantém INEXACT para ser flexível em telas menores
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .crossfade(false)
+            .build()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(8.dp)) // Borda arredondada leve
-            .background(MaterialTheme.colorScheme.surfaceVariant) // Cor de fundo (placeholder)
+//            .aspectRatio(1f)
+            .aspectRatio(0.7f)
+            .clip(RoundedCornerShape(8.dp))
+            // Usar uma cor estática é mais leve que desenhar um placeholder complexo
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
     ) {
-        val context = LocalContext.current
-
-        // OTIMIZAÇÃO CRÍTICA 2: 'remember'
-        // Isso impede que o 'ImageRequest.Builder' seja recriado a cada milissegundo
-        // durante a rolagem ou animação de entrada. Economiza MUITA CPU.
-        val model = remember(book.imageUrl) {
-            ImageRequest.Builder(context)
-                .data(book.imageUrl)
-                .size(300, 300) // Tamanho fixo ajuda o cache de memória
-                .precision(Precision.INEXACT)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .crossfade(false) // Sem animação para máxima velocidade
-                .build()
-        }
-
-        if (book.imageUrl == null) {
-            // Placeholder estático super leve
-            Box(Modifier
-                .fillMaxSize()
-                .background(Color.LightGray))
-        } else {
+        if (book.imageUrl != null) {
             AsyncImage(
-                model = model,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
+                model = imageRequest,
+                contentDescription = null, // Null é melhor para performance em listas decorativas
                 modifier = Modifier.fillMaxSize(),
-                // Fallbacks usando ColorPainter (desenhado na CPU, zero risco de resource ID)
-                error = ColorPainter(Color.Gray),
-                placeholder = ColorPainter(Color.Transparent) // Deixa ver o fundo do Box
+                contentScale = ContentScale.Crop,
+                // OTIMIZAÇÃO: ColorPainter é desenhado na CPU e é ultra leve
+                // Evita carregar drawables XML complexos para placeholder/erro
+                placeholder = ColorPainter(Color.Transparent),
+                error = ColorPainter(Color.DarkGray)
             )
         }
     }

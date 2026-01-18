@@ -65,67 +65,73 @@ fun SharedPlayerScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         val density = LocalDensity.current
-
         val screenWidth = this.maxWidth
-        val miniImageSize = 48.dp
-        val fullImageSize = (screenWidth * 0.85f)
-        val currentImageSize = lerp(miniImageSize, fullImageSize, expandProgress)
 
+        // --- CÁLCULOS GEOMÉTRICOS (Retângulo Pequeno -> Retângulo Grande) ---
+
+        // 1. Definições do MINI PLAYER (Livro Pequeno)
+        // Altura do livro no mini player
+        val miniHeight = 56.dp
+        // Largura respeitando proporção de livro (0.7)
+        val miniWidth = miniHeight * 0.7f
+
+        // 2. Definições do FULL PLAYER (Livro Grande)
+        // Largura ocupa 70% da tela
+        val fullWidth = screenWidth * 0.70f
+        // Altura respeitando a MESMA proporção
+        val fullHeight = fullWidth / 0.7f
+
+        // 3. Interpolação (Animação)
+        val currentWidth = lerp(miniWidth, fullWidth, expandProgress)
+        val currentHeight = lerp(miniHeight, fullHeight, expandProgress)
+
+        // 4. Posição X (Horizontal)
+        // No Mini: Encostado na esquerda (com margem)
         val imageStartX = 16.dp
-        val imageEndX = (screenWidth - fullImageSize) / 2
-        val currentImageX = lerp(imageStartX, imageEndX, expandProgress)
+        // No Full: Centralizado na tela
+        val imageEndX = (screenWidth - fullWidth) / 2
+        val currentX = lerp(imageStartX, imageEndX, expandProgress)
 
-        val imageStartY = 8.dp
+        // 5. Posição Y (Vertical)
+        // No Mini: Centralizado verticalmente na barra de 64dp (aprox 4dp de topo)
+        val imageStartY = 4.dp
+        // No Full: Margem superior maior
         val imageEndY = 100.dp
-        val currentImageY = lerp(imageStartY, imageEndY, expandProgress)
+        val currentY = lerp(imageStartY, imageEndY, expandProgress)
 
-        val imageCorner = lerp(4.dp, 16.dp, expandProgress)
-        val imageShadow = lerp(6.dp, 16.dp, expandProgress)
+        // Arredondamento e Sombra
+        val imageCorner = lerp(4.dp, 12.dp, expandProgress)
+        val imageShadow = lerp(2.dp, 16.dp, expandProgress)
 
-        // --- LÓGICA DE CORES HÍBRIDA ---
+        // Cores e Tema
         val isBackgroundDark = backgroundColor.isDark()
-
-        // 1. HEADER (Topo): Precisa ser inteligente.
-        // Se a capa é CLARA, ícones do topo ficam PRETOS.
-        // Se a capa é ESCURA, ícones do topo ficam BRANCOS.
         val headerContentColor = if (isBackgroundDark) Color.White else Color.Black
-
-        // 2. MINI PLAYER: Segue a mesma lógica do header.
         val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
-
-        // 3. PLAYER CONTROLS (Baixo):
-        // Como vamos restaurar o degradê ESCURO no fundo, os botões de play
-        // SEMPRE devem ser BRANCOS para ter contraste com o fundo azul profundo.
         val playerControlsColor = Color.White
         val playerSecondaryColor = Color.LightGray
 
+        // --- FUNDO COM DEGRADÊ ---
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(expandProgress)
                 .background(
-                    // --- CORREÇÃO: O DEGRADÊ VOLTOU ---
-                    // Começa com a cor da capa (seja clara ou escura)
-                    // Termina sempre no Azul Profundo (0xFF22223B)
-                    // Isso garante que os botões de baixo sempre tenham fundo escuro.
                     Brush.verticalGradient(
                         colors = listOf(backgroundColor, Color(0xFF22223B))
                     )
                 )
         )
 
-        // --- CONTEÚDO FULL (TEXTOS E BOTÕES GRANDES) ---
+        // --- CONTEÚDO TELA CHEIA (Full Player) ---
         if (expandProgress > 0.1f) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 85.dp + fullImageSize + 32.dp)
+                    .padding(top = imageEndY + fullHeight + 24.dp)
                     .padding(horizontal = 24.dp)
                     .alpha(expandProgress),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // TÍTULO E SUBTÍTULO
-                // Usamos Branco/Cinza Claro aqui porque o fundo já estará escurecendo devido ao degradê
                 Text(
                     text = uiState.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -142,7 +148,7 @@ fun SharedPlayerScreen(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
                 PlayerProgressBar(
                     currentPosition = uiState.currentPosition,
@@ -152,29 +158,28 @@ fun SharedPlayerScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // CONTROLES DE MÍDIA
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 48.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onSkipPrev, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onSkipPrev, modifier = Modifier.size(56.dp)) {
                         Icon(
                             imageVector = Icons.Rounded.SkipNext,
                             contentDescription = "Voltar",
-                            tint = playerControlsColor, // Branco (no fundo escuro)
+                            tint = playerControlsColor,
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(36.dp)
                                 .rotate(180f)
                         )
                     }
 
-                    // Botão Play sempre BRANCO (círculo) com ícone PRETO
-                    // Isso garante destaque máximo no fundo escuro
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
-                        modifier = Modifier.size(72.dp),
+                        modifier = Modifier.size(80.dp),
                         onClick = onPlayPause
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -182,27 +187,24 @@ fun SharedPlayerScreen(
                                 imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = "Play/Pause",
                                 tint = Color.Black,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(44.dp)
                             )
                         }
                     }
 
-                    IconButton(onClick = onSkipNext, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onSkipNext, modifier = Modifier.size(56.dp)) {
                         Icon(
                             Icons.Rounded.SkipNext,
                             "Avançar",
-                            tint = playerControlsColor, // Branco
-                            modifier = Modifier.size(32.dp)
+                            tint = playerControlsColor,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
             }
         }
 
-        // --- HEADER DA TELA FULL (SETA P/ BAIXO) ---
-        // AQUI ESTÁ A CORREÇÃO PRINCIPAL QUE VOCÊ PEDIU
-        // Esses botões ficam no TOPO, onde a cor ainda é a da capa (clara ou escura).
-        // Por isso usamos 'headerContentColor' (Inteligente).
+        // --- HEADER ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -214,13 +216,13 @@ fun SharedPlayerScreen(
                 Icon(
                     Icons.Rounded.KeyboardArrowDown,
                     "Minimizar",
-                    tint = headerContentColor, // <--- CORRIGIDO (Preto se fundo claro)
+                    tint = headerContentColor,
                     modifier = Modifier.size(32.dp)
                 )
             }
             Text(
                 text = "TOCANDO AGORA",
-                color = headerContentColor.copy(alpha = 0.7f), // <--- CORRIGIDO
+                color = headerContentColor.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -231,14 +233,12 @@ fun SharedPlayerScreen(
                 Icon(
                     Icons.Rounded.MoreVert,
                     "Opções",
-                    tint = headerContentColor // <--- CORRIGIDO
+                    tint = headerContentColor
                 )
             }
         }
 
-        // --- CONTEÚDO MINI (BARRA INFERIOR) ---
-        // Aqui também usamos a cor inteligente, pois o mini player é pintado
-        // inteiramente com a cor da capa (sem degradê forte).
+        // --- MINI PLAYER ---
         if (expandProgress < 0.9f) {
             val miniAlpha = 1f - (expandProgress * 3).coerceIn(0f, 1f)
 
@@ -248,7 +248,9 @@ fun SharedPlayerScreen(
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
-                        .padding(start = 16.dp + 48.dp + 12.dp, end = 8.dp),
+                        // Aumentei o padding esquerdo (start) para compensar a largura da imagem
+                        // miniWidth é aprox 40dp + margem 16dp + espaçamento 12dp
+                        .padding(start = 16.dp + miniWidth + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(
@@ -282,7 +284,6 @@ fun SharedPlayerScreen(
                             tint = miniContentColor
                         )
                     }
-
                     IconButton(onClick = onSkipNext) {
                         Icon(Icons.Rounded.SkipNext, "Próximo", tint = miniContentColor)
                     }
@@ -290,16 +291,16 @@ fun SharedPlayerScreen(
             }
         }
 
-        // --- CAPA DO ÁLBUM ---
+        // --- A CAPA (ANIMADA) ---
         Surface(
             modifier = Modifier
                 .offset {
                     IntOffset(
-                        x = with(density) { currentImageX.toPx().roundToInt() },
-                        y = with(density) { currentImageY.toPx().roundToInt() }
+                        x = with(density) { currentX.toPx().roundToInt() },
+                        y = with(density) { currentY.toPx().roundToInt() }
                     )
                 }
-                .size(currentImageSize)
+                .size(width = currentWidth, height = currentHeight)
                 .clickable(enabled = expandProgress < 0.5f) { onOpen() }
                 .shadow(
                     elevation = imageShadow,
@@ -315,7 +316,7 @@ fun SharedPlayerScreen(
                 AsyncImage(
                     model = uiState.imageUrl,
                     contentDescription = "Capa do Livro",
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop, // Crop agora funciona perfeito pois o container já é retangular
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
