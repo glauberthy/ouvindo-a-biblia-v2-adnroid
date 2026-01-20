@@ -41,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -77,7 +78,7 @@ fun SharedPlayerScreen(
 
         // 2. Definições do FULL PLAYER (Livro Grande)
         // Largura ocupa 70% da tela
-        val fullWidth = screenWidth * 0.70f
+        val fullWidth = screenWidth * 0.55f
         // Altura respeitando a MESMA proporção
         val fullHeight = fullWidth / 0.7f
 
@@ -156,12 +157,12 @@ fun SharedPlayerScreen(
                     onSeek = onSeek
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 48.dp),
+                        .padding(bottom = 190.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -187,7 +188,7 @@ fun SharedPlayerScreen(
                                 imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = "Play/Pause",
                                 tint = Color.Black,
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
                     }
@@ -329,4 +330,62 @@ fun SharedPlayerScreen(
             }
         }
     }
+}
+
+
+// --- ÁREA DE PREVIEW (SÓ PARA DESENVOLVIMENTO) ---
+
+@Preview(
+    name = "Player Aberto (Full)",
+    showBackground = true,
+    heightDp = 800, // Simula altura de um celular
+    widthDp = 360
+)
+@Composable
+fun PlayerFullPreview() {
+    // Dados Fakes só para testar o visual
+    SharedPlayerScreen(
+        expandProgress = 1f, // 1.0f = Aberto total
+        uiState = PlayerUiState(
+            title = "Zacarias",
+            subtitle = "Capítulo 1",
+            imageUrl = "", // Deixe vazio ou coloque uma URL fake
+            isPlaying = true,
+            duration = 240000L, // 4 minutos
+            currentPosition = 60000L // 1 minuto
+        ),
+        backgroundColor = Color(0xFF8D7F60), // Uma cor de capa qualquer (Marrom/Dourado)
+        onPlayPause = {},
+        onSkipNext = {},
+        onSkipPrev = {},
+        onCollapse = {},
+        onSeek = {},
+        onOpen = {}
+    )
+}
+
+@Preview(
+    name = "Player Fechado (Mini)",
+    showBackground = true,
+    heightDp = 64, // Altura só da barra
+    widthDp = 360
+)
+@Composable
+fun PlayerMiniPreview() {
+    SharedPlayerScreen(
+        expandProgress = 0f, // 0.0f = Fechado (Mini player)
+        uiState = PlayerUiState(
+            title = "Zacarias",
+            subtitle = "Capítulo 1",
+            imageUrl = "",
+            isPlaying = false
+        ),
+        backgroundColor = Color(0xFF8D7F60),
+        onPlayPause = {},
+        onSkipNext = {},
+        onSkipPrev = {},
+        onCollapse = {},
+        onSeek = {},
+        onOpen = {}
+    )
 }

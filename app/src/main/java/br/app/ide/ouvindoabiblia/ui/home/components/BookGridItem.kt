@@ -36,7 +36,7 @@ fun BookGridItem(
     val imageRequest = remember(book.imageUrl) {
         ImageRequest.Builder(context)
             .data(book.imageUrl)
-            .size(500) // Perfeito: Tamanho nativo da sua imagem
+            .size(width = 400, height = 600) // Perfeito: Tamanho nativo da sua imagem
             .precision(Precision.INEXACT) // Mantém INEXACT para ser flexível em telas menores
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
@@ -48,7 +48,7 @@ fun BookGridItem(
         modifier = modifier
             .fillMaxWidth()
 //            .aspectRatio(1f)
-            .aspectRatio(0.7f)
+            .aspectRatio(2f / 3f)
             .clip(RoundedCornerShape(8.dp))
             // Usar uma cor estática é mais leve que desenhar um placeholder complexo
             .background(MaterialTheme.colorScheme.surfaceVariant)
