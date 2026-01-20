@@ -17,9 +17,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Cast
+import androidx.compose.material.icons.outlined.DensityMedium
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Forward10
+import androidx.compose.material.icons.outlined.Nightlight
+import androidx.compose.material.icons.outlined.Replay10
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -33,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -62,68 +67,49 @@ fun SharedPlayerScreen(
     onSeek: (Long) -> Unit,
     onOpen: () -> Unit
 ) {
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val screenWidth = this.maxWidth
 
-        // --- CÁLCULOS GEOMÉTRICOS (Retângulo Pequeno -> Retângulo Grande) ---
-
-        // 1. Definições do MINI PLAYER (Livro Pequeno)
-        // Altura do livro no mini player
+        // --- GEOMETRIA ---
         val miniHeight = 56.dp
-        // Largura respeitando proporção de livro (0.7)
         val miniWidth = miniHeight * 0.7f
-
-        // 2. Definições do FULL PLAYER (Livro Grande)
-        // Largura ocupa 70% da tela
-        val fullWidth = screenWidth * 0.55f
-        // Altura respeitando a MESMA proporção
+        val fullWidth = screenWidth * 0.65f
         val fullHeight = fullWidth / 0.7f
 
-        // 3. Interpolação (Animação)
         val currentWidth = lerp(miniWidth, fullWidth, expandProgress)
         val currentHeight = lerp(miniHeight, fullHeight, expandProgress)
 
-        // 4. Posição X (Horizontal)
-        // No Mini: Encostado na esquerda (com margem)
         val imageStartX = 16.dp
-        // No Full: Centralizado na tela
         val imageEndX = (screenWidth - fullWidth) / 2
         val currentX = lerp(imageStartX, imageEndX, expandProgress)
 
-        // 5. Posição Y (Vertical)
-        // No Mini: Centralizado verticalmente na barra de 64dp (aprox 4dp de topo)
         val imageStartY = 4.dp
-        // No Full: Margem superior maior
         val imageEndY = 100.dp
         val currentY = lerp(imageStartY, imageEndY, expandProgress)
 
-        // Arredondamento e Sombra
         val imageCorner = lerp(4.dp, 12.dp, expandProgress)
         val imageShadow = lerp(2.dp, 16.dp, expandProgress)
 
-        // Cores e Tema
+        // Cores
         val isBackgroundDark = backgroundColor.isDark()
         val headerContentColor = if (isBackgroundDark) Color.White else Color.Black
         val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
         val playerControlsColor = Color.White
         val playerSecondaryColor = Color.LightGray
 
-        // --- FUNDO COM DEGRADÊ ---
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(expandProgress)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(backgroundColor, Color(0xFF22223B))
+                        colors = listOf(backgroundColor, Color(0xFF22223B)) // Fundo bem dark
                     )
                 )
         )
 
-        // --- CONTEÚDO TELA CHEIA (Full Player) ---
+        // --- FULL PLAYER ---
         if (expandProgress > 0.1f) {
             Column(
                 modifier = Modifier
@@ -133,79 +119,184 @@ fun SharedPlayerScreen(
                     .alpha(expandProgress),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = uiState.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = playerControlsColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = uiState.subtitle,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = playerSecondaryColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
 
-                Spacer(modifier = Modifier.weight(1f))
+                // ROW 1: TÍTULO
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = uiState.title,
+                            style = MaterialTheme.typography.titleLarge, // Fonte média, não enorme
+                            fontWeight = FontWeight.Bold,
+                            color = playerControlsColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = uiState.subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = playerSecondaryColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
 
+                    // Botão Favorito (Vazado e fino)
+                    IconButton(onClick = { }, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.FavoriteBorder,
+                            contentDescription = "Favoritar",
+                            tint = playerControlsColor,
+                            modifier = Modifier.size(24.dp) // Ícone pequeno
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ROW 2: PROGRESSO
                 PlayerProgressBar(
                     currentPosition = uiState.currentPosition,
                     duration = uiState.duration,
                     onSeek = onSeek
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
+                // === ROW 3: CONTROLES DE PLAYBACK (Harmonizados e Finos) ===
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 190.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onSkipPrev, modifier = Modifier.size(56.dp)) {
-                        Icon(
-                            imageVector = Icons.Rounded.SkipNext,
-                            contentDescription = "Voltar",
-                            tint = playerControlsColor,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .rotate(180f)
+                    // 1. VELOCIDADE
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp) // Área de toque menor
+                            .clickable { },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "1x",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = playerControlsColor,
+                            fontSize = 24.sp
                         )
                     }
 
+                    // 2. VOLTAR 10s (Ícone Circular)
+                    IconButton(onClick = onSkipPrev, modifier = Modifier.size(48.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Outlined.Replay10,
+                                contentDescription = "-10s",
+                                tint = playerControlsColor,
+                                modifier = Modifier.size(40.dp)
+                            )
+//                            Text("10", style = MaterialTheme.typography.labelSmall, color = playerControlsColor, fontSize = 10.sp)
+                        }
+                    }
+
+                    // 3. PLAY/PAUSE (O único grande, mas nem tanto)
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
-                        modifier = Modifier.size(80.dp),
+                        modifier = Modifier.size(56.dp), // Reduzido de 64/80
                         onClick = onPlayPause
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                contentDescription = "Play/Pause",
+                                contentDescription = "Play",
                                 tint = Color.Black,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
 
-                    IconButton(onClick = onSkipNext, modifier = Modifier.size(56.dp)) {
+                    // 4. AVANÇAR 30s (O TRUQUE DO ESPELHO)
+                    // Usamos o Replay (que é circular) e invertemos ele horizontalmente
+                    IconButton(onClick = onSkipNext, modifier = Modifier.size(48.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Outlined.Forward10,
+                                contentDescription = "15s",
+                                tint = playerControlsColor,
+                                modifier = Modifier
+                                    .size(40.dp)
+                            )
+//                            Text("15", style = MaterialTheme.typography.labelSmall, color = playerControlsColor, fontSize = 10.sp)
+                        }
+                    }
+
+                    // 5. SLEEP (Lua)
+                    IconButton(
+                        onClick = { },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+
                         Icon(
-                            Icons.Rounded.SkipNext,
-                            "Avançar",
-                            tint = playerControlsColor,
-                            modifier = Modifier.size(36.dp)
+                            imageVector = Icons.Outlined.Nightlight,
+                            contentDescription = "Sleep",
+                            tint = playerControlsColor, // Pode colocar .copy(alpha = 0.8f) se achar muito branco
+                            modifier = Modifier.size(24.dp)
                         )
+                    }
+                }
+
+                // Espaçador fixo para aproximar rodapé
+                Spacer(modifier = Modifier.height(54.dp))
+
+                // === ROW 4: AÇÕES DO SISTEMA (Pequenos e Discretos) ===
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    // CAST (Esquerda)
+                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Cast,
+                            contentDescription = "Cast",
+                            tint = playerControlsColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    // DIREITA: SHARE + LISTA
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(32.dp) // Mais juntinhos
+                    ) {
+                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = Icons.Outlined.Share,
+                                contentDescription = "Share",
+                                tint = playerControlsColor.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = Icons.Outlined.DensityMedium,
+                                contentDescription = "Lista",
+                                tint = playerControlsColor.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp) // <--- BEM PEQUENO
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // --- HEADER ---
+        // --- HEADER (Minimizar) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -230,34 +321,23 @@ fun SharedPlayerScreen(
                     .padding(top = 12.dp),
                 letterSpacing = 2.sp
             )
-            IconButton(onClick = {}, modifier = Modifier.align(Alignment.TopEnd)) {
-                Icon(
-                    Icons.Rounded.MoreVert,
-                    "Opções",
-                    tint = headerContentColor
-                )
-            }
         }
 
-        // --- MINI PLAYER ---
+        // ... (Bloco Mini Player e Capa Animada iguais ao anterior) ...
         if (expandProgress < 0.9f) {
             val miniAlpha = 1f - (expandProgress * 3).coerceIn(0f, 1f)
-
             if (miniAlpha > 0) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
-                        // Aumentei o padding esquerdo (start) para compensar a largura da imagem
-                        // miniWidth é aprox 40dp + margem 16dp + espaçamento 12dp
                         .padding(start = 16.dp + miniWidth + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxSize()
                             .clickable { onOpen() },
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -276,48 +356,48 @@ fun SharedPlayerScreen(
                         )
                     }
                     IconButton(onClick = {}) {
-                        Icon(Icons.Rounded.FavoriteBorder, "Favoritar", tint = miniContentColor)
+                        Icon(
+                            Icons.Rounded.FavoriteBorder,
+                            "Fav",
+                            tint = miniContentColor
+                        )
                     }
                     IconButton(onClick = onPlayPause) {
                         Icon(
-                            imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = "Play/Pause",
+                            if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            "Play",
                             tint = miniContentColor
                         )
                     }
                     IconButton(onClick = onSkipNext) {
-                        Icon(Icons.Rounded.SkipNext, "Próximo", tint = miniContentColor)
+                        Icon(
+                            Icons.Rounded.SkipNext,
+                            "Prox",
+                            tint = miniContentColor
+                        )
                     }
                 }
             }
         }
-
-        // --- A CAPA (ANIMADA) ---
+        // ... (Capa Animada) ...
         Surface(
             modifier = Modifier
                 .offset {
                     IntOffset(
-                        x = with(density) { currentX.toPx().roundToInt() },
-                        y = with(density) { currentY.toPx().roundToInt() }
-                    )
+                        with(density) { currentX.toPx().roundToInt() },
+                        with(density) { currentY.toPx().roundToInt() })
                 }
                 .size(width = currentWidth, height = currentHeight)
                 .clickable(enabled = expandProgress < 0.5f) { onOpen() }
-                .shadow(
-                    elevation = imageShadow,
-                    shape = RoundedCornerShape(imageCorner),
-                    spotColor = Color.Black,
-                    ambientColor = Color.Black
-                ),
+                .shadow(imageShadow, RoundedCornerShape(imageCorner)),
             shape = RoundedCornerShape(imageCorner),
-            color = Color.DarkGray,
-            shadowElevation = 0.dp
+            color = Color.DarkGray
         ) {
             if (uiState.imageUrl.isNotEmpty()) {
                 AsyncImage(
                     model = uiState.imageUrl,
-                    contentDescription = "Capa do Livro",
-                    contentScale = ContentScale.Crop, // Crop agora funciona perfeito pois o container já é retangular
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -332,60 +412,17 @@ fun SharedPlayerScreen(
     }
 }
 
-
-// --- ÁREA DE PREVIEW (SÓ PARA DESENVOLVIMENTO) ---
-
-@Preview(
-    name = "Player Aberto (Full)",
-    showBackground = true,
-    heightDp = 800, // Simula altura de um celular
-    widthDp = 360
-)
+@Preview(name = "Full Player", heightDp = 800, widthDp = 360, showBackground = true)
 @Composable
-fun PlayerFullPreview() {
-    // Dados Fakes só para testar o visual
+fun FullPreview() {
     SharedPlayerScreen(
-        expandProgress = 1f, // 1.0f = Aberto total
-        uiState = PlayerUiState(
-            title = "Zacarias",
-            subtitle = "Capítulo 1",
-            imageUrl = "", // Deixe vazio ou coloque uma URL fake
-            isPlaying = true,
-            duration = 240000L, // 4 minutos
-            currentPosition = 60000L // 1 minuto
-        ),
-        backgroundColor = Color(0xFF8D7F60), // Uma cor de capa qualquer (Marrom/Dourado)
-        onPlayPause = {},
-        onSkipNext = {},
-        onSkipPrev = {},
-        onCollapse = {},
-        onSeek = {},
-        onOpen = {}
-    )
-}
-
-@Preview(
-    name = "Player Fechado (Mini)",
-    showBackground = true,
-    heightDp = 64, // Altura só da barra
-    widthDp = 360
-)
-@Composable
-fun PlayerMiniPreview() {
-    SharedPlayerScreen(
-        expandProgress = 0f, // 0.0f = Fechado (Mini player)
-        uiState = PlayerUiState(
-            title = "Zacarias",
-            subtitle = "Capítulo 1",
-            imageUrl = "",
-            isPlaying = false
-        ),
-        backgroundColor = Color(0xFF8D7F60),
-        onPlayPause = {},
-        onSkipNext = {},
-        onSkipPrev = {},
-        onCollapse = {},
-        onSeek = {},
-        onOpen = {}
-    )
+        1f,
+        PlayerUiState("Zacarias", "Capítulo 1", "", false),
+        Color(0xFF8D7F60),
+        {},
+        {},
+        {},
+        {},
+        {},
+        {})
 }

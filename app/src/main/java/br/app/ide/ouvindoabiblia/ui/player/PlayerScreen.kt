@@ -2,6 +2,7 @@ package br.app.ide.ouvindoabiblia.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +49,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -229,9 +233,17 @@ fun TrackInfoSection(title: String, subtitle: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlayerProgressBar(currentPosition: Long, duration: Long, onSeek: (Long) -> Unit) {
+fun PlayerProgressBar(
+    currentPosition: Long,
+    duration: Long,
+    onSeek: (Long) -> Unit
+) {
     val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
+
+    // InteractionSource é necessário para personalizar o Thumb/Track corretamente
+    val interactionSource = remember { MutableInteractionSource() }
 
     Column {
         Slider(
@@ -239,31 +251,58 @@ fun PlayerProgressBar(currentPosition: Long, duration: Long, onSeek: (Long) -> U
             onValueChange = { newProgress ->
                 onSeek((newProgress * duration).toLong())
             },
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.White,
-                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-            ),
-            modifier = Modifier.fillMaxWidth()
+            interactionSource = interactionSource,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp), // Altura total da área de toque (não do desenho)
+
+            // 1. O TRILHO FINO (4dp)
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    enabled = true,
+                    modifier = Modifier.height(4.dp), // <--- AQUI ESTÁ O SEGREDO
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f) // Cinza translúcido
+                    )
+                )
+            },
+
+            // 2. A BOLINHA MENOR (16dp)
+            thumb = {
+                SliderDefaults.Thumb(
+                    interactionSource = interactionSource,
+                    thumbSize = DpSize(16.dp, 16.dp), // <--- BOLINHA MENOR
+                    colors = SliderDefaults.colors(thumbColor = Color.White)
+                )
+            }
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+                .padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = formatTime(currentPosition),
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall
+                color = Color.LightGray, // Gray puro fica ruim no fundo escuro
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp
             )
             Text(
                 text = formatTime(duration),
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall
+                color = Color.LightGray,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp
             )
         }
     }
 }
+
 
 @Composable
 fun PlayerControls(
