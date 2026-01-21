@@ -222,19 +222,25 @@ class PlayerViewModel @Inject constructor(
         mediaController?.let { if (it.isPlaying) it.pause() else it.play() }
     }
 
+    // Usado pela Barra de Progresso
     fun seekTo(positionMs: Long) {
         mediaController?.seekTo(positionMs)
+        // Atualiza a UI imediatamente para o slider não "pular"
         _uiState.update { it.copy(currentPosition = positionMs) }
     }
 
-    // Pular +10s
+    // Usado pelo botão da Direita (+10)
     fun fastForward() {
-        mediaController?.let { it.seekTo(it.currentPosition + 10_000) }
+        mediaController?.let {
+            it.seekTo(it.currentPosition + 10_000)
+        }
     }
 
-    // Voltar -10s
+    // Usado pelo botão da Esquerda (-10)
     fun rewind() {
-        mediaController?.let { it.seekTo(it.currentPosition - 10_000) }
+        mediaController?.let {
+            it.seekTo(it.currentPosition - 10_000)
+        }
     }
 
     // NOVO: Pular para próxima FAIXA (Capítulo)

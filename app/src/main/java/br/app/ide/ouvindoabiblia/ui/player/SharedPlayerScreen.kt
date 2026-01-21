@@ -17,13 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Cast
-import androidx.compose.material.icons.outlined.DensityMedium
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Forward10
-import androidx.compose.material.icons.outlined.Nightlight
-import androidx.compose.material.icons.outlined.Replay10
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
@@ -44,6 +37,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,6 +45,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
+import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
@@ -61,8 +56,8 @@ fun SharedPlayerScreen(
     uiState: PlayerUiState,
     backgroundColor: Color,
     onPlayPause: () -> Unit,
-    onSkipNext: () -> Unit,
-    onSkipPrev: () -> Unit,
+    onRewind: () -> Unit,       // Era onSkipPrev
+    onFastForward: () -> Unit,  // Era onSkipNext
     onCollapse: () -> Unit,
     onSeek: (Long) -> Unit,
     onOpen: () -> Unit
@@ -145,12 +140,13 @@ fun SharedPlayerScreen(
                     }
 
                     // Botão Favorito (Vazado e fino)
-                    IconButton(onClick = { }, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            imageVector = Icons.Outlined.FavoriteBorder,
+//                            imageVector = Icons.Outlined.FavoriteBorder,
+                            painter = painterResource(id = R.drawable.favorite_24px),
                             contentDescription = "Favoritar",
                             tint = playerControlsColor,
-                            modifier = Modifier.size(24.dp) // Ícone pequeno
+                            modifier = Modifier.size(32.dp) // Ícone pequeno
                         )
                     }
                 }
@@ -164,7 +160,7 @@ fun SharedPlayerScreen(
                     onSeek = onSeek
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // === ROW 3: CONTROLES DE PLAYBACK (Harmonizados e Finos) ===
                 Row(
@@ -188,10 +184,10 @@ fun SharedPlayerScreen(
                     }
 
                     // 2. VOLTAR 10s (Ícone Circular)
-                    IconButton(onClick = onSkipPrev, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onRewind, modifier = Modifier.size(48.dp)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                imageVector = Icons.Outlined.Replay10,
+                                painter = painterResource(id = R.drawable.replay_10_24px),
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
                                 modifier = Modifier.size(40.dp)
@@ -217,12 +213,12 @@ fun SharedPlayerScreen(
                         }
                     }
 
-                    // 4. AVANÇAR 30s (O TRUQUE DO ESPELHO)
-                    // Usamos o Replay (que é circular) e invertemos ele horizontalmente
-                    IconButton(onClick = onSkipNext, modifier = Modifier.size(48.dp)) {
+
+                    IconButton(onClick = onFastForward, modifier = Modifier.size(48.dp)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                imageVector = Icons.Outlined.Forward10,
+//                                imageVector = Icons.Outlined.Forward10,
+                                painter = painterResource(id = R.drawable.forward_10_24px),
                                 contentDescription = "15s",
                                 tint = playerControlsColor,
                                 modifier = Modifier
@@ -237,18 +233,18 @@ fun SharedPlayerScreen(
                         onClick = { },
                         modifier = Modifier.size(32.dp)
                     ) {
-
                         Icon(
-                            imageVector = Icons.Outlined.Nightlight,
+//                            imageVector = R.drawable.time_stop,
+                            painter = painterResource(id = R.drawable.mode_night_24px),
                             contentDescription = "Sleep",
                             tint = playerControlsColor, // Pode colocar .copy(alpha = 0.8f) se achar muito branco
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
                     }
                 }
 
                 // Espaçador fixo para aproximar rodapé
-                Spacer(modifier = Modifier.height(54.dp))
+                Spacer(modifier = Modifier.height(48.dp))
 
                 // === ROW 4: AÇÕES DO SISTEMA (Pequenos e Discretos) ===
                 Row(
@@ -259,38 +255,37 @@ fun SharedPlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    // CAST (Esquerda)
-                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Cast,
-                            contentDescription = "Cast",
-                            tint = playerControlsColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    // DIREITA: SHARE + LISTA
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(32.dp) // Mais juntinhos
+                        horizontalArrangement = Arrangement.spacedBy(48.dp) // Mais juntinhos
                     ) {
                         IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
                             Icon(
-                                imageVector = Icons.Outlined.Share,
+                                painter = painterResource(id = R.drawable.cast_24px),
+                                contentDescription = "Lista",
+                                tint = playerControlsColor.copy(alpha = 1.0f),
+                                modifier = Modifier.size(32.dp) // <--- BEM PEQUENO
+                            )
+                        }
+                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.share_24px),
                                 contentDescription = "Share",
-                                tint = playerControlsColor.copy(alpha = 0.7f),
-                                modifier = Modifier.size(24.dp)
+                                tint = playerControlsColor.copy(alpha = 1.0f),
+                                modifier = Modifier.size(32.dp)
                             )
                         }
 
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                            Icon(
-                                imageVector = Icons.Outlined.DensityMedium,
-                                contentDescription = "Lista",
-                                tint = playerControlsColor.copy(alpha = 0.7f),
-                                modifier = Modifier.size(24.dp) // <--- BEM PEQUENO
-                            )
-                        }
+
+                    }
+
+                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_24px),
+                            contentDescription = "Cast",
+                            tint = playerControlsColor.copy(alpha = 1.0f),
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
                 }
             }
@@ -369,7 +364,7 @@ fun SharedPlayerScreen(
                             tint = miniContentColor
                         )
                     }
-                    IconButton(onClick = onSkipNext) {
+                    IconButton(onClick = onFastForward) {
                         Icon(
                             Icons.Rounded.SkipNext,
                             "Prox",

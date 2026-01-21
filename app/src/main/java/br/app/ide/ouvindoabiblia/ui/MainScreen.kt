@@ -238,7 +238,7 @@ fun MainScreen(
                                         restoreState = true
                                     }
                                 },
-                              
+
                                 colors = NavigationBarItemDefaults.colors(
                                     // Quando ESTÁ selecionado (Ativo)
                                     selectedIconColor = CreamBackground, // Creme
@@ -300,8 +300,8 @@ fun MainScreen(
                         uiState = playerUiState,
                         backgroundColor = animatedArtworkColor,
                         onPlayPause = { playerViewModel.togglePlayPause() },
-                        onSkipNext = { playerViewModel.skipToNextChapter() },
-                        onSkipPrev = { playerViewModel.skipToPreviousChapter() },
+                        onFastForward = { playerViewModel.fastForward() },
+                        onRewind = { playerViewModel.rewind() },
                         onSeek = { playerViewModel.seekTo(it) },
                         onCollapse = { isPlayerExpanded = false },
                         onOpen = { isPlayerExpanded = true }
