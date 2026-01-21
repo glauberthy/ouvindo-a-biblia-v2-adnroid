@@ -14,21 +14,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -58,10 +66,14 @@ fun SharedPlayerScreen(
     onPlayPause: () -> Unit,
     onRewind: () -> Unit,       // Era onSkipPrev
     onFastForward: () -> Unit,  // Era onSkipNext
+    onSetSleepTimer: (Int) -> Unit,
     onCollapse: () -> Unit,
     onSeek: (Long) -> Unit,
     onOpen: () -> Unit
 ) {
+    // ESTADO PARA CONTROLAR O DIALOG
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val screenWidth = this.maxWidth
@@ -92,6 +104,8 @@ fun SharedPlayerScreen(
         val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
         val playerControlsColor = Color.White
         val playerSecondaryColor = Color.LightGray
+
+
 
         Box(
             modifier = Modifier
@@ -230,7 +244,7 @@ fun SharedPlayerScreen(
 
                     // 5. SLEEP (Lua)
                     IconButton(
-                        onClick = { },
+                        onClick = { showSleepTimerDialog = true },
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
@@ -405,19 +419,93 @@ fun SharedPlayerScreen(
             }
         }
     }
+
+
+    if (showSleepTimerDialog) {
+        SleepTimerDialog(
+            onDismiss = { showSleepTimerDialog = false },
+            onTimeSelected = { minutes ->
+                onSetSleepTimer(minutes) // Manda pro ViewModel
+            }
+        )
+    }
 }
 
 @Preview(name = "Full Player", heightDp = 800, widthDp = 360, showBackground = true)
 @Composable
 fun FullPreview() {
     SharedPlayerScreen(
-        1f,
-        PlayerUiState("Zacarias", "Capítulo 1", "", false),
-        Color(0xFF8D7F60),
-        {},
-        {},
-        {},
-        {},
-        {},
-        {})
+        expandProgress = 1f,
+        uiState = PlayerUiState(
+            title = "Zacarias",
+            subtitle = "Capítulo 1",
+            imageUrl = "",
+            isPlaying = false
+        ),
+        backgroundColor = Color(0xFF8D7F60),
+        onPlayPause = {},
+        onRewind = {},
+        onFastForward = {},
+        onSetSleepTimer = {},
+        onCollapse = {},
+        onSeek = {},
+        onOpen = {}
+    )
+}
+
+
+@Composable
+fun SleepTimerDialog(
+    onDismiss: () -> Unit,
+    onTimeSelected: (Int) -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Parar áudio em", style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Column {
+                // Lista de opções
+                val options = listOf(
+                    5 to "5 minutos",
+                    15 to "15 minutos",
+                    30 to "30 minutos",
+                    45 to "45 minutos",
+                    60 to "1 hora",
+                    0 to "Desativar" // 0 serve para cancelar
+                )
+
+                options.forEach { (minutes, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onTimeSelected(minutes)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (minutes == 0) Icons.Rounded.Close else Icons.Rounded.Schedule,
+                            contentDescription = null,
+                            tint = if (minutes == 0) Color.Red else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

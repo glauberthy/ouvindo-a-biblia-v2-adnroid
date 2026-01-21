@@ -301,6 +301,7 @@ fun MainScreen(
                         backgroundColor = animatedArtworkColor,
                         onPlayPause = { playerViewModel.togglePlayPause() },
                         onFastForward = { playerViewModel.fastForward() },
+                        onSetSleepTimer = { minutes -> playerViewModel.setSleepTimer(minutes) },
                         onRewind = { playerViewModel.rewind() },
                         onSeek = { playerViewModel.seekTo(it) },
                         onCollapse = { isPlayerExpanded = false },

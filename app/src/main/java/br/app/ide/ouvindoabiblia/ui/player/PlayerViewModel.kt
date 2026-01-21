@@ -18,6 +18,7 @@ import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,9 @@ class PlayerViewModel @Inject constructor(
     private val repository: BibleRepository
 ) : ViewModel() {
 
+    // Variável para controlar o "Job" (o trabalho de contagem regressiva)
+    private var sleepTimerJob: Job? = null
+
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
@@ -47,6 +51,41 @@ class PlayerViewModel @Inject constructor(
 
     init {
         connectToService()
+    }
+
+
+    // Função para configurar o Timer
+    fun setSleepTimer(minutes: Int) {
+        // 1. Cancela qualquer timer anterior (se o usuário mudar de ideia)
+        sleepTimerJob?.cancel()
+
+        // Se escolheu "0" ou "Desativar", paramos por aqui
+        if (minutes <= 0) {
+            return
+        }
+
+        // 2. Inicia a contagem regressiva
+        sleepTimerJob = viewModelScope.launch {
+            // Converte minutos para milissegundos
+            val delayMs = minutes * 60 * 1000L
+
+            // Espera o tempo passar...
+            delay(delayMs)
+
+            // 3. O tempo acabou! Pausa o player.
+            pause() // Ou togglePlayPause() se você tiver lógica de verificação
+
+            // Opcional: Zerar o job
+            sleepTimerJob = null
+        }
+    }
+
+    // Função auxiliar para garantir que pausa mesmo (se não tiver uma fun pause explicita)
+    private fun pause() {
+        if (_uiState.value.isPlaying) {
+            mediaController?.pause()
+            _uiState.update { it.copy(isPlaying = false) }
+        }
     }
 
     private fun connectToService() {
