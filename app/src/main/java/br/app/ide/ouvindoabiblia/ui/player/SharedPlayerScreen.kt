@@ -154,13 +154,13 @@ fun SharedPlayerScreen(
                     }
 
                     // Botão Favorito (Vazado e fino)
-                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
                         Icon(
 //                            imageVector = Icons.Outlined.FavoriteBorder,
                             painter = painterResource(id = R.drawable.favorite_24px),
                             contentDescription = "Favoritar",
                             tint = playerControlsColor,
-                            modifier = Modifier.size(32.dp) // Ícone pequeno
+                            modifier = Modifier.size(24.dp) // Ícone pequeno
                         )
                     }
                 }
@@ -183,17 +183,15 @@ fun SharedPlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // 1. VELOCIDADE
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp) // Área de toque menor
-                            .clickable { },
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = { },
+                        modifier = Modifier.size(40.dp) // Tamanho da "Bolha" de clique
                     ) {
-                        Text(
-                            text = "1x",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = playerControlsColor,
-                            fontSize = 24.sp
+                        Icon(
+                            painter = painterResource(id = R.drawable.speed_1_2_24px),
+                            contentDescription = "Velocidade",
+                            tint = playerControlsColor,
+                            modifier = Modifier.size(24.dp) // Tamanho do desenho
                         )
                     }
 
@@ -204,9 +202,8 @@ fun SharedPlayerScreen(
                                 painter = painterResource(id = R.drawable.replay_10_24px),
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(30.dp)
                             )
-//                            Text("10", style = MaterialTheme.typography.labelSmall, color = playerControlsColor, fontSize = 10.sp)
                         }
                     }
 
@@ -214,7 +211,7 @@ fun SharedPlayerScreen(
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
-                        modifier = Modifier.size(56.dp), // Reduzido de 64/80
+                        modifier = Modifier.size(64.dp),
                         onClick = onPlayPause
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -222,37 +219,33 @@ fun SharedPlayerScreen(
                                 imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = "Play",
                                 tint = Color.Black,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
                     }
 
-
+                    // 4. AVANÇAR
                     IconButton(onClick = onFastForward, modifier = Modifier.size(48.dp)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-//                                imageVector = Icons.Outlined.Forward10,
                                 painter = painterResource(id = R.drawable.forward_10_24px),
                                 contentDescription = "15s",
                                 tint = playerControlsColor,
-                                modifier = Modifier
-                                    .size(40.dp)
+                                modifier = Modifier.size(30.dp)
                             )
-//                            Text("15", style = MaterialTheme.typography.labelSmall, color = playerControlsColor, fontSize = 10.sp)
                         }
                     }
 
                     // 5. SLEEP (Lua)
                     IconButton(
                         onClick = { showSleepTimerDialog = true },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-//                            imageVector = R.drawable.time_stop,
                             painter = painterResource(id = R.drawable.mode_night_24px),
                             contentDescription = "Sleep",
-                            tint = playerControlsColor, // Pode colocar .copy(alpha = 0.8f) se achar muito branco
-                            modifier = Modifier.size(32.dp)
+                            tint = playerControlsColor,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -271,14 +264,14 @@ fun SharedPlayerScreen(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(48.dp) // Mais juntinhos
+                        horizontalArrangement = Arrangement.spacedBy(32.dp)
                     ) {
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
                             Icon(
                                 painter = painterResource(id = R.drawable.cast_24px),
                                 contentDescription = "Lista",
                                 tint = playerControlsColor.copy(alpha = 1.0f),
-                                modifier = Modifier.size(32.dp) // <--- BEM PEQUENO
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                         IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
@@ -286,20 +279,20 @@ fun SharedPlayerScreen(
                                 painter = painterResource(id = R.drawable.share_24px),
                                 contentDescription = "Share",
                                 tint = playerControlsColor.copy(alpha = 1.0f),
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
-
                     }
 
-                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
+
                         Icon(
-                            painter = painterResource(id = R.drawable.menu_24px),
-                            contentDescription = "Cast",
+                            painter = painterResource(id = R.drawable.playlist_play_24px),
+                            contentDescription = "Capítulos",
                             tint = playerControlsColor.copy(alpha = 1.0f),
-                            modifier = Modifier.size(32.dp)
-                        )
+                            modifier = Modifier.size(24.dp),
+                            )
                     }
                 }
             }
