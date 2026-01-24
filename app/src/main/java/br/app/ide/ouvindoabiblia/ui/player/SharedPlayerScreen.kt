@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import br.app.ide.ouvindoabiblia.R
+import br.app.ide.ouvindoabiblia.ui.player.components.CastButton
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
@@ -392,14 +393,19 @@ fun SharedPlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Cast (Prioridade 1 de Hardware)
-                IconButton(onClick = { }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.cast_24px),
-                        contentDescription = "Cast",
-                        tint = headerContentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+//                IconButton(onClick = { }) {
+//                    Icon(
+//                        painter = painterResource(id = R.drawable.cast_24px),
+//                        contentDescription = "Cast",
+//                        tint = headerContentColor,
+//                        modifier = Modifier.size(24.dp)
+//                    )
+//                }
+
+                CastButton(
+                    color = headerContentColor,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
 
                 IconButton(onClick = onShare) {
                     Icon(

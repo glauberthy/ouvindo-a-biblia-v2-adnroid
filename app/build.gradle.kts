@@ -107,4 +107,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.palette.ktx)
     implementation(libs.androidx.core.splashscreen)
+
+    // --- Google Cast ---
+    implementation(libs.play.services.cast.framework)
 }
