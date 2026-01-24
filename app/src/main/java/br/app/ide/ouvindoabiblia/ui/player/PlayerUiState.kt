@@ -10,8 +10,7 @@ data class PlayerUiState(
     val duration: Long = 0L,
     val currentPosition: Long = 0L,
     val isBuffering: Boolean = false,
-
-    // --- NOVOS CAMPOS PARA A UI ---
+    val playbackSpeed: Float = 1.0f,
     val isShuffleEnabled: Boolean = false,
     val repeatMode: Int = 0, // 0 = OFF, 1 = ONE, 2 = ALL
 

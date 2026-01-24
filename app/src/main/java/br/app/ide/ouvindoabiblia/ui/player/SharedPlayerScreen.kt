@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -29,6 +30,8 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +77,7 @@ fun SharedPlayerScreen(
     onCollapse: () -> Unit,
     onSeek: (Long) -> Unit,
     onShare: () -> Unit,
+    onSetSpeed: (Float) -> Unit,
     onOpen: () -> Unit
 ) {
     // ESTADO PARA CONTROLAR O DIALOG
@@ -110,6 +114,7 @@ fun SharedPlayerScreen(
         val playerControlsColor = Color.White
         val playerSecondaryColor = Color.LightGray
 
+        var showSpeedMenu by remember { mutableStateOf(false) }
 
 
         Box(
@@ -192,16 +197,39 @@ fun SharedPlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // 1. VELOCIDADE
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier.size(48.dp) // Área de toque maior
-                    ) {
-                        Text(
-                            text = "1.0x",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = playerControlsColor
-                        )
+                    Box {
+                        IconButton(
+                            onClick = { showSpeedMenu = true },
+                            modifier = Modifier.size(48.dp) // Área de toque maior
+                        ) {
+                            Text(
+                                text = "${"%.1f".format(uiState.playbackSpeed)}x",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = playerControlsColor
+                            )
+                        }
+
+                        // O Menu Dropdown
+                        DropdownMenu(
+                            expanded = showSpeedMenu,
+                            onDismissRequest = { showSpeedMenu = false }
+                        ) {
+                            val speeds = listOf(0.8f, 1.0f, 1.2f, 1.5f, 2.0f)
+                            speeds.forEach { speed ->
+                                DropdownMenuItem(
+                                    text = { Text("${speed}x") },
+                                    onClick = {
+                                        onSetSpeed(speed)
+                                        showSpeedMenu = false
+                                    },
+                                    // Destaca a velocidade atual
+                                    trailingIcon = if (uiState.playbackSpeed == speed) {
+                                        { Icon(Icons.Default.Check, null) }
+                                    } else null
+                                )
+                            }
+                        }
                     }
 
                     // 2. VOLTAR 10s (Bem Grande para ler o número)
@@ -372,7 +400,7 @@ fun SharedPlayerScreen(
                     )
                 }
 
-                IconButton(onClick =  onShare) {
+                IconButton(onClick = onShare) {
                     Icon(
                         painter = painterResource(id = R.drawable.share_24px),
                         contentDescription = "Share",
@@ -511,6 +539,7 @@ fun FullPreview() {
         onCollapse = {},
         onSeek = {},
         onShare = {},
+        onSetSpeed = {},
         onOpen = {}
     )
 }

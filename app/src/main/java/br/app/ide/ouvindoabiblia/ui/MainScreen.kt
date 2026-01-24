@@ -313,6 +313,7 @@ fun MainScreen(
                                 subtitle = playerUiState.subtitle
                             )
                         },
+                        onSetSpeed = { speed -> playerViewModel.setPlaybackSpeed(speed) },
                         onOpen = { isPlayerExpanded = true }
                     )
                 }

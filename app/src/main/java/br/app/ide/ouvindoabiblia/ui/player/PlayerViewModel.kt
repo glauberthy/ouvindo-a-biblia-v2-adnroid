@@ -208,8 +208,7 @@ class PlayerViewModel @Inject constructor(
                     subtitle = subtitle,
                     imageUrl = mediaItem?.mediaMetadata?.artworkUri?.toString() ?: state.imageUrl,
                     currentChapterIndex = player.currentMediaItemIndex,
-
-                    // LENDO ESTADOS NOVOS DO PLAYER
+                    playbackSpeed = player.playbackParameters.speed,
                     isShuffleEnabled = player.shuffleModeEnabled,
                     repeatMode = player.repeatMode
                 )
@@ -318,6 +317,11 @@ class PlayerViewModel @Inject constructor(
     fun onChapterSelected(index: Int) {
         mediaController?.seekTo(index, 0L)
         if (mediaController?.isPlaying == false) mediaController?.play()
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        mediaController?.setPlaybackSpeed(speed)
+        _uiState.update { it.copy(playbackSpeed = speed) }
     }
 
     override fun onCleared() {

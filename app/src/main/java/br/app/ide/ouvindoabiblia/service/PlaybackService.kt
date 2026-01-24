@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
 import androidx.annotation.OptIn
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.core.graphics.drawable.toBitmap
@@ -74,12 +73,7 @@ class PlaybackService : MediaLibraryService() {
         player.stop()
 
         // 2. Remove a notificação da barra de status imediatamente
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
 
         // 3. Mata o serviço (isso vai chamar o onDestroy abaixo)
         stopSelf()
