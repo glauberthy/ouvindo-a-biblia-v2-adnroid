@@ -314,6 +314,9 @@ fun MainScreen(
                             )
                         },
                         onSetSpeed = { speed -> playerViewModel.setPlaybackSpeed(speed) },
+                        onChapterSelect = { index ->
+                            playerViewModel.onChapterSelected(index)
+                        },
                         onOpen = { isPlayerExpanded = true }
                     )
                 }

@@ -78,10 +78,13 @@ fun SharedPlayerScreen(
     onSeek: (Long) -> Unit,
     onShare: () -> Unit,
     onSetSpeed: (Float) -> Unit,
+    onChapterSelect: (Int) -> Unit,
     onOpen: () -> Unit
 ) {
-    // ESTADO PARA CONTROLAR O DIALOG
+    // ESTADO
     var showSleepTimerDialog by remember { mutableStateOf(false) }
+    var showSpeedMenu by remember { mutableStateOf(false) }
+    var showChapters by remember { mutableStateOf(false) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -113,8 +116,6 @@ fun SharedPlayerScreen(
         val miniContentColor = if (isBackgroundDark) Color.White else Color.Black
         val playerControlsColor = Color.White
         val playerSecondaryColor = Color.LightGray
-
-        var showSpeedMenu by remember { mutableStateOf(false) }
 
 
         Box(
@@ -315,7 +316,7 @@ fun SharedPlayerScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
-                        onClick = { /* Abrir Lista */ },
+                        onClick = { showChapters = true },
                         shape = CircleShape,
                         // Fundo levemente mais claro
                         color = Color.White.copy(alpha = 0.2f),
@@ -518,6 +519,18 @@ fun SharedPlayerScreen(
             }
         )
     }
+
+    if (showChapters) {
+        br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet(
+            chapters = uiState.chapters,
+            currentIndex = uiState.currentChapterIndex,
+            accentColor = backgroundColor,
+            onChapterClick = { index ->
+                onChapterSelect(index)
+            },
+            onDismiss = { showChapters = false }
+        )
+    }
 }
 
 @Preview(name = "Full Player", heightDp = 800, widthDp = 360, showBackground = true)
@@ -540,6 +553,7 @@ fun FullPreview() {
         onSeek = {},
         onShare = {},
         onSetSpeed = {},
+        onChapterSelect = {},
         onOpen = {}
     )
 }
