@@ -69,6 +69,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
+import br.app.ide.ouvindoabiblia.util.ShareUtils.shareCurrentContent
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
 
@@ -305,6 +306,13 @@ fun MainScreen(
                         onRewind = { playerViewModel.rewind() },
                         onSeek = { playerViewModel.seekTo(it) },
                         onCollapse = { isPlayerExpanded = false },
+                        onShare = {
+                            shareCurrentContent(
+                                context = context,
+                                title = playerUiState.title,
+                                subtitle = playerUiState.subtitle
+                            )
+                        },
                         onOpen = { isPlayerExpanded = true }
                     )
                 }

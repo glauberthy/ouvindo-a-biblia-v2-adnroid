@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.NightlightRound
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.Icon
@@ -40,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -69,6 +73,7 @@ fun SharedPlayerScreen(
     onSetSleepTimer: (Int) -> Unit,
     onCollapse: () -> Unit,
     onSeek: (Long) -> Unit,
+    onShare: () -> Unit,
     onOpen: () -> Unit
 ) {
     // ESTADO PARA CONTROLAR O DIALOG
@@ -119,6 +124,7 @@ fun SharedPlayerScreen(
         )
 
         // --- FULL PLAYER ---
+        // --- CONTEÚDO TELA CHEIA (Full Player) ---
         if (expandProgress > 0.1f) {
             Column(
                 modifier = Modifier
@@ -138,7 +144,7 @@ fun SharedPlayerScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = uiState.title,
-                            style = MaterialTheme.typography.titleLarge, // Fonte média, não enorme
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = playerControlsColor,
                             maxLines = 1,
@@ -153,14 +159,17 @@ fun SharedPlayerScreen(
                         )
                     }
 
-                    // Botão Favorito (Vazado e fino)
-                    IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
+                    // Botão Favorito (Estilo Fino/Vazado)
+                    IconButton(
+                        onClick = { },
+                        modifier = Modifier.size(48.dp) // Área de toque
+                    ) {
                         Icon(
-//                            imageVector = Icons.Outlined.FavoriteBorder,
-                            painter = painterResource(id = R.drawable.favorite_24px),
+                            // FavoriteBorder = Coração vazio (apenas o traço)
+                            imageVector = Icons.Rounded.FavoriteBorder,
                             contentDescription = "Favoritar",
                             tint = playerControlsColor,
-                            modifier = Modifier.size(24.dp) // Ícone pequeno
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
@@ -174,9 +183,9 @@ fun SharedPlayerScreen(
                     onSeek = onSeek
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp)) // Aumentei um pouco o espaçamento
 
-                // === ROW 3: CONTROLES DE PLAYBACK (Harmonizados e Finos) ===
+                // === ROW 3: CONTROLES DE PLAYBACK (Aumentados) ===
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -185,33 +194,41 @@ fun SharedPlayerScreen(
                     // 1. VELOCIDADE
                     IconButton(
                         onClick = { },
-                        modifier = Modifier.size(40.dp) // Tamanho da "Bolha" de clique
+                        modifier = Modifier.size(48.dp) // Área de toque maior
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.speed_1_2_24px),
-                            contentDescription = "Velocidade",
-                            tint = playerControlsColor,
-                            modifier = Modifier.size(24.dp) // Tamanho do desenho
+                        Text(
+                            text = "1.0x",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = playerControlsColor
                         )
                     }
 
-                    // 2. VOLTAR 10s (Ícone Circular)
-                    IconButton(onClick = onRewind, modifier = Modifier.size(48.dp)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // 2. VOLTAR 10s (Bem Grande para ler o número)
+                    IconButton(onClick = onRewind, modifier = Modifier.size(56.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                painter = painterResource(id = R.drawable.replay_10_24px),
+                                imageVector = Icons.Rounded.Replay, // Rounded é mais clean que Default
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(36.dp)
+                            )
+                            // Texto "10" bem pequeno dentro
+                            Text(
+                                text = "10",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = playerControlsColor,
+                                modifier = Modifier.padding(top = 5.dp)
                             )
                         }
                     }
 
-                    // 3. PLAY/PAUSE (O único grande, mas nem tanto)
+                    // 3. PLAY/PAUSE (Rei da Tela)
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
-                        modifier = Modifier.size(64.dp),
+                        modifier = Modifier.size(72.dp),
                         onClick = onPlayPause
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -219,19 +236,27 @@ fun SharedPlayerScreen(
                                 imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = "Play",
                                 tint = Color.Black,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(40.dp)
                             )
                         }
                     }
-
-                    // 4. AVANÇAR
-                    IconButton(onClick = onFastForward, modifier = Modifier.size(48.dp)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = onFastForward, modifier = Modifier.size(56.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                painter = painterResource(id = R.drawable.forward_10_24px),
-                                contentDescription = "15s",
+                                imageVector = Icons.Rounded.Replay, // Rounded é mais clean que Default
+                                contentDescription = "-10s",
                                 tint = playerControlsColor,
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .scale(scaleX = -1f, scaleY = 1f)
+                            )
+                            // Texto "10" bem pequeno dentro
+                            Text(
+                                text = "30",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = playerControlsColor,
+                                modifier = Modifier.padding(top = 5.dp)
                             )
                         }
                     }
@@ -239,74 +264,79 @@ fun SharedPlayerScreen(
                     // 5. SLEEP (Lua)
                     IconButton(
                         onClick = { showSleepTimerDialog = true },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.mode_night_24px),
+                            // Outlined.Nightlight é apenas o contorno da lua (o que você queria)
+                            imageVector = Icons.Rounded.NightlightRound,
                             contentDescription = "Sleep",
                             tint = playerControlsColor,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                 }
 
-                // Espaçador fixo para aproximar rodapé
-                Spacer(modifier = Modifier.height(48.dp))
+                // Empurra tudo para baixo
+                Spacer(modifier = Modifier.weight(1f))
 
-                // === ROW 4: AÇÕES DO SISTEMA (Pequenos e Discretos) ===
-                Row(
+                // === ROW 4: BOTÃO CAPÍTULOS ===
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 32.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(bottom = 56.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    Surface(
+                        onClick = { /* Abrir Lista */ },
+                        shape = CircleShape,
+                        // Fundo levemente mais claro
+                        color = Color.White.copy(alpha = 0.2f),
+                        // Borda mais forte para definir o limite
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            Color.White.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.height(50.dp)
                     ) {
-                        IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.cast_24px),
-                                contentDescription = "Lista",
-                                tint = playerControlsColor.copy(alpha = 1.0f),
-                                modifier = Modifier.size(24.dp)
+                                imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
+                                contentDescription = null,
+                                tint = Color.White, // Branco Puro para destaque
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = "CAPÍTULOS",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White, // Branco Puro
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
                             )
                         }
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.share_24px),
-                                contentDescription = "Share",
-                                tint = playerControlsColor.copy(alpha = 1.0f),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                    }
-
-                    IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
-
-                        Icon(
-                            painter = painterResource(id = R.drawable.playlist_play_24px),
-                            contentDescription = "Capítulos",
-                            tint = playerControlsColor.copy(alpha = 1.0f),
-                            modifier = Modifier.size(24.dp),
-                            )
                     }
                 }
             }
         }
-
         // --- HEADER (Minimizar) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
-                .padding(top = 32.dp, start = 16.dp, end = 16.dp)
+                .height(80.dp) // Altura fixa e segura
+                .padding(top = 40.dp, start = 16.dp, end = 16.dp)
                 .alpha(expandProgress)
         ) {
-            IconButton(onClick = onCollapse, modifier = Modifier.align(Alignment.TopStart)) {
+            // 1. ESQUERDA: Minimizar
+            IconButton(
+                onClick = onCollapse,
+                modifier = Modifier.align(Alignment.CenterStart) // Fixado na esquerda
+            ) {
                 Icon(
                     Icons.Rounded.KeyboardArrowDown,
                     "Minimizar",
@@ -314,15 +344,53 @@ fun SharedPlayerScreen(
                     modifier = Modifier.size(32.dp)
                 )
             }
+
+            // 2. CENTRO: Título (Absoluto)
+            // O Box permite que este texto fique EXATAMENTE no meio,
+            // ignorando se tem 1 ou 3 botões nas laterais.
             Text(
-                text = "TOCANDO AGORA",
+                text = "OUVINDO A BÍBLIA",
                 color = headerContentColor.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 12.dp),
-                letterSpacing = 2.sp
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                modifier = Modifier.align(Alignment.Center)
             )
+
+            // 3. DIREITA: Ações de Sistema
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Cast (Prioridade 1 de Hardware)
+                IconButton(onClick = { }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.cast_24px),
+                        contentDescription = "Cast",
+                        tint = headerContentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                IconButton(onClick =  onShare) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.share_24px),
+                        contentDescription = "Share",
+                        tint = headerContentColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+//                // Menu (Configurações)
+//                IconButton(onClick = { }) {
+//                    Icon(
+//                        Icons.Rounded.MoreVert,
+//                        contentDescription = "Menu",
+//                        tint = headerContentColor,
+//                        modifier = Modifier.size(24.dp)
+//                    )
+//                }
+            }
         }
 
         // ... (Bloco Mini Player e Capa Animada iguais ao anterior) ...
@@ -442,6 +510,7 @@ fun FullPreview() {
         onSetSleepTimer = {},
         onCollapse = {},
         onSeek = {},
+        onShare = {},
         onOpen = {}
     )
 }
