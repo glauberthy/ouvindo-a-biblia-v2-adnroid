@@ -19,6 +19,7 @@ import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadOptions
+import com.google.android.gms.cast.MediaSeekOptions
 import com.google.android.gms.cast.MediaStatus
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
@@ -50,7 +51,7 @@ class PlayerViewModel @Inject constructor(
     private var castContext: CastContext? = null
     private var castSession: CastSession? = null
 
-    // Ouvinte que monitora o status da TV (Fim de música, Pause, etc)
+    // Ouvinte da TV
     private val castCallback = object : RemoteMediaClient.Callback() {
         override fun onStatusUpdated() {
             updateStateFromCast()
@@ -62,31 +63,31 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // Gerenciador de Sessão (Conecta/Desconecta)
+    // Gerenciador de Sessão
     private val sessionManagerListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarting(session: CastSession) {}
 
         override fun onSessionStarted(session: CastSession, sessionId: String) {
             castSession = session
-            // Registra o ouvinte para saber quando a música acaba
             session.remoteMediaClient?.registerCallback(castCallback)
 
-            loadCurrentMediaOnCast()
+            // Conectou? Manda o capítulo ATUAL da UI imediatamente
+            val currentChapter =
+                _uiState.value.chapters.getOrNull(_uiState.value.currentChapterIndex)
+            if (currentChapter != null) {
+                loadMediaOnCast(currentChapter, _uiState.value.currentPosition)
+            }
             mediaController?.pause()
-
-            // Força atualização da UI para mostrar estado "Conectado"
             updateStateFromCast()
         }
 
         override fun onSessionStartFailed(session: CastSession, error: Int) {}
         override fun onSessionEnding(session: CastSession) {
-            // Remove o ouvinte para evitar crash
             session.remoteMediaClient?.unregisterCallback(castCallback)
         }
 
         override fun onSessionEnded(session: CastSession, error: Int) {
             castSession = null
-            // Quando desconectar da TV, atualiza UI voltando para estado local (pausado)
             _uiState.update { it.copy(isPlaying = false) }
         }
 
@@ -123,15 +124,14 @@ class PlayerViewModel @Inject constructor(
         connectToService()
     }
 
-    // --- ATUALIZA A UI COM DADOS DA TV ---
     private fun updateStateFromCast() {
         val session = castSession ?: return
         if (!session.isConnected) return
-
         val remote = session.remoteMediaClient ?: return
+
+        // Evita update se o RemoteClient estiver nulo ou instável
         val isPlaying = remote.isPlaying
         val duration = remote.streamDuration
-        // Evita piscar 0 se a duração ainda não carregou
         val finalDuration = if (duration > 0) duration else _uiState.value.duration
 
         _uiState.update {
@@ -143,57 +143,60 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // --- AUTO-ADVANCE NA TV ---
     private fun checkCastCompletion() {
         val remote = castSession?.remoteMediaClient ?: return
-        // Se estiver PARADO (IDLE) e o motivo for ACABOU (FINISHED)
         if (remote.playerState == MediaStatus.PLAYER_STATE_IDLE &&
             remote.idleReason == MediaStatus.IDLE_REASON_FINISHED
         ) {
-
-            // Avança para o próximo
-            Log.d("PlayerViewModel", "Cast acabou. Avançando...")
             skipToNextChapter()
         }
     }
 
-    private fun loadCurrentMediaOnCast() {
+    // --- NOVA FUNÇÃO ROBUSTA: Recebe o capítulo exato ---
+    private fun loadMediaOnCast(
+        chapter: ChapterWithBookInfo,
+        positionMs: Long = 0,
+        autoPlay: Boolean = true
+    ) {
         val session = castSession ?: return
         val remoteMediaClient = session.remoteMediaClient ?: return
 
+        // Usa os dados do capítulo passado, e não do State (que pode estar desatualizado)
         val currentState = _uiState.value
-        val currentChapter =
-            currentState.chapters.getOrNull(currentState.currentChapterIndex) ?: return
 
         val movieMetadata = CastMediaMetadata(CastMediaMetadata.MEDIA_TYPE_MUSIC_TRACK)
-        movieMetadata.putString(CastMediaMetadata.KEY_TITLE, currentState.title)
-        movieMetadata.putString(CastMediaMetadata.KEY_SUBTITLE, currentState.subtitle)
-        if (currentState.imageUrl.isNotEmpty()) {
-            movieMetadata.addImage(WebImage(Uri.parse(currentState.imageUrl)))
+        movieMetadata.putString(CastMediaMetadata.KEY_TITLE, currentState.title) // Livro
+        movieMetadata.putString(
+            CastMediaMetadata.KEY_SUBTITLE,
+            "Capítulo ${chapter.chapter.number}"
+        )
+
+        // Usa a capa do capítulo ou a capa geral do livro
+        val coverToUse = chapter.coverUrl ?: currentState.imageUrl
+        if (coverToUse.isNotEmpty()) {
+            movieMetadata.addImage(WebImage(Uri.parse(coverToUse)))
         }
 
-        val mediaInfo = MediaInfo.Builder(currentChapter.chapter.audioUrl)
+        val mediaInfo = MediaInfo.Builder(chapter.chapter.audioUrl)
             .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
             .setContentType("audio/ogg")
             .setMetadata(movieMetadata)
             .build()
 
         val loadOptions = MediaLoadOptions.Builder()
-            .setAutoplay(true)
-            .setPlayPosition(0) // Começa do zero ao trocar de faixa
+            .setAutoplay(autoPlay)
+            .setPlayPosition(positionMs)
             .build()
 
         remoteMediaClient.load(mediaInfo, loadOptions)
     }
 
-    // --- CONTROLES MISTOS (TV ou Local) ---
+    // --- CONTROLES ---
 
     fun togglePlayPause() {
         if (castSession != null && castSession?.isConnected == true) {
             val remote = castSession?.remoteMediaClient ?: return
-            if (remote.isPlaying) remote.pause() else remote.play()
-            // Atualização otimista da UI
-            _uiState.update { it.copy(isPlaying = !remote.isPlaying) }
+            remote.togglePlayback()
         } else {
             mediaController?.let { if (it.isPlaying) it.pause() else it.play() }
         }
@@ -201,7 +204,12 @@ class PlayerViewModel @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         if (castSession != null && castSession?.isConnected == true) {
-            castSession?.remoteMediaClient?.seek(positionMs)
+            // Seek Robusto: Mantém o estado (se estava tocando, continua tocando)
+            val seekOptions = MediaSeekOptions.Builder()
+                .setPosition(positionMs)
+                .setResumeState(MediaSeekOptions.RESUME_STATE_UNCHANGED)
+                .build()
+            castSession?.remoteMediaClient?.seek(seekOptions)
         } else {
             mediaController?.seekTo(positionMs)
         }
@@ -211,7 +219,7 @@ class PlayerViewModel @Inject constructor(
     fun fastForward() {
         if (castSession != null && castSession?.isConnected == true) {
             val current = castSession?.remoteMediaClient?.approximateStreamPosition ?: 0
-            castSession?.remoteMediaClient?.seek(current + 10_000)
+            seekTo(current + 10_000)
         } else {
             mediaController?.let { it.seekTo(it.currentPosition + 10_000) }
         }
@@ -220,39 +228,52 @@ class PlayerViewModel @Inject constructor(
     fun rewind() {
         if (castSession != null && castSession?.isConnected == true) {
             val current = castSession?.remoteMediaClient?.approximateStreamPosition ?: 0
-            castSession?.remoteMediaClient?.seek(maxOf(0, current - 10_000))
+            seekTo(maxOf(0, current - 10_000))
         } else {
             mediaController?.let { it.seekTo(it.currentPosition - 10_000) }
         }
     }
 
     fun onChapterSelected(index: Int) {
+        // 1. Atualiza Localmente
         mediaController?.seekTo(index, 0L)
         if (mediaController?.isPlaying == false) mediaController?.play()
 
-        if (castSession != null && castSession?.isConnected == true) {
-            viewModelScope.launch {
-                // Pequeno delay para o UI state atualizar o indice antes de mandar
-                delay(100)
-                loadCurrentMediaOnCast()
+        // 2. Atualiza no Cast (SEM DELAY, SEM RACE CONDITION)
+        if (castSession?.isConnected == true) {
+            val chapter = _uiState.value.chapters.getOrNull(index)
+            if (chapter != null) {
+                // Manda carregar explicitamente este capítulo
+                loadMediaOnCast(chapter, 0L, true)
             }
         }
     }
 
-    // --- NOVO LOOP DE PROGRESSO UNIFICADO ---
+    fun skipToNextChapter() {
+        val nextIndex = _uiState.value.currentChapterIndex + 1
+        // Verificação de segurança local
+        if (nextIndex < _uiState.value.chapters.size) {
+            onChapterSelected(nextIndex)
+        }
+    }
+
+    fun skipToPreviousChapter() {
+        val prevIndex = _uiState.value.currentChapterIndex - 1
+        if (prevIndex >= 0) {
+            onChapterSelected(prevIndex)
+        }
+    }
+
+    // --- LOOP PROGRESSO ---
     private fun startProgressLoop() {
         viewModelScope.launch {
             while (isActive) {
-                // 1. Prioridade: CAST
                 if (castSession != null && castSession?.isConnected == true) {
                     val remote = castSession?.remoteMediaClient
                     if (remote != null && remote.isPlaying) {
-                        val currentPos = remote.approximateStreamPosition
-                        _uiState.update { it.copy(currentPosition = currentPos) }
+                        _uiState.update { it.copy(currentPosition = remote.approximateStreamPosition) }
                     }
-                }
-                // 2. Fallback: PLAYER LOCAL
-                else {
+                } else {
                     mediaController?.let { player ->
                         if (player.isPlaying) {
                             _uiState.update { it.copy(currentPosition = player.currentPosition) }
@@ -264,16 +285,33 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // --- RESTO DO CÓDIGO (Igual ao Original) ---
+    // --- PADRÃO ---
+    fun toggleShuffle() {
+        mediaController?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
+    }
 
+    fun toggleRepeat() {
+        mediaController?.let {
+            val newMode = when (it.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
+                Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
+                else -> Player.REPEAT_MODE_OFF
+            }
+            it.repeatMode = newMode
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        mediaController?.setPlaybackSpeed(speed)
+        _uiState.update { it.copy(playbackSpeed = speed) }
+    }
+
+    // Timer e Conexão Service (Mantidos)
     fun setSleepTimer(minutes: Int) {
         sleepTimerJob?.cancel()
         if (minutes <= 0) return
-        sleepTimerJob = viewModelScope.launch {
-            delay(minutes * 60 * 1000L)
-            pause()
-            sleepTimerJob = null
-        }
+        sleepTimerJob =
+            viewModelScope.launch { delay(minutes * 60 * 1000L); pause(); sleepTimerJob = null }
     }
 
     private fun pause() {
@@ -288,7 +326,6 @@ class PlayerViewModel @Inject constructor(
         val sessionToken =
             SessionToken(context, ComponentName(context, PlaybackService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-
         controllerFuture?.addListener({
             try {
                 mediaController = controllerFuture?.get()
@@ -300,9 +337,7 @@ class PlayerViewModel @Inject constructor(
                     pendingBookId = null
                 } else if (pendingBookId != null) {
                     loadBookPlaylist(pendingBookId!!, pendingBookTitle!!, pendingCoverUrl!!)
-                    pendingBookId = null
-                    pendingBookTitle = null
-                    pendingCoverUrl = null
+                    pendingBookId = null; pendingBookTitle = null; pendingCoverUrl = null
                 } else {
                     updateStateFromPlayer()
                     loadCurrentBookChaptersList()
@@ -359,17 +394,11 @@ class PlayerViewModel @Inject constructor(
         val mediaItems = chapters.map { chapterInfo ->
             val extras = Bundle()
             extras.putString("book_id", bookId)
-            val metadata = MediaMetadata.Builder()
-                .setTitle(chapterInfo.bookName)
+            val metadata = MediaMetadata.Builder().setTitle(chapterInfo.bookName)
                 .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
-                .setArtworkUri(Uri.parse(chapterInfo.coverUrl))
-                .setExtras(extras)
-                .build()
-            MediaItem.Builder()
-                .setUri(chapterInfo.chapter.audioUrl)
-                .setMediaId(chapterInfo.chapter.id.toString())
-                .setMediaMetadata(metadata)
-                .build()
+                .setArtworkUri(Uri.parse(chapterInfo.coverUrl)).setExtras(extras).build()
+            MediaItem.Builder().setUri(chapterInfo.chapter.audioUrl)
+                .setMediaId(chapterInfo.chapter.id.toString()).setMediaMetadata(metadata).build()
         }
         controller.setMediaItems(mediaItems, 0, 0L)
         controller.prepare()
@@ -421,54 +450,10 @@ class PlayerViewModel @Inject constructor(
         })
     }
 
-    fun skipToNextChapter() {
-        if (mediaController?.hasNextMediaItem() == true) {
-            mediaController?.seekToNextMediaItem()
-        }
-        // Se estiver no Cast, a atualização do Player Local vai disparar 'onMediaItemTransition'
-        // Mas podemos forçar o load no Cast aqui se quisermos ser mais rápidos.
-        // O setupPlayerListener -> updateStateFromPlayer -> UI Update vai acontecer
-
-        if (castSession?.isConnected == true) {
-            // Espera o player local mudar de índice
-            viewModelScope.launch {
-                delay(500)
-                loadCurrentMediaOnCast()
-            }
-        }
-    }
-
-    fun skipToPreviousChapter() {
-        if (mediaController?.hasPreviousMediaItem() == true) mediaController?.seekToPreviousMediaItem()
-    }
-
-    fun toggleShuffle() {
-        mediaController?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-    }
-
-    fun toggleRepeat() {
-        mediaController?.let {
-            val newMode = when (it.repeatMode) {
-                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
-                Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
-                else -> Player.REPEAT_MODE_OFF
-            }
-            it.repeatMode = newMode
-        }
-    }
-
-    fun setPlaybackSpeed(speed: Float) {
-        mediaController?.setPlaybackSpeed(speed)
-        _uiState.update { it.copy(playbackSpeed = speed) }
-    }
-
     override fun onCleared() {
         super.onCleared()
         controllerFuture?.let { MediaController.releaseFuture(it) }
-        // Importante: Limpar callbacks do Cast
-        if (castSession != null) {
-            castSession?.remoteMediaClient?.unregisterCallback(castCallback)
-        }
+        if (castSession != null) castSession?.remoteMediaClient?.unregisterCallback(castCallback)
         castContext?.sessionManager?.removeSessionManagerListener(
             sessionManagerListener,
             CastSession::class.java
