@@ -13,7 +13,7 @@ data class PlayerUiState(
     val playbackSpeed: Float = 1.0f,
     val isShuffleEnabled: Boolean = false,
     val repeatMode: Int = 0, // 0 = OFF, 1 = ONE, 2 = ALL
-
+    val activeSleepTimerMinutes: Int = 0, // 0 significa Desativado
     // Lista e índice
     val currentChapterIndex: Int = 0,
     val chapters: List<ChapterWithBookInfo> = emptyList()

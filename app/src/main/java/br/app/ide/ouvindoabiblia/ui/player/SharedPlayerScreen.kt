@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -30,8 +29,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +59,8 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.ui.player.components.CastButton
+import br.app.ide.ouvindoabiblia.ui.player.components.SleepTimerBottomSheet
+import br.app.ide.ouvindoabiblia.ui.player.components.SpeedBottomSheet
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
@@ -83,8 +82,8 @@ fun SharedPlayerScreen(
     onOpen: () -> Unit
 ) {
     // ESTADO
-    var showSleepTimerDialog by remember { mutableStateOf(false) }
-    var showSpeedMenu by remember { mutableStateOf(false) }
+    var showSleepTimerSheet by remember { mutableStateOf(false) }
+    var showSpeedSheet by remember { mutableStateOf(false) }
     var showChapters by remember { mutableStateOf(false) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -199,40 +198,18 @@ fun SharedPlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // 1. VELOCIDADE
-                    Box {
-                        IconButton(
-                            onClick = { showSpeedMenu = true },
-                            modifier = Modifier.size(48.dp) // Área de toque maior
-                        ) {
-                            Text(
-                                text = "${"%.1f".format(uiState.playbackSpeed)}x",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = playerControlsColor
-                            )
-                        }
-
-                        // O Menu Dropdown
-                        DropdownMenu(
-                            expanded = showSpeedMenu,
-                            onDismissRequest = { showSpeedMenu = false }
-                        ) {
-                            val speeds = listOf(0.8f, 1.0f, 1.2f, 1.5f, 2.0f)
-                            speeds.forEach { speed ->
-                                DropdownMenuItem(
-                                    text = { Text("${speed}x") },
-                                    onClick = {
-                                        onSetSpeed(speed)
-                                        showSpeedMenu = false
-                                    },
-                                    // Destaca a velocidade atual
-                                    trailingIcon = if (uiState.playbackSpeed == speed) {
-                                        { Icon(Icons.Default.Check, null) }
-                                    } else null
-                                )
-                            }
-                        }
+                    IconButton(
+                        onClick = { showSpeedSheet = true },
+                        modifier = Modifier.size(48.dp) // Área de toque maior
+                    ) {
+                        Text(
+                            text = "${"%.1f".format(uiState.playbackSpeed)}x",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = playerControlsColor
+                        )
                     }
+
 
                     // 2. VOLTAR 10s (Bem Grande para ler o número)
                     IconButton(onClick = onRewind, modifier = Modifier.size(56.dp)) {
@@ -293,7 +270,7 @@ fun SharedPlayerScreen(
 
                     // 5. SLEEP (Lua)
                     IconButton(
-                        onClick = { showSleepTimerDialog = true },
+                        onClick = { showSleepTimerSheet = true },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -517,14 +494,7 @@ fun SharedPlayerScreen(
     }
 
 
-    if (showSleepTimerDialog) {
-        SleepTimerDialog(
-            onDismiss = { showSleepTimerDialog = false },
-            onTimeSelected = { minutes ->
-                onSetSleepTimer(minutes) // Manda pro ViewModel
-            }
-        )
-    }
+
 
     if (showChapters) {
         br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet(
@@ -535,6 +505,24 @@ fun SharedPlayerScreen(
                 onChapterSelect(index)
             },
             onDismiss = { showChapters = false }
+        )
+    }
+
+    if (showSpeedSheet) {
+        SpeedBottomSheet(
+            currentSpeed = uiState.playbackSpeed,
+            onSpeedSelected = { newSpeed -> onSetSpeed(newSpeed) },
+            accentColor = backgroundColor,
+            onDismiss = { showSpeedSheet = false }
+        )
+    }
+
+    if (showSleepTimerSheet) {
+        SleepTimerBottomSheet(
+            accentColor = backgroundColor,
+            currentMinutes = uiState.activeSleepTimerMinutes,
+            onTimeSelected = { minutes -> onSetSleepTimer(minutes) },
+            onDismiss = { showSleepTimerSheet = false }
         )
     }
 }

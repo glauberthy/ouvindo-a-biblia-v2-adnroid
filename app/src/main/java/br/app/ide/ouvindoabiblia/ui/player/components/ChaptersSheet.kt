@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,10 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -44,7 +50,6 @@ fun ChaptersSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Mantemos o fundo do Sheet na cor da marca para consistência
     val sheetColor = DeepBlueDark
     val contentColor = Color.White
 
@@ -67,19 +72,33 @@ fun ChaptersSheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.7f)
         ) {
-            Text(
-                text = "Escolha o Capítulo",
-                style = MaterialTheme.typography.titleMedium,
-                color = contentColor,
-                fontWeight = FontWeight.Bold,
+            Row(
                 modifier = Modifier
-                    .padding(bottom = 24.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.width(24.dp)
+                )
 
-            Divider(
-                color = Color.White.copy(alpha = 0.08f),
-                modifier = Modifier.padding(horizontal = 24.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = "Escolha o Capítulo",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                thickness = DividerDefaults.Thickness, color = Color.White.copy(alpha = 0.08f)
             )
 
             LazyVerticalGrid(

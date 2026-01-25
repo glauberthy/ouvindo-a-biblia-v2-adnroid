@@ -308,10 +308,27 @@ class PlayerViewModel @Inject constructor(
 
     // Timer e Conexão Service (Mantidos)
     fun setSleepTimer(minutes: Int) {
+        // 1. ATUALIZAÇÃO VISUAL: Marca a opção escolhida no menu imediatamente
+        _uiState.update { it.copy(activeSleepTimerMinutes = minutes) }
+
+        // 2. Cancela o job anterior (se houver)
         sleepTimerJob?.cancel()
+
+        // 3. Se escolheu "Desativar" (0), paramos por aqui.
+        // O estado já foi atualizado para 0 na linha 1.
         if (minutes <= 0) return
-        sleepTimerJob =
-            viewModelScope.launch { delay(minutes * 60 * 1000L); pause(); sleepTimerJob = null }
+
+        // 4. Inicia a contagem regressiva
+        sleepTimerJob = viewModelScope.launch {
+            delay(minutes * 60 * 1000L)
+
+            // O tempo acabou!
+            pause()
+
+            // 5. RESET VISUAL: O timer acabou, então desmarcamos a opção no menu (volta para 0)
+            _uiState.update { it.copy(activeSleepTimerMinutes = 0) }
+            sleepTimerJob = null
+        }
     }
 
     private fun pause() {
