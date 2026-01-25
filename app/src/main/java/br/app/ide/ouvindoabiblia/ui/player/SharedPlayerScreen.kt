@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
@@ -79,12 +80,16 @@ fun SharedPlayerScreen(
     onShare: () -> Unit,
     onSetSpeed: (Float) -> Unit,
     onChapterSelect: (Int) -> Unit,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onToggleFavorite: () -> Unit
 ) {
     // ESTADO
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showSpeedSheet by remember { mutableStateOf(false) }
     var showChapters by remember { mutableStateOf(false) }
+
+    val currentChapter = uiState.chapters.getOrNull(uiState.currentChapterIndex)
+    val isFavorite = currentChapter?.chapter?.isFavorite == true
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -130,7 +135,6 @@ fun SharedPlayerScreen(
         )
 
         // --- FULL PLAYER ---
-        // --- CONTEÚDO TELA CHEIA (Full Player) ---
         if (expandProgress > 0.1f) {
             Column(
                 modifier = Modifier
@@ -167,14 +171,15 @@ fun SharedPlayerScreen(
 
                     // Botão Favorito (Estilo Fino/Vazado)
                     IconButton(
-                        onClick = { },
+                        onClick = onToggleFavorite,
                         modifier = Modifier.size(48.dp) // Área de toque
                     ) {
                         Icon(
-                            // FavoriteBorder = Coração vazio (apenas o traço)
-                            imageVector = Icons.Rounded.FavoriteBorder,
+                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                             contentDescription = "Favoritar",
-                            tint = playerControlsColor,
+                            tint = if (isFavorite) playerControlsColor else playerControlsColor.copy(
+                                alpha = 0.7f
+                            ),
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -437,10 +442,10 @@ fun SharedPlayerScreen(
                             maxLines = 1
                         )
                     }
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = onToggleFavorite) {
                         Icon(
-                            Icons.Rounded.FavoriteBorder,
-                            "Fav",
+                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = "Fav",
                             tint = miniContentColor
                         )
                     }
@@ -548,7 +553,8 @@ fun FullPreview() {
         onShare = {},
         onSetSpeed = {},
         onChapterSelect = {},
-        onOpen = {}
+        onOpen = {},
+        onToggleFavorite = {}
     )
 }
 

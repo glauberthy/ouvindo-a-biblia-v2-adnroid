@@ -8,7 +8,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 
 @Database(
     entities = [BookEntity::class, ChapterEntity::class], // Lista todas as tabelas
-    version = 1,
+    version = 2,
     exportSchema = false // Para desenvolvimento inicial, deixamos falso
 )
 abstract class BibleDatabase : RoomDatabase() {

@@ -317,7 +317,8 @@ fun MainScreen(
                         onChapterSelect = { index ->
                             playerViewModel.onChapterSelected(index)
                         },
-                        onOpen = { isPlayerExpanded = true }
+                        onOpen = { isPlayerExpanded = true },
+                        onToggleFavorite = { playerViewModel.toggleFavorite() },
                     )
                 }
             }

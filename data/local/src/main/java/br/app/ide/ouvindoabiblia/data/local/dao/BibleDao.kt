@@ -73,4 +73,7 @@ interface BibleDao {
         insertBooks(books)
         insertChapters(chapters)
     }
+
+    @Query("UPDATE chapters SET is_favorite = :isFavorite WHERE id = :chapterId")
+    suspend fun updateFavoriteStatus(chapterId: Long, isFavorite: Boolean)
 }

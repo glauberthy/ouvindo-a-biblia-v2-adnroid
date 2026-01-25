@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -103,6 +104,9 @@ class PlayerViewModel @Inject constructor(
     }
 
     private var sleepTimerJob: Job? = null
+    private var playlistJob: Job? = null
+
+    // Job para controlar a observação do Banco
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
     private var mediaController: MediaController? = null
@@ -339,7 +343,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun connectToService() {
+    private fun connectToService_bkp() {
         val sessionToken =
             SessionToken(context, ComponentName(context, PlaybackService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
@@ -366,7 +370,42 @@ class PlayerViewModel @Inject constructor(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    fun loadBookPlaylist(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
+    private fun connectToService() {
+        val sessionToken =
+            SessionToken(context, ComponentName(context, PlaybackService::class.java))
+        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        controllerFuture?.addListener({
+            try {
+                mediaController = controllerFuture?.get()
+                setupPlayerListener()
+
+                // Lógica de Reconexão Inteligente
+                if (pendingBookId == "RESUME") {
+                    val playingId =
+                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+                    if (playingId != null) loadBookPlaylist(playingId, "", "")
+                    pendingBookId = null
+                } else if (pendingBookId != null) {
+                    loadBookPlaylist(pendingBookId!!, pendingBookTitle!!, pendingCoverUrl!!)
+                    pendingBookId = null; pendingBookTitle = null; pendingCoverUrl = null
+                } else {
+                    // Se abriu o app e já estava tocando algo
+                    val playingId =
+                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+                    if (playingId != null) {
+                        // REATIVA a observação do banco para o livro atual
+                        loadBookPlaylist(playingId, "", "")
+                    }
+                    updateStateFromPlayer()
+                }
+                startProgressLoop()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    fun loadBookPlaylist_bkp(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
         if (bookId != "RESUME") _uiState.update {
             it.copy(
                 title = initialBookTitle,
@@ -394,6 +433,48 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun loadBookPlaylist(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
+        if (bookId != "RESUME") {
+            _uiState.update { it.copy(title = initialBookTitle, imageUrl = initialCoverUrl) }
+        }
+
+        // Descobre se estamos trocando de livro ou apenas recarregando o mesmo
+        val currentPlayingId =
+            mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+        val isNewBook = currentPlayingId != bookId
+
+        // Cancela qualquer observação anterior para não misturar dados
+        playlistJob?.cancel()
+
+        playlistJob = viewModelScope.launch {
+            // .collect() mantém o canal aberto com o banco
+            repository.getChapters(bookId).collect { chapters ->
+                if (chapters.isEmpty()) return@collect
+
+                // 1. Atualiza a UI com os dados frescos do banco (incluindo o ícone de favorito)
+                _uiState.update { it.copy(chapters = chapters) }
+
+                // 2. Só configura o Player de Áudio se for realmente um livro novo ou se o player estiver vazio.
+                // Isso impede que o áudio reinicie quando você dá um "Like".
+                if (isNewBook && mediaController != null) {
+                    val currentIdInPlayer =
+                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+                    if (currentIdInPlayer != bookId) {
+                        setupPlaylist(chapters, bookId)
+                    }
+                } else if (mediaController == null) {
+                    // Se o player ainda não conectou, guardamos para depois
+                    pendingBookId = bookId
+                    pendingBookTitle = initialBookTitle
+                    pendingCoverUrl = initialCoverUrl
+                }
+
+                // Sincroniza estado visual (Play/Pause/Buffering)
+                updateStateFromPlayer()
+            }
+        }
+    }
+
     private fun loadCurrentBookChaptersList() {
         val playingBookId =
             mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
@@ -405,7 +486,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun setupPlaylist(chapters: List<ChapterWithBookInfo>, bookId: String) {
+    private fun setupPlaylist_bkp(chapters: List<ChapterWithBookInfo>, bookId: String) {
         val controller = mediaController ?: return
         _uiState.update { it.copy(chapters = chapters) }
         val mediaItems = chapters.map { chapterInfo ->
@@ -416,6 +497,30 @@ class PlayerViewModel @Inject constructor(
                 .setArtworkUri(Uri.parse(chapterInfo.coverUrl)).setExtras(extras).build()
             MediaItem.Builder().setUri(chapterInfo.chapter.audioUrl)
                 .setMediaId(chapterInfo.chapter.id.toString()).setMediaMetadata(metadata).build()
+        }
+        controller.setMediaItems(mediaItems, 0, 0L)
+        controller.prepare()
+        controller.play()
+    }
+
+    private fun setupPlaylist(chapters: List<ChapterWithBookInfo>, bookId: String) {
+        val controller = mediaController ?: return
+        // Não atualizamos o _uiState aqui de novo, pois o collect já fez isso
+
+        val mediaItems = chapters.map { chapterInfo ->
+            val extras = Bundle()
+            extras.putString("book_id", bookId)
+            val metadata = MediaMetadata.Builder()
+                .setTitle(chapterInfo.bookName)
+                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
+                .setArtworkUri(chapterInfo.coverUrl?.toUri())
+                .setExtras(extras)
+                .build()
+            MediaItem.Builder()
+                .setUri(chapterInfo.chapter.audioUrl)
+                .setMediaId(chapterInfo.chapter.id.toString())
+                .setMediaMetadata(metadata)
+                .build()
         }
         controller.setMediaItems(mediaItems, 0, 0L)
         controller.prepare()
@@ -475,5 +580,16 @@ class PlayerViewModel @Inject constructor(
             sessionManagerListener,
             CastSession::class.java
         )
+    }
+
+    fun toggleFavorite() {
+        val currentState = _uiState.value
+        val currentChapter =
+            currentState.chapters.getOrNull(currentState.currentChapterIndex) ?: return
+
+        // Apenas manda salvar. A UI vai atualizar sozinha graças ao 'loadBookPlaylist' reativo.
+        viewModelScope.launch {
+            repository.toggleFavorite(currentChapter.chapter.id, !currentChapter.chapter.isFavorite)
+        }
     }
 }

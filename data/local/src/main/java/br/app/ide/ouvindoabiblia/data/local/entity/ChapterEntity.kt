@@ -35,5 +35,8 @@ data class ChapterEntity(
     val audioUrl: String,
 
     @ColumnInfo(name = "filename")
-    val filename: String
+    val filename: String,
+
+    @ColumnInfo(name = "is_favorite")
+    val isFavorite: Boolean = false
 )

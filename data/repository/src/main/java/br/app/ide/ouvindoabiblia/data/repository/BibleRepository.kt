@@ -17,4 +17,6 @@ interface BibleRepository {
 
     // Busca um livro específico
     suspend fun getBook(bookId: String): BookEntity?
+
+    suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean)
 }

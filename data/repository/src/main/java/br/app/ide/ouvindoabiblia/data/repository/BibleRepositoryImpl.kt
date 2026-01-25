@@ -119,4 +119,8 @@ class BibleRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
+        dao.updateFavoriteStatus(chapterId, isFavorite)
+    }
 }
