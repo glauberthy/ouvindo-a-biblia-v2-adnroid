@@ -470,7 +470,7 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 // Sincroniza estado visual (Play/Pause/Buffering)
-                updateStateFromPlayer()
+//                updateStateFromPlayer()
             }
         }
     }
