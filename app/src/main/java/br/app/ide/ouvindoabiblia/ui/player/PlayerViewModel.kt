@@ -342,34 +342,7 @@ class PlayerViewModel @Inject constructor(
             _uiState.update { it.copy(isPlaying = false) }
         }
     }
-
-    private fun connectToService_bkp() {
-        val sessionToken =
-            SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        controllerFuture?.addListener({
-            try {
-                mediaController = controllerFuture?.get()
-                setupPlayerListener()
-                if (pendingBookId == "RESUME") {
-                    val playingId =
-                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
-                    if (playingId != null) loadBookPlaylist(playingId, "", "")
-                    pendingBookId = null
-                } else if (pendingBookId != null) {
-                    loadBookPlaylist(pendingBookId!!, pendingBookTitle!!, pendingCoverUrl!!)
-                    pendingBookId = null; pendingBookTitle = null; pendingCoverUrl = null
-                } else {
-                    updateStateFromPlayer()
-                    loadCurrentBookChaptersList()
-                }
-                startProgressLoop()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }, ContextCompat.getMainExecutor(context))
-    }
-
+    
     private fun connectToService() {
         val sessionToken =
             SessionToken(context, ComponentName(context, PlaybackService::class.java))
@@ -403,34 +376,6 @@ class PlayerViewModel @Inject constructor(
                 e.printStackTrace()
             }
         }, ContextCompat.getMainExecutor(context))
-    }
-
-    fun loadBookPlaylist_bkp(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
-        if (bookId != "RESUME") _uiState.update {
-            it.copy(
-                title = initialBookTitle,
-                imageUrl = initialCoverUrl
-            )
-        }
-        if (mediaController == null) {
-            pendingBookId = bookId; pendingBookTitle = initialBookTitle; pendingCoverUrl =
-                initialCoverUrl
-            return
-        }
-        val playingBookId =
-            mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
-        if (playingBookId == bookId) {
-            viewModelScope.launch {
-                val chapters = repository.getChapters(bookId).first()
-                _uiState.update { it.copy(chapters = chapters) }
-                updateStateFromPlayer()
-            }
-            return
-        }
-        viewModelScope.launch {
-            val chapters = repository.getChapters(bookId).first()
-            if (chapters.isNotEmpty()) setupPlaylist(chapters, bookId)
-        }
     }
 
     fun loadBookPlaylist(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
@@ -468,9 +413,6 @@ class PlayerViewModel @Inject constructor(
                     pendingBookTitle = initialBookTitle
                     pendingCoverUrl = initialCoverUrl
                 }
-
-                // Sincroniza estado visual (Play/Pause/Buffering)
-//                updateStateFromPlayer()
             }
         }
     }
