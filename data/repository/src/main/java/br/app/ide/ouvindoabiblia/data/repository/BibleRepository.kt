@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.data.repository
 
+import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import kotlinx.coroutines.flow.Flow
@@ -19,4 +20,14 @@ interface BibleRepository {
     suspend fun getBook(bookId: String): BookEntity?
 
     suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean)
+
+    suspend fun savePlaybackState(chapterId: String, positionMs: Long)
+    fun getLatestPlaybackState(): Flow<PlaybackState?>
 }
+
+data class PlaybackState(
+    val chapterId: String,
+    val positionMs: Long,  // Verifique se o nome está idêntico aqui
+    val audioUrl: Uri,
+    val title: String
+)

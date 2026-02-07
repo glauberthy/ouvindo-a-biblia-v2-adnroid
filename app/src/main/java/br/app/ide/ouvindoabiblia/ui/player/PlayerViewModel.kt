@@ -17,6 +17,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.data.repository.PlaybackState
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadOptions
@@ -125,6 +126,21 @@ class PlayerViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("PlayerViewModel", "Erro Cast: ${e.message}")
         }
+
+        viewModelScope.launch {
+            val lastState = repository.getLatestPlaybackState().first()
+            if (lastState != null) {
+                _uiState.update {
+                    it.copy(
+                        title = lastState.title,
+                        isPlaying = false,
+                        currentPosition = lastState.positionMs
+                    )
+                }
+                // Carrega a lista de capítulos em background
+                loadBookPlaylist(lastState.chapterId, lastState.title, "")
+            }
+        }
         connectToService()
     }
 
@@ -198,11 +214,25 @@ class PlayerViewModel @Inject constructor(
     // --- CONTROLES ---
 
     fun togglePlayPause() {
-        if (castSession != null && castSession?.isConnected == true) {
-            val remote = castSession?.remoteMediaClient ?: return
-            remote.togglePlayback()
+        val controller = mediaController ?: return
+
+        if (castSession?.isConnected == true) {
+            castSession?.remoteMediaClient?.togglePlayback()
         } else {
-            mediaController?.let { if (it.isPlaying) it.pause() else it.play() }
+            try {
+                // Se o log diz que a thread está morta, este bloco vai falhar
+                if (controller.playbackState == Player.STATE_IDLE) {
+                    controller.prepare()
+                }
+                if (controller.isPlaying) controller.pause() else controller.play()
+
+            } catch (e: Exception) {
+                // SE A THREAD MORREU: Limpamos as referências e forçamos nova conexão
+                Log.e("PlayerViewModel", "Thread morta detectada no Play. Reiniciando...")
+                mediaController = null
+                controllerFuture = null
+                connectToService()
+            }
         }
     }
 
@@ -342,41 +372,121 @@ class PlayerViewModel @Inject constructor(
             _uiState.update { it.copy(isPlaying = false) }
         }
     }
-    
+
+
+//    private fun connectToService() {
+//        val sessionToken =
+//            SessionToken(context, ComponentName(context, PlaybackService::class.java))
+//        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+//        controllerFuture?.addListener({
+//            try {
+//                mediaController = controllerFuture?.get()
+//                setupPlayerListener()
+//
+//                val controller = mediaController ?: return@addListener
+//
+//                // Se o controller NÃO tem itens (app acabou de abrir "limpo")
+//                if (controller.mediaItemCount == 0) {
+//                    viewModelScope.launch {
+//                        // 1. Busca o que salvamos no onTaskRemoved do Service
+//                        val lastState = repository.getLatestPlaybackState().first()
+//
+//                        if (lastState != null) {
+//                            // 2. Carrega a playlist do livro salvo
+//                            loadBookPlaylist(
+//                                bookId = lastState.chapterId,
+//                                initialBookTitle = lastState.title,
+//                                initialCoverUrl = "" // A capa virá do banco no collect
+//                            )
+//
+//                            // 3. Posiciona o player no segundo exato
+//                            // Nota: O setupPlaylist precisará ser ajustado para aceitar posição inicial
+//                        }
+//                    }
+//                } else {
+//                    // Se já está tocando (voltou pro app com ele em background)
+//                    val playingId =
+//                        controller.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+//                    if (playingId != null) loadBookPlaylist(playingId, "", "")
+//                    updateStateFromPlayer()
+//                }
+//                startProgressLoop()
+//            } catch (e: Exception) {
+//                e.printStackTrace()
+//            }
+//        }, ContextCompat.getMainExecutor(context))
+//    }
+
+    private fun createMediaItemFromState(state: PlaybackState): MediaItem {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(state.title)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+            // Se você tiver a imagem no PlaybackState, adicione aqui:
+            // .setArtworkUri(state.audioUrl)
+            .build()
+
+        return MediaItem.Builder()
+            .setMediaId(state.chapterId)
+            .setUri(state.audioUrl)
+            .setMediaMetadata(metadata)
+            .build()
+    }
+
     private fun connectToService() {
+        // Evita duplicados (Padrão UAMP)
+        if (controllerFuture != null || mediaController != null) return
+
         val sessionToken =
             SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        controllerFuture?.addListener({
+        val future = MediaController.Builder(context, sessionToken).buildAsync()
+        controllerFuture = future
+
+        future.addListener({
             try {
-                mediaController = controllerFuture?.get()
+                val controller = future.get()
+                mediaController = controller
                 setupPlayerListener()
 
-                // Lógica de Reconexão Inteligente
-                if (pendingBookId == "RESUME") {
-                    val playingId =
-                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
-                    if (playingId != null) loadBookPlaylist(playingId, "", "")
-                    pendingBookId = null
-                } else if (pendingBookId != null) {
-                    loadBookPlaylist(pendingBookId!!, pendingBookTitle!!, pendingCoverUrl!!)
-                    pendingBookId = null; pendingBookTitle = null; pendingCoverUrl = null
-                } else {
-                    // Se abriu o app e já estava tocando algo
-                    val playingId =
-                        mediaController?.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
-                    if (playingId != null) {
-                        // REATIVA a observação do banco para o livro atual
-                        loadBookPlaylist(playingId, "", "")
+                // LÓGICA DE RETOMADA (O Coração do UAMP)
+                if (controller.mediaItemCount == 0) {
+                    viewModelScope.launch { // Inicia no escopo padrão (Geralmente Main)
+
+                        // 1. BUSCA EM BACKGROUND (IO)
+                        // O repositório deve lidar com o Dispatcher.IO internamente,
+                        // mas garantimos aqui que a suspensão não trava a UI.
+                        val lastState = repository.getLatestPlaybackState().first()
+
+                        if (lastState != null) {
+                            _uiState.update { it.copy(title = lastState.title, isPlaying = false) }
+                            // 2. VOLTA PARA A MAIN THREAD PARA COMANDAR O PLAYER
+                            // Comandos ao mediaController DEVEM ser na Main Thread
+                            val mediaItem = createMediaItemFromState(lastState)
+
+                            controller.setMediaItem(mediaItem, lastState.positionMs)
+                            controller.prepare()
+
+                            // Sincroniza a lista lateral (Também chama o repositório em IO internamente)
+                            loadBookPlaylist(lastState.chapterId, lastState.title, "")
+
+                            Log.d("PlayerViewModel", "Mini Player Restaurado: ${lastState.title}")
+                        }
                     }
+                } else {
+                    // Se o app abriu e já tinha algo no player (multitarefa)
+                    val playingId =
+                        controller.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+                    if (playingId != null) loadBookPlaylist(playingId, "", "")
                     updateStateFromPlayer()
                 }
+
                 startProgressLoop()
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("PlayerViewModel", "Falha na conexão: ${e.message}")
+                controllerFuture = null
             }
         }, ContextCompat.getMainExecutor(context))
     }
+
 
     fun loadBookPlaylist(bookId: String, initialBookTitle: String, initialCoverUrl: String) {
         if (bookId != "RESUME") {
@@ -413,6 +523,9 @@ class PlayerViewModel @Inject constructor(
                     pendingBookTitle = initialBookTitle
                     pendingCoverUrl = initialCoverUrl
                 }
+
+                // Sincroniza estado visual (Play/Pause/Buffering)
+//                updateStateFromPlayer()
             }
         }
     }
@@ -428,26 +541,14 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun setupPlaylist_bkp(chapters: List<ChapterWithBookInfo>, bookId: String) {
-        val controller = mediaController ?: return
-        _uiState.update { it.copy(chapters = chapters) }
-        val mediaItems = chapters.map { chapterInfo ->
-            val extras = Bundle()
-            extras.putString("book_id", bookId)
-            val metadata = MediaMetadata.Builder().setTitle(chapterInfo.bookName)
-                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
-                .setArtworkUri(Uri.parse(chapterInfo.coverUrl)).setExtras(extras).build()
-            MediaItem.Builder().setUri(chapterInfo.chapter.audioUrl)
-                .setMediaId(chapterInfo.chapter.id.toString()).setMediaMetadata(metadata).build()
-        }
-        controller.setMediaItems(mediaItems, 0, 0L)
-        controller.prepare()
-        controller.play()
-    }
 
-    private fun setupPlaylist(chapters: List<ChapterWithBookInfo>, bookId: String) {
+    // Altere a assinatura para suportar posição inicial
+    private fun setupPlaylist(
+        chapters: List<ChapterWithBookInfo>,
+        bookId: String,
+        initialPosition: Long = 0L // Novo parâmetro
+    ) {
         val controller = mediaController ?: return
-        // Não atualizamos o _uiState aqui de novo, pois o collect já fez isso
 
         val mediaItems = chapters.map { chapterInfo ->
             val extras = Bundle()
@@ -466,7 +567,7 @@ class PlayerViewModel @Inject constructor(
         }
         controller.setMediaItems(mediaItems, 0, 0L)
         controller.prepare()
-        controller.play()
+        // No UAMP, eles não dão .play() automático na retomada (fica pausado esperando o usuário)
     }
 
     private fun updateStateFromPlayer() {
@@ -516,8 +617,18 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        controllerFuture?.let { MediaController.releaseFuture(it) }
-        if (castSession != null) castSession?.remoteMediaClient?.unregisterCallback(castCallback)
+
+        // 1. Libera o MediaController e anula as referências
+        controllerFuture?.let {
+            MediaController.releaseFuture(it)
+            controllerFuture = null
+        }
+        mediaController = null
+
+        // 2. Limpa o Google Cast
+        if (castSession != null) {
+            castSession?.remoteMediaClient?.unregisterCallback(castCallback)
+        }
         castContext?.sessionManager?.removeSessionManagerListener(
             sessionManagerListener,
             CastSession::class.java

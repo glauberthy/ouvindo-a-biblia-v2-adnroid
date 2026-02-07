@@ -76,4 +76,21 @@ interface BibleDao {
 
     @Query("UPDATE chapters SET is_favorite = :isFavorite WHERE id = :chapterId")
     suspend fun updateFavoriteStatus(chapterId: Long, isFavorite: Boolean)
+
+
+    // Busca um capítulo específico pelo ID para retomar a reprodução (Media Resumption)
+    @Transaction
+    @Query(
+        """
+        SELECT 
+            chapters.*, 
+            books.name as bookName, 
+            books.image_url as coverUrl 
+        FROM chapters 
+        INNER JOIN books ON chapters.book_id = books.book_id 
+        WHERE chapters.audio_url = :audioUrl OR chapters.book_id = :audioUrl 
+        LIMIT 1
+    """
+    )
+    suspend fun getChapterWithBookInfoById(audioUrl: String): ChapterWithBookInfo?
 }

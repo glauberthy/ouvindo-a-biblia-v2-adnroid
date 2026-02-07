@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material3.CircularProgressIndicator // [MARCAÇÃO: IMPORT ADICIONADO]
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,8 +73,8 @@ fun SharedPlayerScreen(
     uiState: PlayerUiState,
     backgroundColor: Color,
     onPlayPause: () -> Unit,
-    onRewind: () -> Unit,       // Era onSkipPrev
-    onFastForward: () -> Unit,  // Era onSkipNext
+    onRewind: () -> Unit,
+    onFastForward: () -> Unit,
     onSetSleepTimer: (Int) -> Unit,
     onCollapse: () -> Unit,
     onSeek: (Long) -> Unit,
@@ -129,7 +130,7 @@ fun SharedPlayerScreen(
                 .alpha(expandProgress)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(backgroundColor, Color(0xFF22223B)) // Fundo bem dark
+                        colors = listOf(backgroundColor, Color(0xFF22223B))
                     )
                 )
         )
@@ -169,10 +170,9 @@ fun SharedPlayerScreen(
                         )
                     }
 
-                    // Botão Favorito (Estilo Fino/Vazado)
                     IconButton(
                         onClick = onToggleFavorite,
-                        modifier = Modifier.size(48.dp) // Área de toque
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
@@ -187,25 +187,22 @@ fun SharedPlayerScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // ROW 2: PROGRESSO
                 PlayerProgressBar(
                     currentPosition = uiState.currentPosition,
                     duration = uiState.duration,
                     onSeek = onSeek
                 )
 
-                Spacer(modifier = Modifier.height(24.dp)) // Aumentei um pouco o espaçamento
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // === ROW 3: CONTROLES DE PLAYBACK (Aumentados) ===
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. VELOCIDADE
                     IconButton(
                         onClick = { showSpeedSheet = true },
-                        modifier = Modifier.size(48.dp) // Área de toque maior
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Text(
                             text = "${"%.1f".format(uiState.playbackSpeed)}x",
@@ -215,17 +212,14 @@ fun SharedPlayerScreen(
                         )
                     }
 
-
-                    // 2. VOLTAR 10s (Bem Grande para ler o número)
                     IconButton(onClick = onRewind, modifier = Modifier.size(56.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Rounded.Replay, // Rounded é mais clean que Default
+                                imageVector = Icons.Rounded.Replay,
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
                                 modifier = Modifier.size(36.dp)
                             )
-                            // Texto "10" bem pequeno dentro
                             Text(
                                 text = "10",
                                 fontSize = 10.sp,
@@ -236,7 +230,7 @@ fun SharedPlayerScreen(
                         }
                     }
 
-                    // 3. PLAY/PAUSE (Rei da Tela)
+                    // [MARCAÇÃO: BOTÃO PLAY FULL AJUSTADO COM BUFFERING]
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
@@ -244,25 +238,33 @@ fun SharedPlayerScreen(
                         onClick = onPlayPause
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                contentDescription = "Play",
-                                tint = Color.Black,
-                                modifier = Modifier.size(40.dp)
-                            )
+                            if (uiState.isBuffering) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(40.dp),
+                                    color = Color.Black,
+                                    strokeWidth = 3.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                    contentDescription = "Play",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
                         }
                     }
+
                     IconButton(onClick = onFastForward, modifier = Modifier.size(56.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Rounded.Replay, // Rounded é mais clean que Default
+                                imageVector = Icons.Rounded.Replay,
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
                                 modifier = Modifier
                                     .size(36.dp)
                                     .scale(scaleX = -1f, scaleY = 1f)
                             )
-                            // Texto "10" bem pequeno dentro
                             Text(
                                 text = "30",
                                 fontSize = 10.sp,
@@ -273,13 +275,11 @@ fun SharedPlayerScreen(
                         }
                     }
 
-                    // 5. SLEEP (Lua)
                     IconButton(
                         onClick = { showSleepTimerSheet = true },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            // Outlined.Nightlight é apenas o contorno da lua (o que você queria)
                             imageVector = Icons.Rounded.NightlightRound,
                             contentDescription = "Sleep",
                             tint = playerControlsColor,
@@ -288,10 +288,8 @@ fun SharedPlayerScreen(
                     }
                 }
 
-                // Empurra tudo para baixo
                 Spacer(modifier = Modifier.weight(1f))
 
-                // === ROW 4: BOTÃO CAPÍTULOS ===
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -301,9 +299,7 @@ fun SharedPlayerScreen(
                     Surface(
                         onClick = { showChapters = true },
                         shape = CircleShape,
-                        // Fundo levemente mais claro
                         color = Color.White.copy(alpha = 0.2f),
-                        // Borda mais forte para definir o limite
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
                             Color.White.copy(alpha = 0.5f)
@@ -318,7 +314,7 @@ fun SharedPlayerScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
                                 contentDescription = null,
-                                tint = Color.White, // Branco Puro para destaque
+                                tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
 
@@ -327,7 +323,7 @@ fun SharedPlayerScreen(
                             Text(
                                 text = "CAPÍTULOS",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.White, // Branco Puro
+                                color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.2.sp
                             )
@@ -336,18 +332,18 @@ fun SharedPlayerScreen(
                 }
             }
         }
+
         // --- HEADER (Minimizar) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp) // Altura fixa e segura
+                .height(80.dp)
                 .padding(top = 40.dp, start = 16.dp, end = 16.dp)
                 .alpha(expandProgress)
         ) {
-            // 1. ESQUERDA: Minimizar
             IconButton(
                 onClick = onCollapse,
-                modifier = Modifier.align(Alignment.CenterStart) // Fixado na esquerda
+                modifier = Modifier.align(Alignment.CenterStart)
             ) {
                 Icon(
                     Icons.Rounded.KeyboardArrowDown,
@@ -357,9 +353,6 @@ fun SharedPlayerScreen(
                 )
             }
 
-            // 2. CENTRO: Título (Absoluto)
-            // O Box permite que este texto fique EXATAMENTE no meio,
-            // ignorando se tem 1 ou 3 botões nas laterais.
             Text(
                 text = "OUVINDO A BÍBLIA",
                 color = headerContentColor.copy(alpha = 0.7f),
@@ -369,21 +362,10 @@ fun SharedPlayerScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
 
-            // 3. DIREITA: Ações de Sistema
             Row(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Cast (Prioridade 1 de Hardware)
-//                IconButton(onClick = { }) {
-//                    Icon(
-//                        painter = painterResource(id = R.drawable.cast_24px),
-//                        contentDescription = "Cast",
-//                        tint = headerContentColor,
-//                        modifier = Modifier.size(24.dp)
-//                    )
-//                }
-
                 CastButton(
                     color = headerContentColor,
                     modifier = Modifier.padding(end = 8.dp)
@@ -397,20 +379,10 @@ fun SharedPlayerScreen(
                         modifier = Modifier.size(22.dp)
                     )
                 }
-
-//                // Menu (Configurações)
-//                IconButton(onClick = { }) {
-//                    Icon(
-//                        Icons.Rounded.MoreVert,
-//                        contentDescription = "Menu",
-//                        tint = headerContentColor,
-//                        modifier = Modifier.size(24.dp)
-//                    )
-//                }
             }
         }
 
-        // ... (Bloco Mini Player e Capa Animada iguais ao anterior) ...
+        // --- MINI PLAYER ---
         if (expandProgress < 0.9f) {
             val miniAlpha = 1f - (expandProgress * 3).coerceIn(0f, 1f)
             if (miniAlpha > 0) {
@@ -419,6 +391,7 @@ fun SharedPlayerScreen(
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
+                        // [MARCAÇÃO: REMOVIDA CONDIÇÃO DE TÍTULO VAZIO PARA MANTER ESPAÇO RESERVADO]
                         .padding(start = 16.dp + miniWidth + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -428,8 +401,9 @@ fun SharedPlayerScreen(
                             .clickable { onOpen() },
                         verticalArrangement = Arrangement.Center
                     ) {
+                        // [MARCAÇÃO: TÍTULO AGORA REAGE AO BUFFERING OU CARREGAMENTO INICIAL]
                         Text(
-                            text = uiState.title.ifEmpty { "Selecione..." },
+                            text = if (uiState.isBuffering && uiState.title.isEmpty()) "Carregando..." else uiState.title.ifEmpty { "Aguarde..." },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = miniContentColor,
@@ -449,12 +423,21 @@ fun SharedPlayerScreen(
                             tint = miniContentColor
                         )
                     }
+                    // [MARCAÇÃO: MINI PLAY COM FEEDBACK DE BUFFERING]
                     IconButton(onClick = onPlayPause) {
-                        Icon(
-                            if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            "Play",
-                            tint = miniContentColor
-                        )
+                        if (uiState.isBuffering) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = miniContentColor,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (uiState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                contentDescription = "Play",
+                                tint = miniContentColor
+                            )
+                        }
                     }
                     IconButton(onClick = onFastForward) {
                         Icon(
@@ -466,7 +449,8 @@ fun SharedPlayerScreen(
                 }
             }
         }
-        // ... (Capa Animada) ...
+
+        // --- CAPA ANIMADA ---
         Surface(
             modifier = Modifier
                 .offset {
@@ -498,17 +482,13 @@ fun SharedPlayerScreen(
         }
     }
 
-
-
-
+    // SHEETS (Mantidos iguais)
     if (showChapters) {
         br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet(
             chapters = uiState.chapters,
             currentIndex = uiState.currentChapterIndex,
             accentColor = backgroundColor,
-            onChapterClick = { index ->
-                onChapterSelect(index)
-            },
+            onChapterClick = { index -> onChapterSelect(index) },
             onDismiss = { showChapters = false }
         )
     }
@@ -530,87 +510,4 @@ fun SharedPlayerScreen(
             onDismiss = { showSleepTimerSheet = false }
         )
     }
-}
-
-@Preview(name = "Full Player", heightDp = 800, widthDp = 360, showBackground = true)
-@Composable
-fun FullPreview() {
-    SharedPlayerScreen(
-        expandProgress = 1f,
-        uiState = PlayerUiState(
-            title = "Zacarias",
-            subtitle = "Capítulo 1",
-            imageUrl = "",
-            isPlaying = false
-        ),
-        backgroundColor = Color(0xFF8D7F60),
-        onPlayPause = {},
-        onRewind = {},
-        onFastForward = {},
-        onSetSleepTimer = {},
-        onCollapse = {},
-        onSeek = {},
-        onShare = {},
-        onSetSpeed = {},
-        onChapterSelect = {},
-        onOpen = {},
-        onToggleFavorite = {}
-    )
-}
-
-
-@Composable
-fun SleepTimerDialog(
-    onDismiss: () -> Unit,
-    onTimeSelected: (Int) -> Unit
-) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = "Parar áudio em", style = MaterialTheme.typography.titleMedium)
-        },
-        text = {
-            Column {
-                // Lista de opções
-                val options = listOf(
-                    5 to "5 minutos",
-                    15 to "15 minutos",
-                    30 to "30 minutos",
-                    45 to "45 minutos",
-                    60 to "1 hora",
-                    0 to "Desativar" // 0 serve para cancelar
-                )
-
-                options.forEach { (minutes, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onTimeSelected(minutes)
-                                onDismiss()
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (minutes == 0) Icons.Rounded.Close else Icons.Rounded.Schedule,
-                            contentDescription = null,
-                            tint = if (minutes == 0) Color.Red else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
 }
