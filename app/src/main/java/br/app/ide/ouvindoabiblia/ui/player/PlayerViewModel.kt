@@ -447,25 +447,22 @@ class PlayerViewModel @Inject constructor(
                 mediaController = controller
                 setupPlayerListener()
 
-                // LÓGICA DE RETOMADA (O Coração do UAMP)
+
                 if (controller.mediaItemCount == 0) {
                     viewModelScope.launch { // Inicia no escopo padrão (Geralmente Main)
 
-                        // 1. BUSCA EM BACKGROUND (IO)
-                        // O repositório deve lidar com o Dispatcher.IO internamente,
-                        // mas garantimos aqui que a suspensão não trava a UI.
+
                         val lastState = repository.getLatestPlaybackState().first()
 
                         if (lastState != null) {
                             _uiState.update { it.copy(title = lastState.title, isPlaying = false) }
-                            // 2. VOLTA PARA A MAIN THREAD PARA COMANDAR O PLAYER
-                            // Comandos ao mediaController DEVEM ser na Main Thread
+
                             val mediaItem = createMediaItemFromState(lastState)
 
                             controller.setMediaItem(mediaItem, lastState.positionMs)
                             controller.prepare()
 
-                            // Sincroniza a lista lateral (Também chama o repositório em IO internamente)
+
                             loadBookPlaylist(lastState.chapterId, lastState.title, "")
 
                             Log.d("PlayerViewModel", "Mini Player Restaurado: ${lastState.title}")
@@ -542,11 +539,10 @@ class PlayerViewModel @Inject constructor(
     }
 
 
-    // Altere a assinatura para suportar posição inicial
     private fun setupPlaylist(
         chapters: List<ChapterWithBookInfo>,
         bookId: String,
-        initialPosition: Long = 0L // Novo parâmetro
+        initialPosition: Long = 0L
     ) {
         val controller = mediaController ?: return
 
@@ -567,7 +563,7 @@ class PlayerViewModel @Inject constructor(
         }
         controller.setMediaItems(mediaItems, 0, 0L)
         controller.prepare()
-        // No UAMP, eles não dão .play() automático na retomada (fica pausado esperando o usuário)
+        controller.play()
     }
 
     private fun updateStateFromPlayer() {
