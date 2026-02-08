@@ -1,0 +1,1496 @@
+//libs.versions.toml
+
+[versions]
+agp = "8.13.2"
+kotlin = "2.0.0"
+coreKtx = "1.17.0"
+junit = "4.13.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lifecycleRuntimeKtx = "2.10.0"
+activityCompose = "1.12.3"
+composeBom = "2026.01.01"
+
+media3 = "1.9.2"
+concurrentFutures = "1.3.0"
+coil = "2.7.0"
+leakcanary = "2.14"
+appcompat = "1.7.1"
+material = "1.13.0"
+mediarouter = "1.8.1"
+kotlinxCoroutines = "1.10.2"
+hilt = "2.51.1"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+androidx-media3-cast = { group = "androidx.media3", name = "media3-cast", version.ref = "media3" }
+androidx-concurrent-futures = { group = "androidx.concurrent", name = "concurrent-futures-ktx", version.ref = "concurrentFutures" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# LeakCanary
+leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+
+# AndroidX Lifecycle (additional)
+androidx-lifecycle-common = { group = "androidx.lifecycle", name = "lifecycle-common", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime", version.ref = "lifecycleRuntimeKtx" }
+
+# AndroidX UI
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
+
+# Coroutines
+kotlinx-coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
+
+# Hilt
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+
+
+---
+
+//build.gradle.kts
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.hilt.android) apply false
+}
+
+---
+
+// APP build.gradle.kts
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt.android)
+    kotlin("kapt")
+}
+
+android {
+    namespace = "br.app.ide.uamptest"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "br.app.ide.uamptest"
+        minSdk = 24
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+    buildFeatures {
+        compose = true
+    }
+}
+
+
+dependencies {
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.concurrent.futures)
+    implementation(libs.coil.compose)
+
+    // LeakCanary - Detecção de memory leaks (apenas debug)
+    debugImplementation(libs.leakcanary.android)
+
+    // AndroidX Lifecycle
+    implementation(libs.androidx.lifecycle.common)
+    implementation(libs.androidx.lifecycle.runtime)
+
+    // AndroidX UI
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.material)
+    implementation(libs.androidx.mediarouter)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.guava)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+
+    // Media3 Cast support (para notificação completa e Android Auto)
+    implementation(libs.androidx.media3.cast)
+}
+
+---
+
+//AndroidManifest.xml
+
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:name=".Application"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.UampTest">
+
+        <!-- Declare that this session demo supports Android Auto -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/auto_app_desc" />
+
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="androidx.media3.cast.DefaultCastOptionsProvider"/>
+
+        <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.UampTest">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.player.PlayerActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.UampTest" />
+
+        <activity
+            android:name=".ui.browser.PlayableFolderActivity"
+            android:exported="true"
+            android:theme="@style/Theme.UampTest" />
+
+        <service
+            android:name=".service.PlaybackService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaLibraryService"/>
+                <action android:name="android.media.browse.MediaBrowserService"/>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/>
+            </intent-filter>
+        </service>
+
+        <receiver android:name="androidx.media3.session.MediaButtonReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>
+
+---
+// MainActivity.kt
+/*
+ * Copyright (C) 2026 UampTest Audio Application
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package br.app.ide.uamptest.ui.main
+
+import android.Manifest
+import android.content.ComponentName
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.media3.session.MediaBrowser
+import androidx.media3.session.SessionToken
+import br.app.ide.uamptest.R
+import br.app.ide.uamptest.service.PlaybackService
+import br.app.ide.uamptest.ui.player.PlayerActivity
+import com.google.common.util.concurrent.ListenableFuture
+import dagger.hilt.android.AndroidEntryPoint
+
+/**
+ * Main launcher activity for the UampTest application.
+ *
+ * This activity serves as the entry point and performs initial setup:
+ * - Requests necessary permissions (POST_NOTIFICATIONS)
+ * - Initializes connection to [PlaybackService]
+ * - Redirects to [PlayerActivity] when service is ready
+ *
+ * The activity displays a loading screen (defined in activity_main.xml) while
+ * waiting for the media service to be ready.
+ *
+ * @see PlayerActivity Main player interface
+ * @see PlaybackService Media playback service
+ */
+@AndroidEntryPoint
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var browserFuture: ListenableFuture<MediaBrowser>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        // Request notification permission on Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermissionIfNeeded()
+        }
+
+        // Initialize MediaBrowser and redirect to PlayerActivity when ready
+        initializeBrowser()
+    }
+
+    override fun onStart() {
+        super.onStart()
+    }
+
+    override fun onStop() {
+        releaseBrowser()
+        super.onStop()
+    }
+
+    /**
+     * Requests POST_NOTIFICATIONS permission if not already granted.
+     * This is required for showing media notifications on Android 13+.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun requestNotificationPermissionIfNeeded() {
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQUEST_CODE_POST_NOTIFICATIONS
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == REQUEST_CODE_POST_NOTIFICATIONS) {
+            if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(
+                    this,
+                    "Notification permission denied. You may not receive media notifications.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    /**
+     * Initializes MediaBrowser connection to PlaybackService.
+     * When the connection is established, redirects to PlayerActivity.
+     */
+    private fun initializeBrowser() {
+        browserFuture = MediaBrowser.Builder(
+            this,
+            SessionToken(this, ComponentName(this, PlaybackService::class.java)),
+        ).buildAsync()
+
+        // Redirect to PlayerActivity when browser is ready
+        browserFuture.addListener(
+            {
+                navigateToPlayer()
+            },
+            ContextCompat.getMainExecutor(this)
+        )
+    }
+
+    /**
+     * Releases MediaBrowser resources.
+     */
+    private fun releaseBrowser() {
+        MediaBrowser.releaseFuture(browserFuture)
+    }
+
+    /**
+     * Navigates to PlayerActivity and finishes this activity.
+     */
+    private fun navigateToPlayer() {
+        val intent = Intent(this, PlayerActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+
+    companion object {
+        /** Request code for POST_NOTIFICATIONS permission */
+        private const val REQUEST_CODE_POST_NOTIFICATIONS = 100
+    }
+}
+
+---
+
+//Application.kt
+/*
+ * Copyright (C) 2026 UampTest Audio Application
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package br.app.ide.uamptest
+
+import android.app.Application
+import android.os.StrictMode
+import dagger.hilt.android.HiltAndroidApp
+
+/**
+ * Custom Application class for UampTest audio application.
+ *
+ * This application is integrated with Hilt for dependency injection and configures
+ * StrictMode policies for detecting potential issues during development.
+ *
+ * Features:
+ * - Hilt dependency injection support via [@HiltAndroidApp]
+ * - StrictMode detection for thread and VM policies (debug builds only)
+ * - Media3 MediaLibraryService integration
+ *
+ * @see PlaybackService Main media service
+ * @see PlayerActivity Main player interface
+ */
+@HiltAndroidApp
+class Application : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Configure StrictMode to detect potential issues during development
+        // TODO: Enable only in debug builds after BuildConfig is generated
+        enableStrictMode()
+    }
+
+    /**
+     * Enables StrictMode policies for detecting threading and memory issues.
+     * This is only active in debug builds to help catch problems during development.
+     */
+    private fun enableStrictMode() {
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectAll()
+                .penaltyLog()
+                .build()
+        )
+
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectAll()
+                .penaltyLog()
+                .build()
+        )
+    }
+}
+
+---
+//BaseMediaPlaybackService.kt
+
+/*
+ * Copyright (C) 2026 UampTest Audio Application
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package br.app.ide.uamptest.service
+
+import android.app.PendingIntent
+import android.content.Intent
+import androidx.annotation.OptIn
+import androidx.core.net.toUri
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaSession
+import br.app.ide.uamptest.ui.player.PlayerActivity
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+
+/**
+ * Base service providing MediaLibraryService functionality with media library support.
+ *
+ * This abstract class implements a complete Media3 MediaLibraryService with:
+ * - ExoPlayer for audio/video playback
+ * - MediaLibrarySession for media browsing and control
+ * - Sample media library with browseable categories (Albums, Artists, Genres)
+ * - Automatic playlist loading and playback
+ * - High-quality artwork for notifications and lock screen
+ *
+ * Architecture:
+ * ```
+ * BaseMediaPlaybackService (abstract base)
+ *   └── PlaybackService (concrete implementation)
+ *        └── Provides PendingIntents for notification
+ * ```
+ *
+ * Media Library Structure:
+ * ```
+ * Root
+ * ├── Albums
+ * │   ├── Test Audio 1
+ * │   └── Test Audio 2
+ * ├── Artists
+ * │   └── Artist Song 1
+ * └── Genres
+ *     └── Genre Song 1
+ * ```
+ *
+ * Subclasses must implement:
+ * - [getSingleTopActivity] - PendingIntent for single-top activity launch
+ * - [getBackStackedActivity] - PendingIntent with back stack navigation
+ *
+ * @see PlaybackService Concrete implementation
+ * @see PlayerActivity UI for playback control
+ */
+abstract class BaseMediaPlaybackService : MediaLibraryService() {
+
+    /** MediaLibrarySession instance managing this service */
+    private var mediaLibrarySession: MediaLibrarySession? = null
+
+    /** ExoPlayer instance for media playback */
+    private lateinit var player: ExoPlayer
+
+    companion object {
+        /** Root node ID for media library */
+        private const val ROOT_ID = "[rootID]"
+
+        /** Album category node ID */
+        private const val ALBUM_ID = "[albumID]"
+
+        /** Genre category node ID */
+        private const val GENRE_ID = "[genreID]"
+
+        /** Artist category node ID */
+        private const val ARTIST_ID = "[artistID]"
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        initializeSessionAndPlayer()
+    }
+
+    override fun onDestroy() {
+        mediaLibrarySession?.run {
+            player.release()
+            release()
+            mediaLibrarySession = null
+        }
+        super.onDestroy()
+    }
+
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
+        mediaLibrarySession
+
+    /**
+     * Handles notification updates for the media session.
+     *
+     * This method is required on Android 12+ to handle notification updates when
+     * a media controller attempts to resume playback while the service is in background.
+     *
+     * @param session The MediaSession that triggered the update
+     * @param startInForegroundRequired Whether the service must be started in foreground
+     */
+    @OptIn(UnstableApi::class)
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        // Overridden to avoid MediaSessionService$MediaNotificationManager crashes
+        super.onUpdateNotification(session, startInForegroundRequired)
+    }
+
+    private fun initializeSessionAndPlayer() {
+        player =
+            ExoPlayer.Builder(this)
+                .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus= */ true)
+                .build()
+
+        // Criar um PendingIntent que abre o PlayerActivity quando clica na notificação
+        val sessionActivityPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, PlayerActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        mediaLibrarySession =
+            MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
+                .setSessionActivity(sessionActivityPendingIntent)
+                .build()
+
+        // Carregar as mídias do álbum automaticamente quando o serviço inicia
+        loadDefaultPlaylist()
+    }
+
+    private fun loadDefaultPlaylist() {
+        // Criar mídias de teste e adicionar ao player
+        val mediaItems = ImmutableList.builder<MediaItem>()
+        mediaItems.add(createMediaItem(
+            "1",
+            "Test Audio 1",
+            "Sample Artist",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=512&h=512&fit=crop"
+        ))
+        mediaItems.add(createMediaItem(
+            "2",
+            "Test Audio 2",
+            "Sample Artist",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=512&h=512&fit=crop"
+        ))
+
+        player.setMediaItems(mediaItems.build().toList())
+
+        // Preparar e reproduzir automaticamente
+        player.prepare()
+        player.play()
+    }
+
+    private fun createMediaItem(
+        mediaId: String,
+        title: String,
+        artist: String,
+        uri: String,
+        artworkUri: String
+    ): MediaItem {
+        return MediaItem.Builder()
+            .setMediaId(mediaId)
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .setIsPlayable(true)
+                    .setIsBrowsable(false)
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                    .setArtworkUri(artworkUri.toUri())
+                    .build()
+            )
+            .build()
+    }
+
+    /**
+     * Creates the children list for a given parent ID in the media library.
+     *
+     * This method builds the hierarchical structure of the media library.
+     * Override this method in subclasses to provide custom library structure.
+     *
+     * @param parentId The ID of the parent node
+     * @return List of child media items
+     */
+    protected open fun getChildren(parentId: String): ImmutableList<MediaItem> {
+        val children = ImmutableList.builder<MediaItem>()
+
+        when (parentId) {
+            ROOT_ID -> {
+                children.add(createBrowsableMediaItem(ALBUM_ID, "Albums", MediaMetadata.MEDIA_TYPE_FOLDER_ALBUMS))
+                children.add(createBrowsableMediaItem(ARTIST_ID, "Artists", MediaMetadata.MEDIA_TYPE_FOLDER_ARTISTS))
+                children.add(createBrowsableMediaItem(GENRE_ID, "Genres", MediaMetadata.MEDIA_TYPE_FOLDER_GENRES))
+            }
+            ALBUM_ID -> {
+                children.add(createMediaItem("1", "Sample Song 1", "Sample Artist", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=512&h=512&fit=crop"))
+                children.add(createMediaItem("2", "Sample Song 2", "Sample Artist", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=512&h=512&fit=crop"))
+            }
+            ARTIST_ID -> {
+                children.add(createMediaItem("3", "Artist Song 1", "Artist Name", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=512&h=512&fit=crop"))
+            }
+            GENRE_ID -> {
+                children.add(createMediaItem("4", "Genre Song 1", "Various Artists", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=512&h=512&fit=crop"))
+            }
+        }
+
+        return children.build()
+    }
+
+    /**
+     * Retrieves a media item by its ID.
+     *
+     * Override this method in subclasses to provide custom item resolution.
+     *
+     * @param mediaId The ID of the media item to retrieve
+     * @return The corresponding MediaItem
+     */
+    protected open fun getItemFromId(mediaId: String): MediaItem {
+        return when (mediaId) {
+            ROOT_ID -> createBrowsableMediaItem(ROOT_ID, "Root", MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+            ALBUM_ID -> createBrowsableMediaItem(ALBUM_ID, "Albums", MediaMetadata.MEDIA_TYPE_FOLDER_ALBUMS)
+            ARTIST_ID -> createBrowsableMediaItem(ARTIST_ID, "Artists", MediaMetadata.MEDIA_TYPE_FOLDER_ARTISTS)
+            GENRE_ID -> createBrowsableMediaItem(GENRE_ID, "Genres", MediaMetadata.MEDIA_TYPE_FOLDER_GENRES)
+            else -> createMediaItem(mediaId, "Unknown", "Unknown", "", "https://images.unsplash.com/photo-1511379938547-c1f69b13d835?w=512&h=512&fit=crop")
+        }
+    }
+
+    /**
+     * Creates a browsable (non-playable) media item for navigation.
+     *
+     * These items represent folders/categories in the media library hierarchy.
+     *
+     * @param mediaId Unique identifier for the folder
+     * @param title Display title
+     * @param mediaType Type of folder (albums, artists, genres, etc.)
+     * @return A browsable MediaItem
+     */
+    protected open fun createBrowsableMediaItem(
+        mediaId: String,
+        title: String,
+        mediaType: Int
+    ): MediaItem {
+        return MediaItem.Builder()
+            .setMediaId(mediaId)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setIsPlayable(false)
+                    .setIsBrowsable(true)
+                    .setMediaType(mediaType)
+                    .setArtworkUri("https://via.placeholder.com/512x512?text=$title".toUri())
+                    .build()
+            )
+            .build()
+    }
+
+    private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            return Futures.immediateFuture(
+                LibraryResult.ofItem(
+                    MediaItem.Builder()
+                        .setMediaId(ROOT_ID)
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setIsPlayable(false)
+                                .setIsBrowsable(true)
+                                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                                .build()
+                        )
+                        .build(),
+                    params
+                )
+            )
+        }
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            // Delegate to base class method (now extensible)
+            val children = getChildren(parentId)
+            return Futures.immediateFuture(LibraryResult.ofItemList(children, params))
+        }
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            // Delegate to base class method (now extensible)
+            val item = getItemFromId(mediaId)
+            return Futures.immediateFuture(LibraryResult.ofItem(item, null))
+        }
+    }
+
+    /**
+     * Returns a [PendingIntent] that can be used as a single top activity
+     */
+    abstract fun getSingleTopActivity(): PendingIntent?
+
+    /**
+     * Returns a [PendingIntent] that can be used as a back stacked activity
+     */
+    abstract fun getBackStackedActivity(): PendingIntent?
+}
+
+---
+//PlaybackService.kt
+/*
+ * Copyright (C) 2026 UampTest Audio Application
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package br.app.ide.uamptest.service
+
+import android.app.PendingIntent
+import android.content.Intent
+import androidx.core.app.TaskStackBuilder
+import br.app.ide.uamptest.ui.main.MainActivity
+import br.app.ide.uamptest.ui.player.PlayerActivity
+
+/**
+ * Main media playback service for the UampTest application.
+ *
+ * This service extends [BaseMediaPlaybackService] to provide Media3 MediaLibraryService functionality
+ * with automatic media loading and playback control.
+ *
+ * Features:
+ * - Media3 MediaLibraryService integration
+ * - Background audio playback
+ * - Media notification with artwork and controls
+ * - Lock screen media controls
+ * - Android Auto support
+ * - Google Cast support
+ *
+ * The service is declared in AndroidManifest.xml with:
+ * - `foregroundServiceType="mediaPlayback"`
+ * - Intent filters for MediaLibraryService and MediaBrowserService
+ *
+ * @see BaseMediaPlaybackService Base service with media library functionality
+ * @see PlayerActivity UI for media playback control
+ */
+class PlaybackService : BaseMediaPlaybackService() {
+
+    /**
+     * Provides a PendingIntent that launches [PlayerActivity] in single-top mode.
+     *
+     * This is used by the media notification to open the app when tapped.
+     * The activity is launched with FLAG_ACTIVITY_SINGLE_TOP to avoid creating
+     * multiple instances.
+     *
+     * @return PendingIntent for launching PlayerActivity, or null if creation fails
+     */
+    override fun getSingleTopActivity(): PendingIntent? {
+        return PendingIntent.getActivity(
+            this,
+            REQUEST_CODE_SINGLE_TOP,
+            Intent(this, PlayerActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    /**
+     * Provides a PendingIntent with back stack navigation.
+     *
+     * This creates a task stack that includes MainActivity followed by PlayerActivity,
+     * ensuring proper back navigation when the app is opened from the notification.
+     *
+     * Task Stack:
+     * 1. MainActivity (root)
+     * 2. PlayerActivity (top)
+     *
+     * @return PendingIntent with back stack, or null if creation fails
+     */
+    override fun getBackStackedActivity(): PendingIntent? {
+        return TaskStackBuilder.create(this).run {
+            addNextIntent(Intent(this@PlaybackService, MainActivity::class.java))
+            addNextIntent(Intent(this@PlaybackService, PlayerActivity::class.java))
+            getPendingIntent(
+                REQUEST_CODE_BACK_STACK,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        }
+    }
+
+    companion object {
+        /** Request code for single-top activity PendingIntent */
+        private const val REQUEST_CODE_SINGLE_TOP = 0
+
+        /** Request code for back-stacked activity PendingIntent */
+        private const val REQUEST_CODE_BACK_STACK = 1
+    }
+}
+
+---
+//PlayableFolderActivity.kt
+package br.app.ide.uamptest.ui.browser
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.session.MediaBrowser
+import androidx.media3.session.SessionToken
+import br.app.ide.uamptest.service.PlaybackService
+import br.app.ide.uamptest.ui.player.PlayerActivity
+import com.google.common.util.concurrent.ListenableFuture
+
+class PlayableFolderActivity : ComponentActivity() {
+    private lateinit var browserFuture: ListenableFuture<MediaBrowser>
+    private val browser: MediaBrowser?
+        get() = if (browserFuture.isDone && !browserFuture.isCancelled) browserFuture.get() else null
+
+    private val subItemMediaList = mutableStateListOf<MediaItem>()
+    private var folderTitle by mutableStateOf("")
+
+    companion object {
+        private const val MEDIA_ITEM_ID_KEY = "MEDIA_ITEM_ID_KEY"
+
+        fun createIntent(context: Context, mediaItemID: String): Intent {
+            val intent = Intent(context, PlayableFolderActivity::class.java)
+            intent.putExtra(MEDIA_ITEM_ID_KEY, mediaItemID)
+            return intent
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.Companion.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    FolderScreen()
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun FolderScreen() {
+        Column(
+            modifier = Modifier.Companion
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = folderTitle,
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Spacer(modifier = Modifier.Companion.height(16.dp))
+
+            Row(
+                modifier = Modifier.Companion.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        val browser = this@PlayableFolderActivity.browser ?: return@Button
+                        browser.setMediaItems(subItemMediaList.toList())
+                        browser.shuffleModeEnabled = false
+                        browser.prepare()
+                        browser.play()
+                        startActivity(
+                            Intent(
+                                this@PlayableFolderActivity,
+                                PlayerActivity::class.java
+                            )
+                        )
+                    },
+                    modifier = Modifier.Companion.weight(1f)
+                ) {
+                    Text("Play All")
+                }
+
+                Button(
+                    onClick = {
+                        val browser = this@PlayableFolderActivity.browser ?: return@Button
+                        browser.setMediaItems(subItemMediaList.toList())
+                        browser.shuffleModeEnabled = true
+                        browser.prepare()
+                        browser.play()
+                        browser.sessionActivity?.send()
+                    },
+                    modifier = Modifier.Companion.weight(1f)
+                ) {
+                    Text("Shuffle")
+                }
+            }
+
+            Spacer(modifier = Modifier.Companion.height(16.dp))
+
+            LazyColumn(
+                modifier = Modifier.Companion.fillMaxWidth()
+            ) {
+                itemsIndexed(subItemMediaList.toList()) { index, item ->
+                    MediaItemRow(
+                        item = item,
+                        onClick = {
+                            val browser = this@PlayableFolderActivity.browser ?: return@MediaItemRow
+                            browser.setMediaItems(
+                                subItemMediaList.toList(),
+                                index,
+                                C.TIME_UNSET,
+                            )
+                            browser.shuffleModeEnabled = false
+                            browser.prepare()
+                            browser.play()
+                            browser.sessionActivity?.send()
+                        },
+                        onAdd = {
+                            val browser = this@PlayableFolderActivity.browser ?: return@MediaItemRow
+                            browser.addMediaItem(item)
+                            if (browser.playbackState == Player.STATE_IDLE) {
+                                browser.prepare()
+                            }
+                        }
+                    )
+                    Divider()
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun MediaItemRow(
+        item: MediaItem,
+        onClick: () -> Unit,
+        onAdd: () -> Unit
+    ) {
+        Row(
+            modifier = Modifier.Companion
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = item.mediaMetadata.title?.toString() ?: "Unknown",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.Companion.weight(1f)
+            )
+            TextButton(onClick = onAdd) {
+                Text("Add")
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        initializeBrowser()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        releaseBrowser()
+    }
+
+    private fun initializeBrowser() {
+        browserFuture =
+            MediaBrowser.Builder(
+                this,
+                SessionToken(this, ComponentName(this, PlaybackService::class.java)),
+            )
+                .buildAsync()
+        browserFuture.addListener({ displayFolder() }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun releaseBrowser() {
+        MediaBrowser.releaseFuture(browserFuture)
+    }
+
+    private fun displayFolder() {
+        val browser = this.browser ?: return
+        val id: String = intent.getStringExtra(MEDIA_ITEM_ID_KEY) ?: return
+
+        val mediaItemFuture = browser.getItem(id)
+        val childrenFuture =
+            browser.getChildren(id, 0, Int.MAX_VALUE, null)
+
+        mediaItemFuture.addListener(
+            {
+                val result = mediaItemFuture.get()
+                folderTitle = result?.value?.mediaMetadata?.title?.toString() ?: "Folder"
+            },
+            ContextCompat.getMainExecutor(this),
+        )
+
+        childrenFuture.addListener(
+            {
+                val result = childrenFuture.get()
+                val children = result?.value ?: emptyList()
+                subItemMediaList.clear()
+                subItemMediaList.addAll(children)
+            },
+            ContextCompat.getMainExecutor(this),
+        )
+    }
+}
+---
+//PlayerActivity.kt
+
+/*
+ * Copyright (C) 2026 UampTest Audio Application
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package br.app.ide.uamptest.ui.player
+
+import android.content.ComponentName
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import androidx.media3.ui.PlayerView
+import br.app.ide.uamptest.service.BaseMediaPlaybackService
+import br.app.ide.uamptest.service.PlaybackService
+import coil.compose.AsyncImage
+import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.guava.await
+import kotlinx.coroutines.launch
+
+/** Tag for logging */
+private const val TAG = "PlayerActivity"
+
+/**
+ * Main player activity for the UampTest audio application.
+ *
+ * This activity provides a complete media playback interface built with Jetpack Compose.
+ * It connects to [PlaybackService] via Media3's MediaController to control playback and
+ * display media information.
+ *
+ * Features:
+ * - Full media player UI with PlayerView (video/audio controls)
+ * - Album artwork display using Coil image loading
+ * - Current playlist with tap-to-play functionality
+ * - Remove items from playlist
+ * - Real-time metadata updates (title, artist, artwork)
+ * - Playback state synchronization
+ * - Automatic preparation and playback
+ *
+ * The UI is built entirely with Jetpack Compose and Material3 design.
+ *
+ * @see PlaybackService Media service providing the player
+ * @see BaseMediaPlaybackService Base service with media library
+ */
+class PlayerActivity : ComponentActivity() {
+
+    /** Future for MediaController connection */
+    private lateinit var controllerFuture: ListenableFuture<MediaController>
+
+    /** MediaController instance for controlling playback */
+    private lateinit var controller: MediaController
+
+    /** Observable list of media items in the current playlist */
+    private val mediaItemList = mutableStateListOf<MediaItem>()
+
+    /** Index of currently playing media item */
+    private var currentMediaItemIndex by mutableStateOf(-1)
+
+    /** Title of current media item */
+    private var mediaTitle by mutableStateOf("Waiting for metadata...")
+
+    /** Artist of current media item */
+    private var mediaArtist by mutableStateOf("")
+
+    /** Artwork URI of current media item */
+    private var artworkUri by mutableStateOf("")
+
+    /** Whether media is currently playing */
+    private var isPlaying by mutableStateOf(false)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Initialize MediaController and keep it alive while activity is in STARTED state
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    initializeController()
+                    awaitCancellation()
+                } finally {
+                    releaseController()
+                }
+            }
+        }
+
+        // Set Compose UI
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    PlayerScreen()
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun PlayerScreen() {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Player View
+            AndroidView(
+                factory = { context ->
+                    PlayerView(context).apply {
+                        if (::controller.isInitialized) {
+                            player = controller
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.35f)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Album Artwork
+            if (artworkUri.isNotEmpty()) {
+                AsyncImage(
+                    model = artworkUri,
+                    contentDescription = "Album Artwork",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Media Info
+            Text(
+                text = mediaTitle,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = mediaArtist,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Playlist
+            Text(
+                text = "Current Playlist",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.6f)
+            ) {
+                itemsIndexed(mediaItemList.toList()) { index, item ->
+                    PlaylistItem(
+                        item = item,
+                        isCurrentItem = index == currentMediaItemIndex,
+                        onClick = {
+                            if (::controller.isInitialized) {
+                                if (controller.currentMediaItemIndex == index) {
+                                    // Se for o mesmo item, apenas toggle play/pause
+                                    controller.playWhenReady = !controller.playWhenReady
+                                } else {
+                                    // Se for outro item, vai para ele e toca
+                                    controller.seekToDefaultPosition(index)
+                                    controller.prepare()
+                                    controller.play()
+                                }
+                            }
+                        },
+                        onDelete = {
+                            if (::controller.isInitialized) {
+                                controller.removeMediaItem(index)
+                                updateCurrentPlaylistUI()
+                            }
+                        }
+                    )
+                    HorizontalDivider()
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun PlaylistItem(
+        item: MediaItem,
+        isCurrentItem: Boolean,
+        onClick: () -> Unit,
+        onDelete: () -> Unit
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = item.mediaMetadata.title?.toString() ?: "Unknown",
+                    style = if (isCurrentItem) {
+                        MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        MaterialTheme.typography.bodyLarge
+                    }
+                )
+            }
+
+            if (!isCurrentItem) {
+                TextButton(onClick = onDelete) {
+                    Text("Delete")
+                }
+            }
+        }
+    }
+
+    private suspend fun initializeController() {
+        controllerFuture =
+            MediaController.Builder(
+                this,
+                SessionToken(this, ComponentName(this, PlaybackService::class.java)),
+            )
+                .buildAsync()
+        updateMediaMetadataUI()
+        setController()
+    }
+
+    private fun releaseController() {
+        MediaController.releaseFuture(controllerFuture)
+    }
+
+    private suspend fun setController() {
+        try {
+            controller = controllerFuture.await()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to connect to MediaController", t)
+            return
+        }
+
+        updateCurrentPlaylistUI()
+        updateMediaMetadataUI()
+
+        // Preparar o player automaticamente se houver itens
+        if (controller.mediaItemCount > 0) {
+            controller.prepare()
+        }
+
+        controller.addListener(
+            object : Player.Listener {
+                override fun onEvents(player: Player, events: Player.Events) {
+                    if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+                        updateCurrentPlaylistUI()
+                        // Preparar novamente se a timeline mudou e não está preparado
+                        if (player.mediaItemCount > 0 && player.playbackState == Player.STATE_IDLE) {
+                            player.prepare()
+                        }
+                    }
+                    if (events.contains(Player.EVENT_MEDIA_METADATA_CHANGED)) {
+                        updateMediaMetadataUI()
+                    }
+                    if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+                        currentMediaItemIndex = player.currentMediaItemIndex
+                    }
+                    if (events.contains(Player.EVENT_IS_PLAYING_CHANGED)) {
+                        isPlaying = player.isPlaying
+                    }
+                }
+            }
+        )
+    }
+
+    private fun updateMediaMetadataUI() {
+        if (!::controller.isInitialized || controller.mediaItemCount == 0) {
+            mediaTitle = "Waiting for metadata..."
+            mediaArtist = ""
+            artworkUri = ""
+            return
+        }
+
+        val mediaMetadata = controller.mediaMetadata
+        mediaTitle = mediaMetadata.title?.toString() ?: ""
+        mediaArtist = mediaMetadata.artist?.toString() ?: ""
+        artworkUri = mediaMetadata.artworkUri?.toString() ?: ""
+    }
+
+    private fun updateCurrentPlaylistUI() {
+        if (!::controller.isInitialized) {
+            return
+        }
+        mediaItemList.clear()
+        for (i in 0 until controller.mediaItemCount) {
+            mediaItemList.add(controller.getMediaItemAt(i))
+        }
+        currentMediaItemIndex = controller.currentMediaItemIndex
+    }
+}
