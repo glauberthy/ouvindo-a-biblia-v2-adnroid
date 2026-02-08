@@ -66,7 +66,7 @@ class PlaybackService : MediaLibraryService() {
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        
+
         super.onStartCommand(intent, flags, startId)
         return START_STICKY
     }
@@ -87,22 +87,6 @@ class PlaybackService : MediaLibraryService() {
         return mediaSession
     }
 
-    // --- NOVO MÉTODO ADICIONADO: DETECTA QUANDO O APP É REMOVIDO DOS RECENTES ---
-    // No seu PlaybackService.kt
-//    override fun onTaskRemoved(rootIntent: Intent?) {
-//        val currentMediaItem = player.currentMediaItem
-//        val position = player.currentPosition
-//
-//        if (currentMediaItem != null) {
-//            serviceScope.launch {
-//                // Padrão UAMP: Salva o progresso, mas deixa o ciclo de vida para o Android
-//                repository.savePlaybackState(currentMediaItem.mediaId, position)
-//            }
-//        }
-//        // Apenas pause. Se o app foi "morto", o Android cuidará de encerrar o processo.
-//        player.pause()
-//        super.onTaskRemoved(rootIntent)
-//    }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val currentMediaItem = player.currentMediaItem
@@ -113,10 +97,9 @@ class PlaybackService : MediaLibraryService() {
                 repository.savePlaybackState(currentMediaItem.mediaId, position)
             }
         }
-        // Não chame stopSelf() ou player.stop() aqui.
-        // Apenas pause para o Android saber que não deve mais manter o áudio ativo.
-        player.pause()
-        super.onTaskRemoved(rootIntent)
+
+//        player.pause()
+//        super.onTaskRemoved(rootIntent)
     }
     // --------------------------------------------------------------------------
 
