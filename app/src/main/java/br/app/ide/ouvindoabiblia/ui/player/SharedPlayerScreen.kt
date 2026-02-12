@@ -231,7 +231,7 @@ fun SharedPlayerScreen(
                                 imageVector = Icons.Rounded.Replay,
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             )
                             Text(
                                 text = "10",
@@ -275,7 +275,7 @@ fun SharedPlayerScreen(
                                 contentDescription = "-10s",
                                 tint = playerControlsColor,
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(48.dp)
                                     .scale(scaleX = -1f, scaleY = 1f)
                             )
                             Text(
