@@ -284,10 +284,35 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
-        val currentChapter =
-            _uiState.value.chapters.getOrNull(_uiState.value.currentChapterIndex) ?: return
+        val currentIndex = _uiState.value.currentChapterIndex
+        val currentChapter = _uiState.value.chapters.getOrNull(currentIndex) ?: return
+        val newStatus = !currentChapter.chapter.isFavorite
+        val controller = mediaController ?: return
+
         viewModelScope.launch {
-            repository.toggleFavorite(currentChapter.chapter.id, !currentChapter.chapter.isFavorite)
+            // 1. Atualiza no Banco (Persistência)
+            repository.toggleFavorite(currentChapter.chapter.id, newStatus)
+
+            // 2. Atualiza no Player (Memória / UI Imediata)
+            // Precisamos clonar o MediaItem atual e mudar o Bundle extra
+            val currentItem = controller.getMediaItemAt(currentIndex)
+
+            val currentExtras = currentItem.mediaMetadata.extras ?: android.os.Bundle()
+            currentExtras.putBoolean("is_favorite", newStatus)
+
+            val newMetadata = currentItem.mediaMetadata.buildUpon()
+                .setExtras(currentExtras)
+                .build()
+
+            val newItem = currentItem.buildUpon()
+                .setMediaMetadata(newMetadata)
+                .build()
+
+            // Substitui o item na playlist do player sem parar o áudio
+            controller.replaceMediaItem(currentIndex, newItem)
+
+            // Força atualização visual imediata (opcional, pois o listener do player deve pegar a mudança acima)
+            // syncStateWithController()
         }
     }
 
@@ -364,7 +389,7 @@ class PlayerViewModel @Inject constructor(
             val bookName = meta.albumTitle?.toString() ?: meta.subtitle?.toString() ?: ""
             val audioUrl = item.requestMetadata.mediaUri?.toString() ?: ""
             val coverUrl = meta.artworkUri?.toString()
-
+            val isFav = meta.extras?.getBoolean("is_favorite") ?: false
             list.add(
                 ChapterWithBookInfo(
                     chapter = ChapterEntity(
@@ -372,7 +397,8 @@ class PlayerViewModel @Inject constructor(
                         bookId = "",
                         number = chapterNum,
                         audioUrl = audioUrl,
-                        filename = ""
+                        filename = "",
+                        isFavorite = isFav
                     ),
                     bookName = bookName,
                     coverUrl = coverUrl

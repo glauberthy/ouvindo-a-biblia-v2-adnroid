@@ -147,6 +147,7 @@ class PlaybackService : MediaLibraryService() {
      * Função Mágica: Converte o estado salvo (PlaybackState) em itens tocáveis (MediaItems).
      * Retorna null se o livro ou capítulos não existirem mais.
      */
+    @OptIn(UnstableApi::class)
     private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? {
         // Busca ID do livro
         val bookId = repository.getBookIdFromChapter(state.chapterId) ?: return null
@@ -178,7 +179,10 @@ class PlaybackService : MediaLibraryService() {
                 .setIsBrowsable(false)
                 .setIsPlayable(true)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
-                .setExtras(Bundle().apply { putString("book_id", bookId) })
+                .setExtras(Bundle().apply {
+                    putString("book_id", bookId)
+                    putBoolean("is_favorite", chapterInfo.chapter.isFavorite)
+                })
                 .build()
 
             MediaItem.Builder()
