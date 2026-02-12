@@ -5,11 +5,11 @@ import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import br.app.ide.ouvindoabiblia.data.local.dao.BibleDao
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
@@ -24,26 +24,17 @@ import javax.inject.Inject
 class BibleRepositoryImpl @Inject constructor(
     private val api: BibleApi,
     private val dao: BibleDao,
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences> // Mantido apenas para controle de versão (Sync)
 ) : BibleRepository {
 
     companion object {
         private const val TAG = "BibleRepository"
 
-        // Chaves de Preferências
+        // Chave de versão para o Sync (DataStore é apropriado aqui)
         private val KEY_BIBLE_VERSION = stringPreferencesKey("bible_data_version")
-
-        // Chaves do Playback State (Agora completos)
-        private val KEY_LAST_CHAPTER_ID = stringPreferencesKey("last_chapter_id")
-        private val KEY_LAST_POSITION = longPreferencesKey("last_position_ms")
-        private val KEY_LAST_DURATION = longPreferencesKey("last_duration_ms")
-        private val KEY_LAST_TITLE = stringPreferencesKey("last_title")
-        private val KEY_LAST_SUBTITLE = stringPreferencesKey("last_subtitle")
-        private val KEY_LAST_IMAGE_URL = stringPreferencesKey("last_image_url")
-        private val KEY_LAST_AUDIO_URL = stringPreferencesKey("last_audio_url")
     }
 
-    // --- LEITURAS SIMPLES (Mantidas) ---
+    // --- LEITURAS DE CONTEÚDO ---
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
 
     override fun getChapters(bookId: String): Flow<List<ChapterWithBookInfo>> =
@@ -55,7 +46,8 @@ class BibleRepositoryImpl @Inject constructor(
         dao.updateFavoriteStatus(chapterId, isFavorite)
     }
 
-    // --- SALVAMENTO COMPLETO (Ajustado) ---
+    // --- PLAYBACK STATE (MIGRAÇÃO PARA ROOM) ---
+
     override suspend fun savePlaybackState(
         chapterId: String,
         positionMs: Long,
@@ -65,58 +57,61 @@ class BibleRepositoryImpl @Inject constructor(
         imageUrl: String?,
         audioUrl: String
     ) {
-        dataStore.edit { prefs ->
-            prefs[KEY_LAST_CHAPTER_ID] = chapterId
-            prefs[KEY_LAST_POSITION] = positionMs
-            prefs[KEY_LAST_DURATION] = duration
-            prefs[KEY_LAST_TITLE] = title
-            prefs[KEY_LAST_SUBTITLE] = subtitle
-            prefs[KEY_LAST_IMAGE_URL] = imageUrl ?: ""
-            prefs[KEY_LAST_AUDIO_URL] = audioUrl
-        }
+        // Converte o ID String ("105") para Long (105) exigido pelo Banco
+        val idLong = chapterId.toLongOrNull() ?: return
+
+        // Cria a entidade. Note que duration/title/image não são salvos aqui,
+        // pois serão recuperados via JOIN com as tabelas originais no getLatest.
+        val entity = PlaybackStateEntity(
+            chapterId = idLong,
+            positionMs = positionMs
+        )
+        dao.savePlaybackState(entity)
     }
 
-    // --- LEITURA RÁPIDA (Otimizada para Cold Start) ---
-    override fun getLatestPlaybackState(): Flow<PlaybackState?> = dataStore.data
-        .map { prefs ->
-            val id = prefs[KEY_LAST_CHAPTER_ID] ?: return@map null
-            val pos = prefs[KEY_LAST_POSITION] ?: 0L
-            val dur = prefs[KEY_LAST_DURATION] ?: 0L
-            val title = prefs[KEY_LAST_TITLE] ?: ""
-            val subtitle = prefs[KEY_LAST_SUBTITLE] ?: ""
-            val img = prefs[KEY_LAST_IMAGE_URL]?.takeIf { it.isNotEmpty() }
-            val audio = prefs[KEY_LAST_AUDIO_URL] ?: ""
+    override fun getLatestPlaybackState(): Flow<PlaybackState?> {
+        // Observa a query JOIN do DAO. Se o capítulo for apagado, retorna null automaticamente.
+        return dao.getLastPlaybackState()
+            .map { dto ->
+                if (dto == null) {
+                    null
+                } else {
+                    // Mapeia o DTO do banco para o objeto de domínio
+                    PlaybackState(
+                        chapterId = dto.chapterId.toString(),
+                        positionMs = dto.positionMs,
+                        duration = 0L, // Duração é re-calculada pelo player ao preparar
+                        title = "${dto.bookName} ${dto.chapterNumber}",
+                        subtitle = "Capítulo ${dto.chapterNumber}",
+                        imageUrl = dto.coverUrl,
+                        audioUrl = dto.audioUrl.toUri()
+                    )
+                }
+            }
+            .flowOn(Dispatchers.IO)
+    }
 
-            // Retorna o objeto completo SEM ir ao banco de dados (Instantâneo)
-            PlaybackState(
-                chapterId = id,
-                positionMs = pos,
-                duration = dur,
-                title = title,
-                subtitle = subtitle,
-                imageUrl = img,
-                audioUrl = audio.toUri()
-            )
-        }
-        .flowOn(Dispatchers.IO)
+    override suspend fun clearPlaybackState() {
+        dao.clearPlaybackState()
+    }
 
+    // --- UTILITÁRIOS ---
 
     override suspend fun getBookIdFromChapter(chapterId: String): String? {
         return try {
-            // Se o seu banco usa Long (padrão Room), converta.
             val idLong = chapterId.toLongOrNull() ?: return null
 
-            // Busca usando o ID Long
-            val info = dao.getChapterWithBookInfoById(idLong.toString())
-            // Nota: Ajuste acima conforme seu DAO (se pede String ou Long)
+            // CORREÇÃO: Usa a busca por ID numérico, não por URL
+            val chapter = dao.getChapterById(idLong)
 
-            info?.chapter?.bookId
+            chapter?.bookId
         } catch (e: Exception) {
+            Log.e(TAG, "Erro ao buscar ID do livro: ${e.message}")
             null
         }
     }
 
-    // --- SYNC (Mantido Intacto) ---
+    // --- SINCRONIZAÇÃO (Mantido) ---
     override suspend fun syncBibleData(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.getBibleIndex()
@@ -133,7 +128,6 @@ class BibleRepositoryImpl @Inject constructor(
 
             Log.i(TAG, "Iniciando atualização... Local: $localVersion | Remoto: $remoteVersion")
 
-            // Processamento em Default (CPU)
             val (booksToInsert, chaptersToInsert) = withContext(Dispatchers.Default) {
                 val books = mutableListOf<BookEntity>()
                 val chapters = mutableListOf<ChapterEntity>()
@@ -155,6 +149,8 @@ class BibleRepositoryImpl @Inject constructor(
                         dto.capitulos.forEach { chapterDto ->
                             chapters.add(
                                 ChapterEntity(
+                                    // Removemos 'id' aqui se for autogerado pelo Room (0),
+                                    // ou mapeamos se vier da API. Assumindo auto-generate:
                                     bookId = slug,
                                     number = chapterDto.numero,
                                     audioUrl = chapterDto.url,
@@ -171,10 +167,8 @@ class BibleRepositoryImpl @Inject constructor(
                 Pair(books, chapters)
             }
 
-            // Escrita no Banco (IO)
             if (booksToInsert.isNotEmpty()) {
                 dao.refreshBibleData(booksToInsert, chaptersToInsert)
-
                 dataStore.edit { prefs ->
                     prefs[KEY_BIBLE_VERSION] = remoteVersion
                 }
@@ -186,13 +180,6 @@ class BibleRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Erro sync: ${e.message}", e)
             Result.failure(e)
-        }
-    }
-
-    override suspend fun clearPlaybackState() {
-        dataStore.edit { preferences ->
-            // OPÇÃO A: Se este DataStore for SÓ para o Player, limpe tudo (Mais fácil)
-            preferences.clear()
         }
     }
 }

@@ -33,7 +33,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -114,29 +113,37 @@ class PlayerViewModel @Inject constructor(
 
     init {
         initializeCast()
-        viewModelScope.launch {
-            // 1. Tenta ler o último estado salvo
-            val lastState = repository.getLatestPlaybackState().first()
 
-            if (lastState != null && lastState.title.isNotEmpty()) {
-                // TEM HISTÓRICO: Preenche a UI imediatamente
-                _uiState.update {
-                    it.copy(
-                        title = lastState.title,
-                        subtitle = lastState.subtitle.ifEmpty { "Continuar Ouvindo" },
-                        imageUrl = lastState.imageUrl ?: "",
-                        // Importante: Começa pausado visualmente até o Player real confirmar
-                        isPlaying = false,
-                        currentPosition = lastState.positionMs,
-                        duration = if (lastState.duration > 0) lastState.duration else 1L
-                    )
+        // --- INICIALIZAÇÃO OTIMIZADA COM ROOM ---
+        viewModelScope.launch {
+            // Observa continuamente o estado do banco.
+            // Se o banco mudar (ex: limpeza de dados), a UI reflete isso.
+            repository.getLatestPlaybackState().collect { lastState ->
+
+                // CRÍTICO: Só atualizamos a UI baseada no banco SE o MediaController
+                // ainda não estiver conectado. Assim que o Controller conectar, ELE manda na UI.
+                if (mediaController == null || mediaController?.isConnected == false) {
+
+                    if (lastState != null && lastState.title.isNotEmpty()) {
+                        // Tem histórico válido: Mostra o Mini Player / Botão Continuar
+                        _uiState.update {
+                            it.copy(
+                                title = lastState.title,
+                                subtitle = lastState.subtitle.ifEmpty { "Continuar Ouvindo" },
+                                imageUrl = lastState.imageUrl ?: "",
+                                isPlaying = false, // Cold start é sempre pausado
+                                currentPosition = lastState.positionMs,
+                                duration = if (lastState.duration > 0) lastState.duration else 1L
+                            )
+                        }
+                    } else {
+                        // Banco vazio ou inválido: Limpa a UI para esconder o player
+                        _uiState.update { it.copy(title = "") }
+                    }
                 }
-            } else {
-                // NÃO TEM HISTÓRICO (Primeira vez ou limpou dados)
-                // Garante que o título esteja vazio para a UI saber que deve esconder o player
-                _uiState.update { it.copy(title = "") }
             }
         }
+
         initializeController()
     }
 
@@ -174,8 +181,7 @@ class PlayerViewModel @Inject constructor(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    // --- AÇÃO PRINCIPAL: TOCAR LIVRO (Refatorado) ---
-    // Agora enviamos apenas o comando para o Serviço carregar os dados
+    // --- AÇÃO PRINCIPAL: TOCAR LIVRO ---
     fun playBook(bookId: String, bookTitle: String, coverUrl: String) {
         val controller = mediaController ?: return
 
@@ -282,8 +288,6 @@ class PlayerViewModel @Inject constructor(
             _uiState.value.chapters.getOrNull(_uiState.value.currentChapterIndex) ?: return
         viewModelScope.launch {
             repository.toggleFavorite(currentChapter.chapter.id, !currentChapter.chapter.isFavorite)
-            // Nota: O ideal seria observar o Flow do banco para atualizar o ícone,
-            // mas para simplificar, confiamos que o próximo sync atualizará ou otimizamos aqui.
         }
     }
 
@@ -323,10 +327,7 @@ class PlayerViewModel @Inject constructor(
             val current = castSession?.remoteMediaClient?.approximateStreamPosition ?: 0
             seekTo(current + 30_000) // Avança 30s no Cast
         } else {
-            // Usa a configuração nativa do ExoPlayer que definimos no MediaModule (30s)
             mediaController?.seekForward()
-
-            // Atualização visual otimista
             _uiState.update { it.copy(currentPosition = it.currentPosition + 30_000) }
         }
     }
@@ -336,16 +337,9 @@ class PlayerViewModel @Inject constructor(
             val current = castSession?.remoteMediaClient?.approximateStreamPosition ?: 0
             seekTo((current - 10_000).coerceAtLeast(0)) // Volta 10s no Cast
         } else {
-            // Usa a configuração nativa do ExoPlayer que definimos no MediaModule (10s)
             mediaController?.seekBack()
-
-            // Atualização visual otimista
             _uiState.update {
-                it.copy(
-                    currentPosition = (it.currentPosition - 10_000).coerceAtLeast(
-                        0
-                    )
-                )
+                it.copy(currentPosition = (it.currentPosition - 10_000).coerceAtLeast(0))
             }
         }
     }
@@ -360,19 +354,14 @@ class PlayerViewModel @Inject constructor(
             val chapterId = item.mediaId.toLongOrNull() ?: 0L
             val titleStr = meta.title?.toString() ?: ""
 
-            // CORREÇÃO: Tenta pegar o último número da string (ex: "1 Samuel 10" -> 10)
-            // Se falhar, usa o índice + 1
+            // Extração segura do número do capítulo
             val chapterNum = try {
                 titleStr.trim().split(" ").last().toInt()
             } catch (e: NumberFormatException) {
                 i + 1
             }
 
-            // O subtítulo geralmente tem "Capítulo X" ou o nome do Livro.
-            // No PlaybackService, definimos: Subtítulo = "Capítulo X", AlbumTitle = "Nome do Livro"
-            // Vamos preferir o AlbumTitle (Nome do Livro) se disponível.
             val bookName = meta.albumTitle?.toString() ?: meta.subtitle?.toString() ?: ""
-
             val audioUrl = item.requestMetadata.mediaUri?.toString() ?: ""
             val coverUrl = meta.artworkUri?.toString()
 
@@ -380,7 +369,7 @@ class PlayerViewModel @Inject constructor(
                 ChapterWithBookInfo(
                     chapter = ChapterEntity(
                         id = chapterId,
-                        bookId = "", // Não temos o ID do livro aqui, mas não é crítico para a UI
+                        bookId = "",
                         number = chapterNum,
                         audioUrl = audioUrl,
                         filename = ""
@@ -416,7 +405,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // --- CAST LOGIC (Simplificada e Mantida) ---
+    // --- CAST LOGIC ---
 
     private fun updateStateFromCast() {
         val session = castSession ?: return

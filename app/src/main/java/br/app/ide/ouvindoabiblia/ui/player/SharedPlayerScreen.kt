@@ -157,16 +157,6 @@ fun SharedPlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-//                        // 1. A MARCA (O "Selo" de qualidade)
-//                        // Usa o campo 'artist' que adicionamos no UiState
-//                        Text(
-//                            text = uiState.artist.uppercase(),
-//                            style = MaterialTheme.typography.labelSmall,
-//                            color = playerSecondaryColor.copy(alpha = 0.6f), // Bem suave
-//                            fontWeight = FontWeight.Bold,
-//                            letterSpacing = 2.sp, // Espaçamento entre letras dá ar "Premium"
-//                            modifier = Modifier.padding(bottom = 4.dp)
-//                        )
 
                         // 2. O TÍTULO (O Livro e o Capítulo)
                         // Ex: "Gênesis 1"

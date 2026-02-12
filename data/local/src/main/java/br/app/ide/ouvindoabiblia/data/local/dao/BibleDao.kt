@@ -7,7 +7,9 @@ import androidx.room.Query
 import androidx.room.Transaction
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.PlaybackStateDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -78,7 +80,7 @@ interface BibleDao {
     suspend fun updateFavoriteStatus(chapterId: Long, isFavorite: Boolean)
 
 
-    // Busca um capítulo específico pelo ID para retomar a reprodução (Media Resumption)
+    // Busca um capítulo específico pelo ID (Mantido para compatibilidade, se usado em outro lugar)
     @Transaction
     @Query(
         """
@@ -93,4 +95,41 @@ interface BibleDao {
     """
     )
     suspend fun getChapterWithBookInfoById(audioUrl: String): ChapterWithBookInfo?
+
+    // -------------------------------------------------------------------------
+    // --- NOVO: MÉTODOS PARA O PLAYBACK STATE (Substituindo DataStore) ---
+    // -------------------------------------------------------------------------
+
+    // 1. Salvar o Estado (Substitui se já existir, mantendo sempre o ID=1)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun savePlaybackState(state: PlaybackStateEntity)
+
+    // 2. Limpar o Estado (caso precise resetar)
+    @Query("DELETE FROM playback_state")
+    suspend fun clearPlaybackState()
+
+    // 3. A Query Mestra: Busca o estado + dados do Capítulo + dados do Livro
+    // Se o capítulo ou livro não existirem mais, isso não retorna nada (evitando erro!)
+    @Transaction
+    @Query(
+        """
+        SELECT 
+            P.chapterId, 
+            P.positionMs, 
+            C.audio_url as audioUrl,
+            C.chapter_number as chapterNumber,
+            C.book_id as bookId,
+            B.name as bookName,
+            B.image_url as coverUrl
+        FROM playback_state P
+        INNER JOIN chapters C ON P.chapterId = C.id
+        INNER JOIN books B ON C.book_id = B.book_id
+        WHERE P.id = 1
+    """
+    )
+    fun getLastPlaybackState(): Flow<PlaybackStateDto?>
+
+
+    @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
+    suspend fun getChapterById(chapterId: Long): ChapterEntity?
 }
