@@ -21,22 +21,29 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-
 class BibleRepositoryImpl @Inject constructor(
     private val api: BibleApi,
     private val dao: BibleDao,
-    private val dataStore: DataStore<Preferences> // Injetado via Hilt (DataStoreModule)
+    private val dataStore: DataStore<Preferences>
 ) : BibleRepository {
 
     companion object {
-        // Chave para salvar a versão do JSON (ex: "2.0")
-        private val KEY_BIBLE_VERSION = stringPreferencesKey("bible_data_version")
         private const val TAG = "BibleRepository"
 
+        // Chaves de Preferências
+        private val KEY_BIBLE_VERSION = stringPreferencesKey("bible_data_version")
+
+        // Chaves do Playback State (Agora completos)
         private val KEY_LAST_CHAPTER_ID = stringPreferencesKey("last_chapter_id")
         private val KEY_LAST_POSITION = longPreferencesKey("last_position_ms")
+        private val KEY_LAST_DURATION = longPreferencesKey("last_duration_ms")
+        private val KEY_LAST_TITLE = stringPreferencesKey("last_title")
+        private val KEY_LAST_SUBTITLE = stringPreferencesKey("last_subtitle")
+        private val KEY_LAST_IMAGE_URL = stringPreferencesKey("last_image_url")
+        private val KEY_LAST_AUDIO_URL = stringPreferencesKey("last_audio_url")
     }
 
+    // --- LEITURAS SIMPLES (Mantidas) ---
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
 
     override fun getChapters(bookId: String): Flow<List<ChapterWithBookInfo>> =
@@ -44,20 +51,81 @@ class BibleRepositoryImpl @Inject constructor(
 
     override suspend fun getBook(bookId: String): BookEntity? = dao.getBookById(bookId)
 
+    override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
+        dao.updateFavoriteStatus(chapterId, isFavorite)
+    }
+
+    // --- SALVAMENTO COMPLETO (Ajustado) ---
+    override suspend fun savePlaybackState(
+        chapterId: String,
+        positionMs: Long,
+        duration: Long,
+        title: String,
+        subtitle: String,
+        imageUrl: String?,
+        audioUrl: String
+    ) {
+        dataStore.edit { prefs ->
+            prefs[KEY_LAST_CHAPTER_ID] = chapterId
+            prefs[KEY_LAST_POSITION] = positionMs
+            prefs[KEY_LAST_DURATION] = duration
+            prefs[KEY_LAST_TITLE] = title
+            prefs[KEY_LAST_SUBTITLE] = subtitle
+            prefs[KEY_LAST_IMAGE_URL] = imageUrl ?: ""
+            prefs[KEY_LAST_AUDIO_URL] = audioUrl
+        }
+    }
+
+    // --- LEITURA RÁPIDA (Otimizada para Cold Start) ---
+    override fun getLatestPlaybackState(): Flow<PlaybackState?> = dataStore.data
+        .map { prefs ->
+            val id = prefs[KEY_LAST_CHAPTER_ID] ?: return@map null
+            val pos = prefs[KEY_LAST_POSITION] ?: 0L
+            val dur = prefs[KEY_LAST_DURATION] ?: 0L
+            val title = prefs[KEY_LAST_TITLE] ?: ""
+            val subtitle = prefs[KEY_LAST_SUBTITLE] ?: ""
+            val img = prefs[KEY_LAST_IMAGE_URL]?.takeIf { it.isNotEmpty() }
+            val audio = prefs[KEY_LAST_AUDIO_URL] ?: ""
+
+            // Retorna o objeto completo SEM ir ao banco de dados (Instantâneo)
+            PlaybackState(
+                chapterId = id,
+                positionMs = pos,
+                duration = dur,
+                title = title,
+                subtitle = subtitle,
+                imageUrl = img,
+                audioUrl = audio.toUri()
+            )
+        }
+        .flowOn(Dispatchers.IO)
+
+
+    override suspend fun getBookIdFromChapter(chapterId: String): String? {
+        return try {
+            // Se o seu banco usa Long (padrão Room), converta.
+            val idLong = chapterId.toLongOrNull() ?: return null
+
+            // Busca usando o ID Long
+            val info = dao.getChapterWithBookInfoById(idLong.toString())
+            // Nota: Ajuste acima conforme seu DAO (se pede String ou Long)
+
+            info?.chapter?.bookId
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // --- SYNC (Mantido Intacto) ---
     override suspend fun syncBibleData(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // 1. Obter a versão remota (Download rápido do JSON)
-            // Dica: Se o backend suportasse HEAD request, seria ainda mais rápido,
-            // mas baixar o JSON index é leve o suficiente.
             val response = api.getBibleIndex()
             val remoteVersion = response.meta.version
 
-            // 2. Verificar estado local
             val preferences = dataStore.data.first()
             val localVersion = preferences[KEY_BIBLE_VERSION]
             val isDbEmpty = dao.getBookCount() == 0
 
-            // 3. SMART SYNC: Se versões batem E banco tem dados, aborta.
             if (localVersion == remoteVersion && !isDbEmpty) {
                 Log.i(TAG, "Sync ignorado: Versão $localVersion já está atualizada.")
                 return@withContext Result.success(Unit)
@@ -65,7 +133,7 @@ class BibleRepositoryImpl @Inject constructor(
 
             Log.i(TAG, "Iniciando atualização... Local: $localVersion | Remoto: $remoteVersion")
 
-            // 4. Processamento Pesado (CPU Bound) -> Movemos para Default
+            // Processamento em Default (CPU)
             val (booksToInsert, chaptersToInsert) = withContext(Dispatchers.Default) {
                 val books = mutableListOf<BookEntity>()
                 val chapters = mutableListOf<ChapterEntity>()
@@ -97,70 +165,34 @@ class BibleRepositoryImpl @Inject constructor(
                     }
                 }
 
-                // Mapeia ambos os testamentos
                 mapTestament("at", response.testamentos.antigoTestamento)
                 mapTestament("nt", response.testamentos.novoTestamento)
 
                 Pair(books, chapters)
             }
 
-            // 5. Escrita no Banco e Atualização da Versão (IO Bound)
+            // Escrita no Banco (IO)
             if (booksToInsert.isNotEmpty()) {
-                // Transação atômica (limpa e insere)
                 dao.refreshBibleData(booksToInsert, chaptersToInsert)
 
-                // Salva a nova versão para evitar sync futuro
                 dataStore.edit { prefs ->
                     prefs[KEY_BIBLE_VERSION] = remoteVersion
                 }
-
-                Log.i(TAG, "Sync concluído com sucesso! Versão atualizada para: $remoteVersion")
+                Log.i(TAG, "Sync concluído! Versão: $remoteVersion")
             }
 
             Result.success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Erro durante o sync: ${e.message}", e)
-
-            // Se o banco já tem dados, o app continua funcionando offline,
-            // então retornamos Failure mas a UI pode decidir não bloquear o uso.
+            Log.e(TAG, "Erro sync: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-    override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
-        dao.updateFavoriteStatus(chapterId, isFavorite)
-    }
-
-    override suspend fun savePlaybackState(chapterId: String, positionMs: Long) {
-        dataStore.edit { prefs ->
-            prefs[KEY_LAST_CHAPTER_ID] = chapterId
-            prefs[KEY_LAST_POSITION] = positionMs
+    override suspend fun clearPlaybackState() {
+        dataStore.edit { preferences ->
+            // OPÇÃO A: Se este DataStore for SÓ para o Player, limpe tudo (Mais fácil)
+            preferences.clear()
         }
     }
-
-    override fun getLatestPlaybackState(): Flow<PlaybackState?> = dataStore.data
-        .map { prefs ->
-            // 1. Recupera os IDs básicos do DataStore
-            val id = prefs[stringPreferencesKey("last_chapter_id")] ?: return@map null
-            val pos = prefs[longPreferencesKey("last_position_ms")] ?: 0L
-
-            // 2. Busca metadados (Título e URL) no Room
-            // Como esta função no DAO é 'suspend', o Room lida com a thread,
-            // mas o 'map' precisa esperar o resultado.
-            val info = dao.getChapterWithBookInfoById(id)
-
-            if (info != null) {
-                PlaybackState(
-                    chapterId = id,
-                    positionMs = pos,
-                    audioUrl = info.chapter.audioUrl.toUri(),
-                    title = "${info.bookName} ${info.chapter.number}"
-                )
-            } else {
-                null
-            }
-        }
-        .flowOn(Dispatchers.IO)
-
 }

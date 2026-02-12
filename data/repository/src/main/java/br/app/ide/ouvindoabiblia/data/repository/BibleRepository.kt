@@ -20,14 +20,27 @@ interface BibleRepository {
     suspend fun getBook(bookId: String): BookEntity?
 
     suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean)
+    suspend fun getBookIdFromChapter(chapterId: String): String?
+    suspend fun savePlaybackState(
+        chapterId: String,
+        positionMs: Long,
+        duration: Long,
+        title: String,
+        subtitle: String,
+        imageUrl: String?,
+        audioUrl: String
+    )
 
-    suspend fun savePlaybackState(chapterId: String, positionMs: Long)
+    suspend fun clearPlaybackState()
     fun getLatestPlaybackState(): Flow<PlaybackState?>
 }
 
 data class PlaybackState(
     val chapterId: String,
-    val positionMs: Long,  // Verifique se o nome está idêntico aqui
-    val audioUrl: Uri,
-    val title: String
+    val positionMs: Long,
+    val duration: Long,
+    val title: String,
+    val subtitle: String,
+    val imageUrl: String?,
+    val audioUrl: Uri
 )

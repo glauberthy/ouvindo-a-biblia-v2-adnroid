@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,10 +33,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,10 +61,13 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.ui.player.components.CastButton
+import br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet
 import br.app.ide.ouvindoabiblia.ui.player.components.SleepTimerBottomSheet
 import br.app.ide.ouvindoabiblia.ui.player.components.SpeedBottomSheet
+import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 @Composable
@@ -87,6 +94,7 @@ fun SharedPlayerScreen(
 
     val currentChapter = uiState.chapters.getOrNull(uiState.currentChapterIndex)
     val isFavorite = currentChapter?.chapter?.isFavorite == true
+    val hasMedia = uiState.title.isNotEmpty()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -149,18 +157,35 @@ fun SharedPlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
+//                        // 1. A MARCA (O "Selo" de qualidade)
+//                        // Usa o campo 'artist' que adicionamos no UiState
+//                        Text(
+//                            text = uiState.artist.uppercase(),
+//                            style = MaterialTheme.typography.labelSmall,
+//                            color = playerSecondaryColor.copy(alpha = 0.6f), // Bem suave
+//                            fontWeight = FontWeight.Bold,
+//                            letterSpacing = 2.sp, // Espaçamento entre letras dá ar "Premium"
+//                            modifier = Modifier.padding(bottom = 4.dp)
+//                        )
+
+                        // 2. O TÍTULO (O Livro e o Capítulo)
+                        // Ex: "Gênesis 1"
                         Text(
                             text = uiState.title,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineMedium, // Aumentei para Headline
                             fontWeight = FontWeight.Bold,
                             color = playerControlsColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+
+                        // 3. O SUBTÍTULO (O detalhe)
+                        // Ex: "Capítulo 1"
                         Text(
                             text = uiState.subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = playerSecondaryColor,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = playerSecondaryColor.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Normal,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -379,7 +404,7 @@ fun SharedPlayerScreen(
         }
 
         // --- MINI PLAYER ---
-        if (expandProgress < 0.9f) {
+        if (expandProgress < 0.9f && hasMedia) {
             val miniAlpha = 1f - (expandProgress * 3).coerceIn(0f, 1f)
             if (miniAlpha > 0) {
                 Row(
@@ -387,7 +412,6 @@ fun SharedPlayerScreen(
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
-                        // [MARCAÇÃO: REMOVIDA CONDIÇÃO DE TÍTULO VAZIO PARA MANTER ESPAÇO RESERVADO]
                         .padding(start = 16.dp + miniWidth + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -397,7 +421,6 @@ fun SharedPlayerScreen(
                             .clickable { onOpen() },
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // [MARCAÇÃO: TÍTULO AGORA REAGE AO BUFFERING OU CARREGAMENTO INICIAL]
                         Text(
                             text = if (uiState.isBuffering && uiState.title.isEmpty()) "Carregando..." else uiState.title.ifEmpty { "Aguarde..." },
                             style = MaterialTheme.typography.bodyMedium,
@@ -419,7 +442,7 @@ fun SharedPlayerScreen(
                             tint = miniContentColor
                         )
                     }
-                    // [MARCAÇÃO: MINI PLAY COM FEEDBACK DE BUFFERING]
+
                     IconButton(onClick = onPlayPause) {
                         if (uiState.isBuffering) {
                             CircularProgressIndicator(
@@ -480,10 +503,10 @@ fun SharedPlayerScreen(
 
     // SHEETS (Mantidos iguais)
     if (showChapters) {
-        br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet(
+        ChaptersSheet(
             chapters = uiState.chapters,
             currentIndex = uiState.currentChapterIndex,
-            accentColor = backgroundColor,
+            accentColor = SlateBlue,
             onChapterClick = { index -> onChapterSelect(index) },
             onDismiss = { showChapters = false }
         )
@@ -493,17 +516,93 @@ fun SharedPlayerScreen(
         SpeedBottomSheet(
             currentSpeed = uiState.playbackSpeed,
             onSpeedSelected = { newSpeed -> onSetSpeed(newSpeed) },
-            accentColor = backgroundColor,
+            accentColor = SlateBlue,
             onDismiss = { showSpeedSheet = false }
         )
     }
 
     if (showSleepTimerSheet) {
         SleepTimerBottomSheet(
-            accentColor = backgroundColor,
+            accentColor = SlateBlue,
             currentMinutes = uiState.activeSleepTimerMinutes,
             onTimeSelected = { minutes -> onSetSleepTimer(minutes) },
             onDismiss = { showSleepTimerSheet = false }
         )
+    }
+}
+
+
+@Composable
+fun PlayerProgressBar(
+    currentPosition: Long,
+    duration: Long,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Evita divisão por zero e garante range válido
+    val safeDuration = if (duration > 0) duration else 1L
+
+    // Estado local para controlar o arraste (Drag) do slider
+    // Sem isso, o slider fica "pulando" enquanto você tenta arrastar
+    var isDragging by remember { mutableStateOf(false) }
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
+
+    // Se estiver arrastando, mostra a posição do dedo. Se não, mostra a posição real do áudio.
+    val contentPosition = if (isDragging) sliderPosition else currentPosition.toFloat()
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Slider(
+            value = contentPosition,
+            onValueChange = { newPos ->
+                isDragging = true
+                sliderPosition = newPos
+            },
+            onValueChangeFinished = {
+                onSeek(sliderPosition.toLong())
+                isDragging = false
+            },
+            valueRange = 0f..safeDuration.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = formatTime(contentPosition.toLong()),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Medium
+            )
+
+            Text(
+                text = formatTime(safeDuration),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+// Função utilitária para formatar milissegundos em MM:SS ou HH:MM:SS
+@SuppressLint("DefaultLocale")
+private fun formatTime(ms: Long): String {
+    val hours = TimeUnit.MILLISECONDS.toHours(ms)
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
+
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
     }
 }

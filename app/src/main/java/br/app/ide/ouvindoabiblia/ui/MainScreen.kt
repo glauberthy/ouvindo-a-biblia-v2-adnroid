@@ -69,7 +69,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
-import br.app.ide.ouvindoabiblia.util.ShareUtils.shareCurrentContent
+import br.app.ide.ouvindoabiblia.util.ShareUtils
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
 
@@ -85,25 +85,27 @@ fun MainScreen(
         val playerUiState by playerViewModel.uiState.collectAsState()
         val context = LocalContext.current
 
+        // Estado de expansão do player
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
-
-        // --- 1. MOVIDO PARA CIMA: Cálculos de Dimensão e Progresso ---
-        // (Precisamos saber o progresso ANTES de configurar a Status Bar)
-        val displayMetrics = LocalContext.current.resources.displayMetrics
+        // --- 1. DIMENSÕES E PROGRESSO ---
+        val displayMetrics = context.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
-        val screenHeight = with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp }
+        val screenHeight =
+            with(LocalDensity.current) { screenHeightPx.toDp() + 100.dp } // Margem de segurança
 
+        // Altura dinâmica do container do player
         val playerContainerHeight by animateDpAsState(
             targetValue = when {
                 isPlayerExpanded -> screenHeight
-                hasMedia -> 64.dp
+                hasMedia -> 64.dp // Altura do Mini Player
                 else -> 0.dp
             },
             animationSpec = spring(stiffness = Spring.StiffnessLow),
-            label = "Height"
+            label = "PlayerHeight"
         )
 
+        // Calcula de 0.0 a 1.0 quanto o player está expandido
         val expandProgress by remember {
             derivedStateOf {
                 val minH = 64f
@@ -113,13 +115,17 @@ fun MainScreen(
             }
         }
 
-        // --- 2. EXTRAÇÃO DE COR ---
+        // --- 2. EXTRAÇÃO DE COR (Dinâmica baseada na capa) ---
         val defaultColor = MaterialTheme.colorScheme.surfaceVariant
         var artworkColor by remember { mutableStateOf(defaultColor) }
 
         LaunchedEffect(playerUiState.imageUrl) {
-            val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
-            if (color != null) artworkColor = color else artworkColor = defaultColor
+            if (playerUiState.imageUrl.isNotEmpty()) {
+                val color = extractDominantColorFromUrl(context, playerUiState.imageUrl)
+                artworkColor = color ?: defaultColor
+            } else {
+                artworkColor = defaultColor
+            }
         }
 
         val animatedArtworkColor by animateColorAsState(
@@ -127,7 +133,7 @@ fun MainScreen(
             label = "ColorAnim"
         )
 
-        // --- 3. CONTROLE DA BARRA DE STATUS (AGORA SINCRONIZADO) ---
+        // --- 3. CONTROLE DA STATUS BAR ---
         val view = LocalView.current
         val isSystemDark = isSystemInDarkTheme()
 
@@ -136,42 +142,39 @@ fun MainScreen(
                 val window = (view.context as Activity).window
                 val controller = WindowCompat.getInsetsController(window, view)
 
-                // --- A MUDANÇA SUTIL QUE FAZ TODA DIFERENÇA ---
-                // Só consideramos que estamos no "Modo Player" se a animação
-                // estiver acima de 95% (quase tocando o topo).
+                // Se o player cobrir quase tudo (> 90%), a barra de status deve reagir à cor do player
                 val isVisuallyExpanded = expandProgress > 0.90f
 
                 val useDarkIcons = if (isVisuallyExpanded) {
-                    // Player chegou no topo: Usa a inteligência da cor da capa
-                    !animatedArtworkColor.isDark()
+                    !animatedArtworkColor.isDark() // Se a arte for clara, ícones escuros
                 } else {
-                    // Player está embaixo ou subindo: Usa o tema da Home
-                    !isSystemDark
+                    !isSystemDark // Padrão do sistema
                 }
 
                 controller.isAppearanceLightStatusBars = useDarkIcons
             }
         }
 
-        // --- LÓGICA DE ABERTURA ---
+        // --- 4. LÓGICA DE ABERTURA VIA NOTIFICAÇÃO ---
         LaunchedEffect(shouldOpenPlayer) {
             if (shouldOpenPlayer) {
-                playerViewModel.loadBookPlaylist("RESUME", "Retomando...", "")
+                // Não precisamos carregar nada, o Service já restaurou. Apenas expandimos.
                 isPlayerExpanded = true
                 onPlayerOpened()
             }
         }
 
+        // --- 5. BACK HANDLER (Fechar player ao voltar) ---
         BackHandler(enabled = isPlayerExpanded) { isPlayerExpanded = false }
 
-        // --- ANIMAÇÕES RESTANTES ---
+        // --- 6. ANIMAÇÕES DE LAYOUT (Padding e Bordas) ---
         val bottomPadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 116.dp,
+            targetValue = if (isPlayerExpanded) 0.dp else 80.dp + 16.dp, // NavBar + Margem
             animationSpec = spring(stiffness = Spring.StiffnessLow),
             label = "BottomPadding"
         )
         val sidePadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 16.dp,
+            targetValue = if (isPlayerExpanded) 0.dp else 8.dp,
             label = "SidePadding"
         )
         val cornerRadius by animateDpAsState(
@@ -183,13 +186,13 @@ fun MainScreen(
             label = "ContainerColor"
         )
         val elevation by animateDpAsState(
-            targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 2.dp,
+            targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 6.dp,
             label = "Elevation"
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // CAMADA 1: NAVEGAÇÃO
+            // CAMADA 1: NAVEGAÇÃO PRINCIPAL (Fica por baixo)
             Scaffold(
                 contentWindowInsets = WindowInsets.navigationBars,
                 bottomBar = {
@@ -211,8 +214,6 @@ fun MainScreen(
                             val isSelected = currentDestination?.hierarchy?.any {
                                 it.route?.contains(item.screen::class.simpleName ?: "") == true
                             } == true
-                            val selectedColor = CreamBackground
-                            val unselectedColor = LavenderGray
 
                             NavigationBarItem(
                                 icon = {
@@ -239,16 +240,12 @@ fun MainScreen(
                                         restoreState = true
                                     }
                                 },
-
                                 colors = NavigationBarItemDefaults.colors(
-                                    // Quando ESTÁ selecionado (Ativo)
-                                    selectedIconColor = CreamBackground, // Creme
-                                    selectedTextColor = CreamBackground, // Creme
-                                    indicatorColor = Color.Transparent,  // Remove a bolha oval de fundo
-
-                                    // Quando NÃO ESTÁ selecionado (Inativo)
-                                    unselectedIconColor = LavenderGray.copy(alpha = 0.6f), // Cinza meio transparente
-                                    unselectedTextColor = LavenderGray.copy(alpha = 0.6f)  // Texto mais apagado
+                                    selectedIconColor = CreamBackground,
+                                    selectedTextColor = CreamBackground,
+                                    indicatorColor = Color.Transparent,
+                                    unselectedIconColor = LavenderGray.copy(alpha = 0.6f),
+                                    unselectedTextColor = LavenderGray.copy(alpha = 0.6f)
                                 )
                             )
                         }
@@ -265,60 +262,69 @@ fun MainScreen(
                         navController = navController,
                         windowSizeClass = windowSizeClass,
                         onPlayBook = { id, name, cover ->
-                            playerViewModel.loadBookPlaylist(id, name, cover)
+                            // Usa o método refatorado que envia o "Play Folder" pro Service
+                            playerViewModel.playBook(id, name, cover)
                         }
                     )
                 }
             }
 
-            // CAMADA 2: PLAYER FLUTUANTE
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = bottomPadding, start = sidePadding, end = sidePadding)
-                    .height(playerContainerHeight)
-                    .fillMaxWidth()
-                    .draggable(
-                        state = rememberDraggableState { delta ->
-                            if (delta < -20) isPlayerExpanded = true
-                            if (delta > 20) isPlayerExpanded = false
-                        },
-                        orientation = Orientation.Vertical
-                    )
-                    .shadow(
-                        elevation,
-                        RoundedCornerShape(cornerRadius),
-                        spotColor = Color.Black,
-                        ambientColor = Color.Black
-                    ),
-                shape = RoundedCornerShape(cornerRadius),
-                color = containerColor,
-                shadowElevation = 0.dp
-            ) {
-                if (playerContainerHeight > 0.dp) {
+            // CAMADA 2: PLAYER FLUTUANTE (Persistent Overlay)
+            if (playerContainerHeight > 0.dp) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(
+                            bottom = if (isPlayerExpanded) 0.dp else 80.dp + 16.dp,
+                            start = sidePadding,
+                            end = sidePadding
+                        )
+                        .height(playerContainerHeight)
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation,
+                            RoundedCornerShape(cornerRadius),
+                            spotColor = Color.Black,
+                            ambientColor = Color.Black
+                        )
+                        // Lógica de arrastar (Gestos)
+                        .draggable(
+                            state = rememberDraggableState { delta ->
+                                // Arrastar para baixo fecha, para cima abre
+                                if (delta > 20 && isPlayerExpanded) isPlayerExpanded = false
+                                if (delta < -20 && !isPlayerExpanded) isPlayerExpanded = true
+                            },
+                            orientation = Orientation.Vertical
+                        ),
+                    shape = RoundedCornerShape(cornerRadius),
+                    color = containerColor,
+                    shadowElevation = 0.dp // Usamos o modifier.shadow para mais controle
+                ) {
                     SharedPlayerScreen(
                         expandProgress = expandProgress,
                         uiState = playerUiState,
                         backgroundColor = animatedArtworkColor,
                         onPlayPause = { playerViewModel.togglePlayPause() },
+                        onRewind = { playerViewModel.rewind() },
                         onFastForward = { playerViewModel.fastForward() },
                         onSetSleepTimer = { minutes -> playerViewModel.setSleepTimer(minutes) },
-                        onRewind = { playerViewModel.rewind() },
                         onSeek = { playerViewModel.seekTo(it) },
-                        onCollapse = { isPlayerExpanded = false },
                         onShare = {
-                            shareCurrentContent(
+                            ShareUtils.shareCurrentContent(
                                 context = context,
                                 title = playerUiState.title,
                                 subtitle = playerUiState.subtitle
                             )
                         },
                         onSetSpeed = { speed -> playerViewModel.setPlaybackSpeed(speed) },
-                        onChapterSelect = { index ->
-                            playerViewModel.onChapterSelected(index)
-                        },
-                        onOpen = { isPlayerExpanded = true },
+                        onChapterSelect = { index -> playerViewModel.onChapterSelected(index) },
                         onToggleFavorite = { playerViewModel.toggleFavorite() },
+
+                        // Callback de Colapso (Botão Minimizar)
+                        onCollapse = { isPlayerExpanded = false },
+
+                        // Callback de Abertura (Clicar no Mini Player)
+                        onOpen = { isPlayerExpanded = true }
                     )
                 }
             }

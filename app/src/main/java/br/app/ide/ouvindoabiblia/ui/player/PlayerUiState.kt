@@ -5,6 +5,7 @@ import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 data class PlayerUiState(
     val title: String = "",
     val subtitle: String = "",
+    val artist: String = "Ouvindo a Bíblia",
     val imageUrl: String = "",
     val isPlaying: Boolean = false,
     val duration: Long = 0L,
@@ -19,5 +20,8 @@ data class PlayerUiState(
     val chapters: List<ChapterWithBookInfo> = emptyList()
 ) {
     val progress: Float
-        get() = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+        get() = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(
+            0f,
+            1f
+        ) else 0f
 }
