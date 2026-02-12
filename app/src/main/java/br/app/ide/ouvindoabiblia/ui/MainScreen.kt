@@ -270,41 +270,73 @@ fun MainScreen(
             }
 
             // CAMADA 2: PLAYER FLUTUANTE (Persistent Overlay)
+            // Só mostra se tiver altura (animação ou conteúdo)
             if (playerContainerHeight > 0.dp) {
+
+                // Calcula o padding inferior dinâmico
+                // Se expandido: 0 (ocupa tudo)
+                // Se minimizado: Altura da NavBar (80) + Espaço (16) + Inset de Navegação do Sistema (se houver)
+                val navBarHeight = 85.dp // Altura padrão da Material 3 NavigationBar
+                val floatMargin = 24.dp
+
+                // Anima o padding para subir/descer suavemente
+                val animatedBottomPadding by animateDpAsState(
+                    targetValue = if (isPlayerExpanded) 0.dp else (navBarHeight + floatMargin),
+                    label = "PlayerBottomMargin"
+                )
+
+                // Anima as laterais (para dar efeito de "card" flutuante quando mini)
+                val animatedSidePadding by animateDpAsState(
+                    targetValue = if (isPlayerExpanded) 0.dp else 8.dp,
+                    label = "PlayerSideMargin"
+                )
+
+                // Anima o arredondamento
+                val animatedCorner by animateDpAsState(
+                    targetValue = if (isPlayerExpanded) 0.dp else 16.dp,
+                    label = "PlayerCorner"
+                )
+
                 Surface(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
+                        .align(Alignment.BottomCenter) // Alinha no fundo da tela
                         .padding(
-                            bottom = if (isPlayerExpanded) 0.dp else 80.dp + 16.dp,
-                            start = sidePadding,
-                            end = sidePadding
+                            bottom = animatedBottomPadding, // <--- AQUI O SEGREDO
+                            start = animatedSidePadding,
+                            end = animatedSidePadding
                         )
-                        .height(playerContainerHeight)
+                        .height(playerContainerHeight) // Altura controlada pela animação principal
                         .fillMaxWidth()
                         .shadow(
-                            elevation,
-                            RoundedCornerShape(cornerRadius),
-                            spotColor = Color.Black,
-                            ambientColor = Color.Black
+                            elevation = if (isPlayerExpanded) 0.dp else 8.dp, // Sombra só quando mini
+                            shape = RoundedCornerShape(animatedCorner),
+                            clip = false
                         )
-                        // Lógica de arrastar (Gestos)
                         .draggable(
                             state = rememberDraggableState { delta ->
-                                // Arrastar para baixo fecha, para cima abre
-                                if (delta > 20 && isPlayerExpanded) isPlayerExpanded = false
-                                if (delta < -20 && !isPlayerExpanded) isPlayerExpanded = true
+                                // delta > 0 = Arrastando para BAIXO (Fechar)
+                                // Aumentei a sensibilidade (> 15) para não fechar por acidente ao scrollar listas
+                                if (delta > 15 && isPlayerExpanded) {
+                                    isPlayerExpanded = false
+                                }
+                                // delta < 0 = Arrastando para CIMA (Abrir)
+                                if (delta < -15 && !isPlayerExpanded) {
+                                    isPlayerExpanded = true
+                                }
                             },
                             orientation = Orientation.Vertical
                         ),
-                    shape = RoundedCornerShape(cornerRadius),
-                    color = containerColor,
-                    shadowElevation = 0.dp // Usamos o modifier.shadow para mais controle
+                    shape = RoundedCornerShape(animatedCorner),
+                    color = animatedArtworkColor, // A cor extraída da capa
+                    tonalElevation = 0.dp
                 ) {
                     SharedPlayerScreen(
                         expandProgress = expandProgress,
                         uiState = playerUiState,
                         backgroundColor = animatedArtworkColor,
                         onPlayPause = { playerViewModel.togglePlayPause() },
+                        onSkipToNextChapter = { playerViewModel.skipToNextChapter() },
+                        onSkipToPreviousChapter = { playerViewModel.skipToPreviousChapter() },
                         onRewind = { playerViewModel.rewind() },
                         onFastForward = { playerViewModel.fastForward() },
                         onSetSleepTimer = { minutes -> playerViewModel.setSleepTimer(minutes) },
@@ -319,11 +351,7 @@ fun MainScreen(
                         onSetSpeed = { speed -> playerViewModel.setPlaybackSpeed(speed) },
                         onChapterSelect = { index -> playerViewModel.onChapterSelected(index) },
                         onToggleFavorite = { playerViewModel.toggleFavorite() },
-
-                        // Callback de Colapso (Botão Minimizar)
                         onCollapse = { isPlayerExpanded = false },
-
-                        // Callback de Abertura (Clicar no Mini Player)
                         onOpen = { isPlayerExpanded = true }
                     )
                 }

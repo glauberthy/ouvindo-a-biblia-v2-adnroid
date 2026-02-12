@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,11 +61,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import br.app.ide.ouvindoabiblia.R
-import br.app.ide.ouvindoabiblia.ui.player.components.CastButton
 import br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet
 import br.app.ide.ouvindoabiblia.ui.player.components.SleepTimerBottomSheet
 import br.app.ide.ouvindoabiblia.ui.player.components.SpeedBottomSheet
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
+import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import java.util.concurrent.TimeUnit
@@ -76,6 +76,8 @@ fun SharedPlayerScreen(
     uiState: PlayerUiState,
     backgroundColor: Color,
     onPlayPause: () -> Unit,
+    onSkipToNextChapter: () -> Unit,
+    onSkipToPreviousChapter: () -> Unit,
     onRewind: () -> Unit,
     onFastForward: () -> Unit,
     onSetSleepTimer: (Int) -> Unit,
@@ -377,10 +379,10 @@ fun SharedPlayerScreen(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CastButton(
-                    color = headerContentColor,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
+//                CastButton(
+//                    color = headerContentColor,
+//                    modifier = Modifier.padding(end = 8.dp)
+//                )
 
                 IconButton(onClick = onShare) {
                     Icon(
@@ -391,6 +393,8 @@ fun SharedPlayerScreen(
                     )
                 }
             }
+
+
         }
 
         // --- MINI PLAYER ---
@@ -433,6 +437,14 @@ fun SharedPlayerScreen(
                         )
                     }
 
+                    IconButton(onClick = onSkipToPreviousChapter) {
+                        Icon(
+                            Icons.Rounded.SkipPrevious,
+                            "Prev",
+                            tint = miniContentColor
+                        )
+                    }
+
                     IconButton(onClick = onPlayPause) {
                         if (uiState.isBuffering) {
                             CircularProgressIndicator(
@@ -448,7 +460,7 @@ fun SharedPlayerScreen(
                             )
                         }
                     }
-                    IconButton(onClick = onFastForward) {
+                    IconButton(onClick = onSkipToNextChapter) {
                         Icon(
                             Icons.Rounded.SkipNext,
                             "Prox",
@@ -496,7 +508,7 @@ fun SharedPlayerScreen(
         ChaptersSheet(
             chapters = uiState.chapters,
             currentIndex = uiState.currentChapterIndex,
-            accentColor = SlateBlue,
+            accentColor = Accent,
             onChapterClick = { index -> onChapterSelect(index) },
             onDismiss = { showChapters = false }
         )
@@ -506,14 +518,14 @@ fun SharedPlayerScreen(
         SpeedBottomSheet(
             currentSpeed = uiState.playbackSpeed,
             onSpeedSelected = { newSpeed -> onSetSpeed(newSpeed) },
-            accentColor = SlateBlue,
+            accentColor = Accent,
             onDismiss = { showSpeedSheet = false }
         )
     }
 
     if (showSleepTimerSheet) {
         SleepTimerBottomSheet(
-            accentColor = SlateBlue,
+            accentColor = Accent,
             currentMinutes = uiState.activeSleepTimerMinutes,
             onTimeSelected = { minutes -> onSetSleepTimer(minutes) },
             onDismiss = { showSleepTimerSheet = false }
@@ -595,4 +607,77 @@ private fun formatTime(ms: Long): String {
     } else {
         String.format("%02d:%02d", minutes, seconds)
     }
+}
+
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Mini Player (Collapsed)"
+)
+@Composable
+fun SharedPlayerScreenMiniPreview() {
+    val mockUiState = PlayerUiState(
+        title = "Gênesis 1",
+        subtitle = "Capítulo 1",
+        imageUrl = "", // Pode deixar vazio ou colocar uma URL fake se tiver um placeholder
+        isPlaying = false,
+        currentPosition = 15000L,
+        duration = 60000L
+    )
+
+    SharedPlayerScreen(
+        expandProgress = 0f, // 0f = Minimizado (Mini Player)
+        uiState = mockUiState,
+        backgroundColor = Color(0xFFFFCC00), // Uma cor de exemplo (Amarelo)
+        onPlayPause = {},
+        onSkipToNextChapter = {},
+        onSkipToPreviousChapter = {},
+        onRewind = {},
+        onFastForward = {},
+        onSetSleepTimer = {},
+        onCollapse = {},
+        onSeek = {},
+        onShare = {},
+        onSetSpeed = {},
+        onChapterSelect = {},
+        onOpen = {},
+        onToggleFavorite = {}
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Full Player (Expanded)",
+    heightDp = 800
+)
+@Composable
+fun SharedPlayerScreenFullPreview() {
+    val mockUiState = PlayerUiState(
+        title = "Gênesis 1",
+        subtitle = "Capítulo 1",
+        imageUrl = "",
+        isPlaying = true,
+        currentPosition = 30000L,
+        duration = 60000L,
+        playbackSpeed = 1.5f
+    )
+
+    SharedPlayerScreen(
+        expandProgress = 1f, // 1f = Maximizado (Tela Cheia)
+        uiState = mockUiState,
+        backgroundColor = Accent,
+        onPlayPause = {},
+        onSkipToNextChapter = {},
+        onSkipToPreviousChapter = {},
+        onRewind = {},
+        onFastForward = {},
+        onSetSleepTimer = {},
+        onCollapse = {},
+        onSeek = {},
+        onShare = {},
+        onSetSpeed = {},
+        onChapterSelect = {},
+        onOpen = {},
+        onToggleFavorite = {}
+    )
 }

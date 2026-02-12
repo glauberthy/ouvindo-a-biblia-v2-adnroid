@@ -241,22 +241,22 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun skipToNextChapter() {
-        if (castSession?.isConnected == true) {
-            val nextIndex = _uiState.value.currentChapterIndex + 1
-            if (nextIndex < _uiState.value.chapters.size) {
-                onChapterSelected(nextIndex)
-            }
-        } else {
-            mediaController?.seekToNextMediaItem()
-        }
+        mediaController?.seekToNextMediaItem()
     }
 
     fun skipToPreviousChapter() {
-        if (castSession?.isConnected == true) {
-            val prevIndex = _uiState.value.currentChapterIndex - 1
-            if (prevIndex >= 0) onChapterSelected(prevIndex)
-        } else {
-            mediaController?.seekToPreviousMediaItem()
+        mediaController?.seekToPreviousMediaItem()
+    }
+
+    fun fastForward() {
+        mediaController?.seekForward()
+        _uiState.update { it.copy(currentPosition = it.currentPosition + 30_000) }
+    }
+
+    fun rewind() {
+        mediaController?.seekBack()
+        _uiState.update {
+            it.copy(currentPosition = (it.currentPosition - 10_000).coerceAtLeast(0))
         }
     }
 
@@ -346,28 +346,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-
-    fun fastForward() {
-        if (castSession?.isConnected == true) {
-            val current = castSession?.remoteMediaClient?.approximateStreamPosition ?: 0
-            seekTo(current + 30_000) // Avança 30s no Cast
-        } else {
-            mediaController?.seekForward()
-            _uiState.update { it.copy(currentPosition = it.currentPosition + 30_000) }
-        }
-    }
-
-    fun rewind() {
-        if (castSession?.isConnected == true) {
-            val current = castSession?.remoteMediaClient?.approximateStreamPosition ?: 0
-            seekTo((current - 10_000).coerceAtLeast(0)) // Volta 10s no Cast
-        } else {
-            mediaController?.seekBack()
-            _uiState.update {
-                it.copy(currentPosition = (it.currentPosition - 10_000).coerceAtLeast(0))
-            }
-        }
-    }
 
     // Converte a Timeline do Media3 de volta para o modelo que sua UI usa (ChapterWithBookInfo)
     private fun extractChaptersFromPlayer(player: Player): List<ChapterWithBookInfo> {
