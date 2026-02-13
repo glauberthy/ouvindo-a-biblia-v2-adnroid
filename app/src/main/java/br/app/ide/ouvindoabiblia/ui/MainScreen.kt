@@ -261,9 +261,9 @@ fun MainScreen(
                         modifier = Modifier.fillMaxSize(),
                         navController = navController,
                         windowSizeClass = windowSizeClass,
-                        onPlayBook = { id, name, cover ->
-                            // Usa o método refatorado que envia o "Play Folder" pro Service
-                            playerViewModel.playBook(id, name, cover)
+                        onPlayBook = { id, name, cover, index -> // Adicionamos o 'index' aqui
+                            // Agora repassamos os 4 parâmetros para o ViewModel
+                            playerViewModel.playBook(id, name, cover, index)
                         }
                     )
                 }

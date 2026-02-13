@@ -132,4 +132,25 @@ interface BibleDao {
 
     @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
     suspend fun getChapterById(chapterId: Long): ChapterEntity?
+
+
+    @Transaction
+    @Query(
+        """
+        SELECT 
+            chapters.*, 
+            books.name as bookName, 
+            books.image_url as coverUrl 
+        FROM chapters 
+        INNER JOIN books ON chapters.book_id = books.book_id 
+        WHERE chapters.is_favorite = 1
+        ORDER BY books.name ASC, chapters.chapter_number ASC
+    """
+    )
+    fun getFavoriteChapters(): Flow<List<ChapterWithBookInfo>>
+
+    // No BibleDao.kt
+
+    @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
+    fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
 }

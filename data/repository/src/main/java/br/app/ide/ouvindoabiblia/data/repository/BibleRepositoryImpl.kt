@@ -122,11 +122,11 @@ class BibleRepositoryImpl @Inject constructor(
             val isDbEmpty = dao.getBookCount() == 0
 
             if (localVersion == remoteVersion && !isDbEmpty) {
-                Log.i(TAG, "Sync ignorado: Versão $localVersion já está atualizada.")
+//                Log.i(TAG, "Sync ignorado: Versão $localVersion já está atualizada.")
                 return@withContext Result.success(Unit)
             }
 
-            Log.i(TAG, "Iniciando atualização... Local: $localVersion | Remoto: $remoteVersion")
+//            Log.i(TAG, "Iniciando atualização... Local: $localVersion | Remoto: $remoteVersion")
 
             val (booksToInsert, chaptersToInsert) = withContext(Dispatchers.Default) {
                 val books = mutableListOf<BookEntity>()
@@ -182,4 +182,8 @@ class BibleRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override fun getFavorites(): Flow<List<ChapterWithBookInfo>> = dao.getFavoriteChapters()
+    override fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?> =
+        dao.getChapterByIdFlow(chapterId)
 }

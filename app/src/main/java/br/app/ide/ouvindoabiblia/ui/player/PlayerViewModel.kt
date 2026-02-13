@@ -45,6 +45,8 @@ class PlayerViewModel @Inject constructor(
     private val repository: BibleRepository // Usado apenas para ações auxiliares (favoritar)
 ) : ViewModel() {
 
+    private var favoriteObservationJob: Job? = null
+
     // --- ESTADO DA UI ---
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -182,12 +184,18 @@ class PlayerViewModel @Inject constructor(
     }
 
     // --- AÇÃO PRINCIPAL: TOCAR LIVRO ---
-    fun playBook(bookId: String, bookTitle: String, coverUrl: String) {
+    // No PlayerViewModel.kt
+
+    fun playBook(bookId: String, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
         val controller = mediaController ?: return
 
         // Evita recarregar se já estivermos tocando este livro
         val currentBookId = controller.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
         if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
+            // Se já for o mesmo livro, apenas move para o capítulo desejado se ele for diferente do atual
+            if (controller.currentMediaItemIndex != initialIndex) {
+                controller.seekTo(initialIndex, 0L)
+            }
             if (!controller.isPlaying) controller.play()
             return
         }
@@ -195,7 +203,7 @@ class PlayerViewModel @Inject constructor(
         // Atualiza UI otimista
         _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
 
-        // Cria o MediaItem "Pasta" que o Serviço vai interceptar
+        // Criamos o item de pasta, e passamos o 'start_index' nos Extras para o Service ler
         val bookFolderItem = MediaItem.Builder()
             .setMediaId(bookId)
             .setMediaMetadata(
@@ -204,11 +212,14 @@ class PlayerViewModel @Inject constructor(
                     .setArtworkUri(coverUrl.toUri())
                     .setIsBrowsable(true) // Sinaliza que é uma pasta/livro
                     .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+                    .setExtras(android.os.Bundle().apply {
+                        putInt("start_index", initialIndex)
+                    })
                     .build()
             )
             .build()
 
-        // Envia para o Serviço (ele vai buscar no Room e montar a playlist)
+        // Envia para o Serviço
         controller.setMediaItems(listOf(bookFolderItem))
         controller.prepare()
         controller.play()
@@ -322,6 +333,9 @@ class PlayerViewModel @Inject constructor(
         mediaController?.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
                 syncStateWithController()
+                if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+                    observeCurrentFavorite(player.currentMediaItem?.mediaId)
+                }
             }
         })
     }
@@ -496,5 +510,31 @@ class PlayerViewModel @Inject constructor(
             sessionManagerListener,
             CastSession::class.java
         )
+    }
+
+    private fun observeCurrentFavorite(chapterId: String?) {
+        favoriteObservationJob?.cancel() // Para de vigiar o capítulo anterior
+        val idLong = chapterId?.toLongOrNull() ?: return
+
+        favoriteObservationJob = viewModelScope.launch {
+            // O Room enviará um novo valor aqui SEMPRE que o favorito mudar no banco
+            repository.getChapterByIdFlow(idLong).collect { chapterEntity ->
+                _uiState.update { state ->
+                    // Atualiza o coração na lista interna do Player
+                    val updatedChapters = state.chapters.map { chapterWithInfo ->
+                        if (chapterWithInfo.chapter.id == idLong) {
+                            chapterWithInfo.copy(
+                                chapter = chapterWithInfo.chapter.copy(
+                                    isFavorite = chapterEntity?.isFavorite ?: false
+                                )
+                            )
+                        } else {
+                            chapterWithInfo
+                        }
+                    }
+                    state.copy(chapters = updatedChapters)
+                }
+            }
+        }
     }
 }

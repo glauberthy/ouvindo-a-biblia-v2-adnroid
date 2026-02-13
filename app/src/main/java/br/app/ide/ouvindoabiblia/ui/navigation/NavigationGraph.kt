@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
+import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
 
@@ -22,7 +23,7 @@ import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
 fun NavigationGraph(
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
-    onPlayBook: (String, String, String) -> Unit, // Callback: A Home avisa "Toca isso", e a MainScreen obedece
+    onPlayBook: (String, String, String, Int) -> Unit, // Adicionamos o Int aqui
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -37,13 +38,19 @@ fun NavigationGraph(
                 onNavigateToBook = { id, name, cover ->
                     // Ao clicar num livro, não navegamos mais para uma nova tela.
                     // Nós chamamos essa função para abrir o Player (Bottom Sheet) por cima.
-                    onPlayBook(id, name, cover)
+                    onPlayBook(id, name, cover, 0)
                 }
             )
         }
 
-        // --- TELAS SECUNDÁRIAS ---
-        composable<Screen.Favorites> { PlaceholderScreen("Favoritos") }
+        // --- FAVORITOS ---
+        composable<Screen.Favorites> {
+            FavoritesScreen(
+                onPlayChapter = { id, name, cover, index -> // Recebe o index da tela
+                    onPlayBook(id, name, cover, index)     // Repassa para a Main
+                }
+            )
+        }
         composable<Screen.Search> { PlaceholderScreen("Busca") }
         composable<Screen.History> { PlaceholderScreen("Histórico") }
 
