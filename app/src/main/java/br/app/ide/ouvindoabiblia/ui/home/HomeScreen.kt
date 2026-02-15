@@ -41,7 +41,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     windowSizeClass: WindowSizeClass,
-    onNavigateToBook: (String, String, String) -> Unit
+    onNavigateToBook: (Int, String, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -62,7 +62,7 @@ fun HomeScreen(
 private fun HomeContent(
     state: HomeUiState.Success,
     onIntent: (HomeIntent) -> Unit,
-    onNavigateToBook: (String, String, String) -> Unit
+    onNavigateToBook: (Int, String, String) -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

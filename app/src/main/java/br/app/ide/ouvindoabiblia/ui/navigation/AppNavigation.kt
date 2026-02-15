@@ -6,12 +6,16 @@ sealed interface Screen {
     // Telas Principais da Bottom Bar
     @Serializable
     data object Home : Screen
+
     @Serializable
     data object Favorites : Screen
+
     @Serializable
     data object Search : Screen
+
     @Serializable
     data object History : Screen
+
     @Serializable
     data object More : Screen
 
@@ -25,13 +29,14 @@ sealed interface Screen {
 
     @Serializable
     data class Chapters(
-        val bookId: String,
+        val bookId: Int,
         val bookName: String
     ) : Screen
 
     // Conteúdo do Menu "Mais"
     @Serializable
     data object About : Screen
+
     @Serializable
     data object Copyright : Screen
 }

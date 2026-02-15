@@ -31,14 +31,12 @@ class ChaptersViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val args = savedStateHandle.toRoute<Screen.Chapters>()
-
     val bookName: String = args.bookName
 
     val chapters: StateFlow<List<ChapterUiModel>> = repository.getChapters(args.bookId)
         .map { list ->
             list.map { item ->
                 ChapterUiModel(
-                    // Dados do Capítulo (estão dentro do objeto 'chapter')
                     number = item.chapter.number,
                     id = item.chapter.id,
                     url = item.chapter.audioUrl,
@@ -74,14 +72,19 @@ class ChaptersViewModel @Inject constructor(
 
     fun playChapter(chapter: ChapterUiModel) {
         mediaController?.let { controller ->
+
+            val mediaIdWithIndex = "${args.bookId}|${chapter.number - 1}"
+
             val metadata = MediaMetadata.Builder()
-                .setTitle("Capítulo ${chapter.number}")
-                .setArtist(chapter.bookName)
+                .setTitle(bookName)
+                .setSubtitle("Capítulo ${chapter.number}")
                 .setArtworkUri((chapter.coverUrl ?: "").toUri())
+                .setIsBrowsable(true) // Indica que é um "livro" para o Service
+                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
                 .build()
 
             val mediaItem = MediaItem.Builder()
-                .setUri(chapter.url)
+                .setMediaId(mediaIdWithIndex)
                 .setMediaMetadata(metadata)
                 .build()
 

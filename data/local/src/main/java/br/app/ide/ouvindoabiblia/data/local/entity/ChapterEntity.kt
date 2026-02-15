@@ -8,17 +8,18 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "chapters",
-    // Configura a chave estrangeira: Se apagar o Livro, apaga os Capítulos
     foreignKeys = [
         ForeignKey(
             entity = BookEntity::class,
-            parentColumns = ["book_id"],
-            childColumns = ["book_id"],
+            parentColumns = ["numericId"], // Aponta para o ID numérico do Livro
+            childColumns = ["book_id"],    // Coluna local (que agora será Int)
             onDelete = ForeignKey.CASCADE
         )
     ],
-    // Cria um índice para busca rápida pelo ID do livro
-    indices = [Index(value = ["book_id"])]
+    // INDICE ÚNICO: Essencial para o Smart Sync funcionar com ID autogerado
+    indices = [
+        Index(value = ["book_id", "chapter_number"], unique = true)
+    ]
 )
 data class ChapterEntity(
     @PrimaryKey(autoGenerate = true)
@@ -26,7 +27,7 @@ data class ChapterEntity(
     val id: Long = 0,
 
     @ColumnInfo(name = "book_id")
-    val bookId: String,
+    val bookId: Int, // Alterado para Int para relacionar com numericId
 
     @ColumnInfo(name = "chapter_number")
     val number: Int,

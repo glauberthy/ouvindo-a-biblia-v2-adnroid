@@ -168,27 +168,27 @@ fun MainScreen(
         BackHandler(enabled = isPlayerExpanded) { isPlayerExpanded = false }
 
         // --- 6. ANIMAÇÕES DE LAYOUT (Padding e Bordas) ---
-        val bottomPadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 80.dp + 16.dp, // NavBar + Margem
-            animationSpec = spring(stiffness = Spring.StiffnessLow),
-            label = "BottomPadding"
-        )
-        val sidePadding by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 8.dp,
-            label = "SidePadding"
-        )
-        val cornerRadius by animateDpAsState(
-            targetValue = if (isPlayerExpanded) 0.dp else 12.dp,
-            label = "Corner"
-        )
-        val containerColor by animateColorAsState(
-            targetValue = if (isPlayerExpanded) Color.Transparent else animatedArtworkColor,
-            label = "ContainerColor"
-        )
-        val elevation by animateDpAsState(
-            targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 6.dp,
-            label = "Elevation"
-        )
+//        val bottomPadding by animateDpAsState(
+//            targetValue = if (isPlayerExpanded) 0.dp else 80.dp + 16.dp, // NavBar + Margem
+//            animationSpec = spring(stiffness = Spring.StiffnessLow),
+//            label = "BottomPadding"
+//        )
+//        val sidePadding by animateDpAsState(
+//            targetValue = if (isPlayerExpanded) 0.dp else 8.dp,
+//            label = "SidePadding"
+//        )
+//        val cornerRadius by animateDpAsState(
+//            targetValue = if (isPlayerExpanded) 0.dp else 12.dp,
+//            label = "Corner"
+//        )
+//        val containerColor by animateColorAsState(
+//            targetValue = if (isPlayerExpanded) Color.Transparent else animatedArtworkColor,
+//            label = "ContainerColor"
+//        )
+//        val elevation by animateDpAsState(
+//            targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 6.dp,
+//            label = "Elevation"
+//        )
 
         Box(modifier = Modifier.fillMaxSize()) {
 
@@ -261,9 +261,9 @@ fun MainScreen(
                         modifier = Modifier.fillMaxSize(),
                         navController = navController,
                         windowSizeClass = windowSizeClass,
-                        onPlayBook = { id, name, cover, index -> // Adicionamos o 'index' aqui
+                        onPlayBook = { numericId, name, cover, index -> // Adicionamos o 'index' aqui
                             // Agora repassamos os 4 parâmetros para o ViewModel
-                            playerViewModel.playBook(id, name, cover, index)
+                            playerViewModel.playBook(numericId, name, cover, index)
                         }
                     )
                 }

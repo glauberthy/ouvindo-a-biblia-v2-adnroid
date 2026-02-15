@@ -13,7 +13,7 @@ sealed interface HomeUiState {
 }
 
 data class BookSummary(
-    val id: String,
+    val id: Int,
     val title: String,
     val imageUrl: String?,
     val testament: String
@@ -23,6 +23,6 @@ enum class TestamentFilter { ALL, AT, NT }
 
 sealed interface HomeIntent {
     data class SelectFilter(val filter: TestamentFilter) : HomeIntent
-    data class OpenBook(val bookId: String) : HomeIntent
+    data class OpenBook(val bookId: Int) : HomeIntent
     data object Retry : HomeIntent
 }

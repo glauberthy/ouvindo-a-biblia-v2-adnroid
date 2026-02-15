@@ -24,29 +24,25 @@ import javax.inject.Inject
 class BibleRepositoryImpl @Inject constructor(
     private val api: BibleApi,
     private val dao: BibleDao,
-    private val dataStore: DataStore<Preferences> // Mantido apenas para controle de versão (Sync)
+    private val dataStore: DataStore<Preferences>
 ) : BibleRepository {
 
     companion object {
         private const val TAG = "BibleRepository"
-
-        // Chave de versão para o Sync (DataStore é apropriado aqui)
         private val KEY_BIBLE_VERSION = stringPreferencesKey("bible_data_version")
     }
 
-    // --- LEITURAS DE CONTEÚDO ---
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
 
-    override fun getChapters(bookId: String): Flow<List<ChapterWithBookInfo>> =
+    // O bookId aqui continua sendo o SLUG ("genesis"), o DAO faz o JOIN internamente
+    override fun getChapters(bookId: Int): Flow<List<ChapterWithBookInfo>> =
         dao.getChaptersWithBookInfo(bookId)
 
-    override suspend fun getBook(bookId: String): BookEntity? = dao.getBookById(bookId)
+    override suspend fun getBook(bookId: Int): BookEntity? = dao.getBookById(bookId.toString())
 
     override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
         dao.updateFavoriteStatus(chapterId, isFavorite)
     }
-
-    // --- PLAYBACK STATE (MIGRAÇÃO PARA ROOM) ---
 
     override suspend fun savePlaybackState(
         chapterId: String,
@@ -57,30 +53,20 @@ class BibleRepositoryImpl @Inject constructor(
         imageUrl: String?,
         audioUrl: String
     ) {
-        // Converte o ID String ("105") para Long (105) exigido pelo Banco
         val idLong = chapterId.toLongOrNull() ?: return
-
-        // Cria a entidade. Note que duration/title/image não são salvos aqui,
-        // pois serão recuperados via JOIN com as tabelas originais no getLatest.
-        val entity = PlaybackStateEntity(
-            chapterId = idLong,
-            positionMs = positionMs
-        )
+        val entity = PlaybackStateEntity(chapterId = idLong, positionMs = positionMs)
         dao.savePlaybackState(entity)
     }
 
     override fun getLatestPlaybackState(): Flow<PlaybackState?> {
-        // Observa a query JOIN do DAO. Se o capítulo for apagado, retorna null automaticamente.
         return dao.getLastPlaybackState()
             .map { dto ->
-                if (dto == null) {
-                    null
-                } else {
-                    // Mapeia o DTO do banco para o objeto de domínio
+                if (dto == null) null else {
                     PlaybackState(
-                        chapterId = dto.chapterId.toString(),
+                        // SINALIZAÇÃO: Convertendo Long do banco para Int do domínio
+                        chapterId = dto.chapterId.toInt(),
                         positionMs = dto.positionMs,
-                        duration = 0L, // Duração é re-calculada pelo player ao preparar
+                        duration = 0L,
                         title = "${dto.bookName} ${dto.chapterNumber}",
                         subtitle = "Capítulo ${dto.chapterNumber}",
                         imageUrl = dto.coverUrl,
@@ -95,38 +81,40 @@ class BibleRepositoryImpl @Inject constructor(
         dao.clearPlaybackState()
     }
 
-    // --- UTILITÁRIOS ---
-
-    override suspend fun getBookIdFromChapter(chapterId: String): String? {
+    override suspend fun getBookNumericIdFromChapter(chapterId: Int): Int? {
         return try {
-            val idLong = chapterId.toLongOrNull() ?: return null
+            val chapter = dao.getChapterById(chapterId.toLong())
+            chapter?.bookId // Retorna o Int (numericId)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
-            // CORREÇÃO: Usa a busca por ID numérico, não por URL
-            val chapter = dao.getChapterById(idLong)
 
-            chapter?.bookId
+    override suspend fun getBookIdFromChapter(chapterId: Int): Int? {
+        return try {
+            // 1. chapterId já é Int, apenas convertemos para Long para o DAO se necessário
+            val chapter = dao.getChapterById(chapterId.toLong()) ?: return null
+
+            // 2. Retornamos o bookId da ChapterEntity, que já é o numericId (Int)
+            // Não precisamos mais buscar o slug ("genesis"), o número (ex: 6) é o que o Player precisa.
+            chapter.bookId
         } catch (e: Exception) {
             Log.e(TAG, "Erro ao buscar ID do livro: ${e.message}")
             null
         }
     }
 
-    // --- SINCRONIZAÇÃO (Mantido) ---
+    // --- CORREÇÃO NO SYNC (MAPEAMENTO) ---
     override suspend fun syncBibleData(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.getBibleIndex()
             val remoteVersion = response.meta.version
-
             val preferences = dataStore.data.first()
             val localVersion = preferences[KEY_BIBLE_VERSION]
             val isDbEmpty = dao.getBookCount() == 0
 
-            if (localVersion == remoteVersion && !isDbEmpty) {
-//                Log.i(TAG, "Sync ignorado: Versão $localVersion já está atualizada.")
-                return@withContext Result.success(Unit)
-            }
-
-//            Log.i(TAG, "Iniciando atualização... Local: $localVersion | Remoto: $remoteVersion")
+            if (localVersion == remoteVersion && !isDbEmpty) return@withContext Result.success(Unit)
 
             val (booksToInsert, chaptersToInsert) = withContext(Dispatchers.Default) {
                 val books = mutableListOf<BookEntity>()
@@ -136,8 +124,8 @@ class BibleRepositoryImpl @Inject constructor(
                     booksMap.forEach { (slug, dto) ->
                         books.add(
                             BookEntity(
-                                bookId = slug,
-                                numericId = dto.id,
+                                numericId = dto.id,    // PK agora é numérica
+                                bookId = slug,         // Slug para navegação
                                 name = dto.name,
                                 testament = testamentCode,
                                 folderPath = dto.path,
@@ -149,12 +137,12 @@ class BibleRepositoryImpl @Inject constructor(
                         dto.capitulos.forEach { chapterDto ->
                             chapters.add(
                                 ChapterEntity(
-                                    // Removemos 'id' aqui se for autogerado pelo Room (0),
-                                    // ou mapeamos se vier da API. Assumindo auto-generate:
-                                    bookId = slug,
+                                    // IMPORTANTE: bookId aqui agora é Int (numericId)
+                                    bookId = dto.id,
                                     number = chapterDto.numero,
                                     audioUrl = chapterDto.url,
                                     filename = chapterDto.arquivo
+                                    // id é auto-gerado (0) e isFavorite é false por padrão
                                 )
                             )
                         }
@@ -163,22 +151,15 @@ class BibleRepositoryImpl @Inject constructor(
 
                 mapTestament("at", response.testamentos.antigoTestamento)
                 mapTestament("nt", response.testamentos.novoTestamento)
-
                 Pair(books, chapters)
             }
 
             if (booksToInsert.isNotEmpty()) {
                 dao.refreshBibleData(booksToInsert, chaptersToInsert)
-                dataStore.edit { prefs ->
-                    prefs[KEY_BIBLE_VERSION] = remoteVersion
-                }
-                Log.i(TAG, "Sync concluído! Versão: $remoteVersion")
+                dataStore.edit { it[KEY_BIBLE_VERSION] = remoteVersion }
             }
-
             Result.success(Unit)
-
         } catch (e: Exception) {
-            Log.e(TAG, "Erro sync: ${e.message}", e)
             Result.failure(e)
         }
     }

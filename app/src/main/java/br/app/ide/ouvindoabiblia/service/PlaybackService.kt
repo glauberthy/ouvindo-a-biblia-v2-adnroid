@@ -153,17 +153,19 @@ class PlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? {
         // Busca ID do livro
-        val bookId = repository.getBookIdFromChapter(state.chapterId) ?: return null
+        val bookNumericId = repository.getBookNumericIdFromChapter(state.chapterId) ?: return null
 
         // Carrega capítulos
-        val chapters = repository.getChapters(bookId).first()
+        val chapters = repository.getChapters(bookNumericId).first()
         if (chapters.isEmpty()) return null
 
         // Cria playlist
-        val playlist = createMediaItemsFromChapters(chapters, bookId)
+        val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
 
         // Acha índice
-        val startIndex = playlist.indexOfFirst { it.mediaId == state.chapterId }.coerceAtLeast(0)
+        val startIndex = playlist.indexOfFirst {
+            it.mediaId == state.chapterId.toString()
+        }.coerceAtLeast(0)
 
         return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
     }
@@ -313,39 +315,106 @@ class PlaybackService : MediaLibraryService() {
             }
         }
 
+//        override fun onSetMediaItems(
+//            mediaSession: MediaSession,
+//            controller: MediaSession.ControllerInfo,
+//            mediaItems: MutableList<MediaItem>,
+//            startIndex: Int, // Este startIndex do sistema costuma ser 0 em pastas
+//            startPositionMs: Long
+//        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+//            val item = mediaItems.firstOrNull()
+//            val isBookFolder = item?.mediaMetadata?.isBrowsable == true
+//
+//            if (mediaItems.size == 1 && isBookFolder) {
+//
+//                // --- 1. DECODIFICAÇÃO DO ID ---
+//                // Separamos o ID do livro do índice solicitado (Ex: "2Kings|18")
+//                val parts = item.mediaId.split("|")
+//                val actualBookId = parts[0]
+//                val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
+//
+//                return CallbackToFutureAdapter.getFuture { completer ->
+//                    serviceScope.launch(Dispatchers.IO) {
+//                        try {
+//                            // Buscamos capítulos usando o ID real (ex: "2Kings")
+//                            val chapters = repository.getChapters(actualBookId).first()
+//
+//                            if (chapters.isEmpty()) {
+//                                completer.setException(IllegalStateException("Livro vazio: $actualBookId"))
+//                                return@launch
+//                            }
+//
+//                            val playlist = createMediaItemsFromChapters(chapters, actualBookId)
+//
+//                            // --- 2. A CORREÇÃO MÁGICA ---
+//                            // Agora passamos o requestedIndex. O Player começará exatamente no capítulo desejado!
+//                            completer.set(
+//                                MediaSession.MediaItemsWithStartPosition(
+//                                    playlist,
+//                                    requestedIndex,
+//                                    0L
+//                                )
+//                            )
+//                        } catch (e: Exception) {
+//                            completer.setException(e)
+//                        }
+//                    }
+//                    "Play Folder $actualBookId"
+//                }
+//            }
+//
+//            return super.onSetMediaItems(
+//                mediaSession,
+//                controller,
+//                mediaItems,
+//                startIndex,
+//                startPositionMs
+//            )
+//        }
+
         override fun onSetMediaItems(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
             mediaItems: MutableList<MediaItem>,
-            startIndex: Int, // Este startIndex do sistema costuma ser 0 em pastas
+            startIndex: Int,
             startPositionMs: Long
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            val item = mediaItems.firstOrNull()
-            val isBookFolder = item?.mediaMetadata?.isBrowsable == true
+            val item = mediaItems.firstOrNull() ?: return super.onSetMediaItems(
+                mediaSession,
+                controller,
+                mediaItems,
+                startIndex,
+                startPositionMs
+            )
+            val isBookFolder = item.mediaMetadata.isBrowsable == true
 
-            if (mediaItems.size == 1 && isBookFolder) {
-
-                // --- 1. DECODIFICAÇÃO DO ID ---
-                // Separamos o ID do livro do índice solicitado (Ex: "2Kings|18")
+            if (isBookFolder) {
                 val parts = item.mediaId.split("|")
-                val actualBookId = parts[0]
+                // CONVERSÃO NECESSÁRIA: De String para Int
+                val bookIdInt = parts[0].toIntOrNull() ?: return super.onSetMediaItems(
+                    mediaSession,
+                    controller,
+                    mediaItems,
+                    startIndex,
+                    startPositionMs
+                )
                 val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
 
                 return CallbackToFutureAdapter.getFuture { completer ->
                     serviceScope.launch(Dispatchers.IO) {
                         try {
-                            // Buscamos capítulos usando o ID real (ex: "2Kings")
-                            val chapters = repository.getChapters(actualBookId).first()
+                            // Agora passamos o Int (6) para o repositório
+                            val chapters = repository.getChapters(bookIdInt).first()
 
                             if (chapters.isEmpty()) {
-                                completer.setException(IllegalStateException("Livro vazio: $actualBookId"))
+                                completer.setException(IllegalStateException("Livro vazio no banco: $bookIdInt"))
                                 return@launch
                             }
 
-                            val playlist = createMediaItemsFromChapters(chapters, actualBookId)
+                            // Passamos o ID como String para o MediaItem, mas os dados vieram do Int
+                            val playlist =
+                                createMediaItemsFromChapters(chapters, bookIdInt.toString())
 
-                            // --- 2. A CORREÇÃO MÁGICA ---
-                            // Agora passamos o requestedIndex. O Player começará exatamente no capítulo desejado!
                             completer.set(
                                 MediaSession.MediaItemsWithStartPosition(
                                     playlist,
@@ -357,10 +426,9 @@ class PlaybackService : MediaLibraryService() {
                             completer.setException(e)
                         }
                     }
-                    "Play Folder $actualBookId"
+                    "Play Book $bookIdInt"
                 }
             }
-
             return super.onSetMediaItems(
                 mediaSession,
                 controller,
@@ -402,18 +470,22 @@ class PlaybackService : MediaLibraryService() {
                             val books = repository.getBooks().first()
                             books.forEach { book ->
                                 children.add(
-                                    MediaItem.Builder().setMediaId(book.bookId).setMediaMetadata(
-                                        MediaMetadata.Builder().setTitle(book.name)
-                                            .setSubtitle("${book.totalChapters} Caps")
-                                            .setArtworkUri(book.imageUrl?.toUri())
-                                            .setIsBrowsable(true).setIsPlayable(false)
-                                            .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
-                                            .build()
-                                    ).build()
+                                    MediaItem.Builder()
+                                        .setMediaId(book.numericId.toString()) // USAR O NÚMERO COMO ID DE MÍDIA
+                                        .setMediaMetadata(
+                                            MediaMetadata.Builder()
+                                                .setTitle(book.name)
+                                                .setIsBrowsable(true)
+                                                .setIsPlayable(false)
+                                                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+                                                .build()
+                                        ).build()
                                 )
                             }
                         } else {
-                            val chapters = repository.getChapters(parentId).first()
+                            // Se o parentId é "6", convertemos para Int e buscamos os capítulos
+                            val bookIdInt = parentId.toIntOrNull() ?: 0
+                            val chapters = repository.getChapters(bookIdInt).first()
                             children.addAll(createMediaItemsFromChapters(chapters, parentId))
                         }
                         completer.set(LibraryResult.ofItemList(children.build(), params))

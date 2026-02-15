@@ -186,16 +186,16 @@ class PlayerViewModel @Inject constructor(
     // --- AÇÃO PRINCIPAL: TOCAR LIVRO ---
     // No PlayerViewModel.kt
 
-    fun playBook(bookId: String, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
+    // 1. ALTERADO: bookId agora é Int
+    fun playBook(bookId: Int, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
         val controller = mediaController ?: return
 
-        // 1. Verificamos o ID atual. Como agora usamos o formato "ID|INDEX",
-        // precisamos pegar apenas a primeira parte para comparar o ID do livro.
+        // 2. CORREÇÃO DE COMPARAÇÃO:
+        // Pegamos o ID da mídia atual e convertemos para Int para comparar com o novo bookId
         val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
-        val currentBookId = currentMediaId.split("|").firstOrNull()
+        val currentBookId = currentMediaId.split("|").firstOrNull()?.toIntOrNull()
 
         if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
-            // Se já é o mesmo livro, apenas movemos para o capítulo (seek)
             if (controller.currentMediaItemIndex != initialIndex) {
                 controller.seekTo(initialIndex, 0L)
             }
@@ -203,11 +203,10 @@ class PlayerViewModel @Inject constructor(
             return
         }
 
-        // Atualiza UI otimista
         _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
 
-        // 2. O SEGREDO: Criamos o mediaId no formato "ID_DO_LIVRO|INDICE"
-        // Exemplo: "genesis|18"
+        // 3. O mediaId continua sendo uma String no formato "NUMERIC_ID|INDEX"
+        // Exemplo: "1|18" (Gênesis Capítulo 19)
         val mediaIdWithIndex = "$bookId|$initialIndex"
 
         val bookFolderItem = MediaItem.Builder()
@@ -218,7 +217,6 @@ class PlayerViewModel @Inject constructor(
                     .setArtworkUri(coverUrl.toUri())
                     .setIsBrowsable(true)
                     .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
-                    // Mantemos o extra por segurança, mas o Service lerá do ID
                     .setExtras(android.os.Bundle().apply {
                         putInt("start_index", initialIndex)
                     })
@@ -226,7 +224,6 @@ class PlayerViewModel @Inject constructor(
             )
             .build()
 
-        // Envia para o Serviço
         controller.setMediaItems(listOf(bookFolderItem))
         controller.prepare()
         controller.play()
@@ -393,7 +390,7 @@ class PlayerViewModel @Inject constructor(
                 ChapterWithBookInfo(
                     chapter = ChapterEntity(
                         id = chapterId,
-                        bookId = "",
+                        bookId = 0,
                         number = chapterNum,
                         audioUrl = audioUrl,
                         filename = "",

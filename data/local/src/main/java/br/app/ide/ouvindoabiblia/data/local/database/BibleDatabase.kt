@@ -9,7 +9,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 
 @Database(
     entities = [BookEntity::class, ChapterEntity::class, PlaybackStateEntity::class], // Lista todas as tabelas
-    version = 3,
+    version = 4,
     exportSchema = false // Para desenvolvimento inicial, deixamos falso
 )
 abstract class BibleDatabase : RoomDatabase() {

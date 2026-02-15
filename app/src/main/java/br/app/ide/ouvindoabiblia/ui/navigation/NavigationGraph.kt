@@ -23,7 +23,7 @@ import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
 fun NavigationGraph(
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
-    onPlayBook: (String, String, String, Int) -> Unit, // Adicionamos o Int aqui
+    onPlayBook: (Int, String, String, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -35,10 +35,10 @@ fun NavigationGraph(
         composable<Screen.Home> {
             HomeScreen(
                 windowSizeClass = windowSizeClass,
-                onNavigateToBook = { id, name, cover ->
+                onNavigateToBook = { numericId, name, cover ->
                     // Ao clicar num livro, não navegamos mais para uma nova tela.
                     // Nós chamamos essa função para abrir o Player (Bottom Sheet) por cima.
-                    onPlayBook(id, name, cover, 0)
+                    onPlayBook(numericId, name, cover, 0)
                 }
             )
         }
@@ -46,8 +46,8 @@ fun NavigationGraph(
         // --- FAVORITOS ---
         composable<Screen.Favorites> {
             FavoritesScreen(
-                onPlayChapter = { id, name, cover, index -> // Recebe o index da tela
-                    onPlayBook(id, name, cover, index)     // Repassa para a Main
+                onPlayChapter = { numericId, name, cover, index -> // Recebe o index da tela
+                    onPlayBook(numericId, name, cover, index)     // Repassa para a Main
                 }
             )
         }

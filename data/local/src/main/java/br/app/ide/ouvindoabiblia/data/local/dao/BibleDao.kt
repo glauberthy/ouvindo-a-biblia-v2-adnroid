@@ -27,35 +27,41 @@ interface BibleDao {
     @Transaction
     @Query(
         """
-        SELECT 
-            chapters.*, 
-            books.name as bookName, 
-            books.image_url as coverUrl, 
-            books.testament as testament,
-            books.total_chapters as totalChapters
-        FROM chapters 
-        INNER JOIN books ON chapters.book_id = books.book_id 
-        WHERE chapters.book_id = :bookId
-        ORDER BY chapters.chapter_number ASC
-    """
+    SELECT 
+        chapters.*, 
+        books.name as bookName, 
+        books.image_url as coverUrl, 
+        books.testament as testament,
+        books.total_chapters as totalChapters
+    FROM chapters 
+    -- CORREÇÃO: Comparar com numericId (número), não book_id (slug)
+    INNER JOIN books ON chapters.book_id = books.numericId 
+    WHERE chapters.book_id = :bookId
+    ORDER BY chapters.chapter_number ASC
+"""
     )
-    fun getChaptersWithBookInfo(bookId: String): Flow<List<ChapterWithBookInfo>>
+    fun getChaptersWithBookInfo(bookId: Int): Flow<List<ChapterWithBookInfo>>
 
     // Busca capítulos de um livro específico
     @Query("SELECT * FROM chapters WHERE book_id = :bookId ORDER BY chapter_number ASC")
-    fun getChaptersForBook(bookId: String): Flow<List<ChapterEntity>>
+    fun getChaptersForBook(bookId: Int): Flow<List<ChapterEntity>> // Agora recebe Int
 
     // Busca um único livro (útil para pegar a capa no player)
     @Query("SELECT * FROM books WHERE book_id = :bookId LIMIT 1")
     suspend fun getBookById(bookId: String): BookEntity?
 
     // --- ESCRITA (Usada quando o app inicia e baixa o JSON) ---
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertBookIgnore(book: BookEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChapterIgnore(chapter: ChapterEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBooks(books: List<BookEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChapters(chapters: List<ChapterEntity>)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChaptersIgnore(chapters: List<ChapterEntity>): List<Long>
 
     // Deleta tudo (útil para resetar dados se o JSON mudar muito)
     @Query("DELETE FROM books")
@@ -72,11 +78,65 @@ interface BibleDao {
     // Uma transação garante que limpa e insere tudo de uma vez com segurança
     @Transaction
     suspend fun refreshBibleData(books: List<BookEntity>, chapters: List<ChapterEntity>) {
-        clearBooks()
-        clearChapters()
-        insertBooks(books)
-        insertChapters(chapters)
+
+        // Sincroniza Livros (Protegendo contra o CASCADE DELETE)
+        books.forEach { book ->
+            val rowId = insertBookIgnore(book)
+            if (rowId == -1L) {
+                // Já existe: atualizamos apenas os dados técnicos
+                updateBookMetadata(
+                    book.numericId,
+                    book.name,
+                    book.imageUrl,
+                    book.folderPath,
+                    book.totalChapters
+                )
+            }
+        }
+
+        // Sincroniza Capítulos (Protegendo os Favoritos)
+        chapters.forEach { chapter ->
+            val rowId = insertChapterIgnore(chapter)
+            if (rowId == -1L) {
+                // Já existe: atualizamos apenas a URL de áudio sem tocar no is_favorite
+                updateChapterMetadataByCompositeKey(
+                    bookId = chapter.bookId,
+                    chapterNumber = chapter.number,
+                    audioUrl = chapter.audioUrl,
+                    filename = chapter.filename
+                )
+            }
+        }
     }
+
+    @Query(
+        """
+        UPDATE books SET name = :name, image_url = :imageUrl, folder_path = :folderPath, total_chapters = :totalChapters 
+        WHERE numericId = :numericId
+    """
+    )
+    suspend fun updateBookMetadata(
+        numericId: Int,
+        name: String,
+        imageUrl: String?,
+        folderPath: String,
+        totalChapters: Int
+    )
+
+    // SINALIZAÇÃO: CORREÇÃO CRÍTICA!
+    // Como o 'id' no ChapterEntity vindo do Sync é 0, precisamos atualizar pela CHAVE COMPOSTA (Livro + Número)
+    @Query(
+        """
+        UPDATE chapters SET audio_url = :audioUrl, filename = :filename 
+        WHERE book_id = :bookId AND chapter_number = :chapterNumber
+    """
+    )
+    suspend fun updateChapterMetadataByCompositeKey(
+        bookId: Int,
+        chapterNumber: Int,
+        audioUrl: String,
+        filename: String
+    )
 
     @Query("UPDATE chapters SET is_favorite = :isFavorite WHERE id = :chapterId")
     suspend fun updateFavoriteStatus(chapterId: Long, isFavorite: Boolean)
@@ -100,9 +160,25 @@ interface BibleDao {
     )
     suspend fun getChapterWithBookInfoById(audioUrl: String): ChapterWithBookInfo?
 
-    // -------------------------------------------------------------------------
-    // --- NOVO: MÉTODOS PARA O PLAYBACK STATE (Substituindo DataStore) ---
-    // -------------------------------------------------------------------------
+
+    @Query(
+        """
+        UPDATE chapters 
+        SET audio_url = :audioUrl, 
+            filename = :filename,
+            book_id = :bookId,
+            chapter_number = :chapterNumber
+        WHERE id = :id
+    """
+    )
+    suspend fun updateChapterMetadata(
+        id: Long,
+        audioUrl: String,
+        filename: String,
+        bookId: Int,
+        chapterNumber: Int
+    )
+
 
     // 1. Salvar o Estado (Substitui se já existir, mantendo sempre o ID=1)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -147,8 +223,8 @@ interface BibleDao {
         books.image_url as coverUrl,
         books.testament as testament,
         books.total_chapters as totalChapters
-    FROM chapters 
-    INNER JOIN books ON chapters.book_id = books.book_id 
+    FROM chapters
+    INNER JOIN books ON chapters.book_id = books.numericId 
     WHERE chapters.is_favorite = 1
     ORDER BY books.numericId ASC, CAST(chapters.chapter_number AS INTEGER) ASC
 """

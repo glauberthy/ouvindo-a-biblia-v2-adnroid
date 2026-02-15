@@ -41,7 +41,7 @@ class HomeViewModel @Inject constructor(
                 .sortedBy { it.numericId }
                 .map {
                     BookSummary(
-                        id = it.bookId,
+                        id = it.numericId,
                         title = it.name,
                         imageUrl = if (it.imageUrl.isNullOrBlank()) null else it.imageUrl,
                         testament = it.testament

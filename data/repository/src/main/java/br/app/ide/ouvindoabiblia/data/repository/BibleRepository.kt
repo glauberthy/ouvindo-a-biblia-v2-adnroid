@@ -7,14 +7,12 @@ import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
-    // Sincroniza dados da API
     suspend fun syncBibleData(): Result<Unit>
-
-    // --- LEITURA ---
     fun getBooks(): Flow<List<BookEntity>>
-    fun getChapters(bookId: String): Flow<List<ChapterWithBookInfo>>
-    suspend fun getBook(bookId: String): BookEntity?
-    suspend fun getBookIdFromChapter(chapterId: String): String?
+    fun getChapters(bookId: Int): Flow<List<ChapterWithBookInfo>>
+    suspend fun getBook(bookId: Int): BookEntity?
+    suspend fun getBookNumericIdFromChapter(chapterId: Int): Int?
+    suspend fun getBookIdFromChapter(chapterId: Int): Int?
 
     // --- INTERAÇÃO ---
     suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean)
@@ -31,19 +29,14 @@ interface BibleRepository {
     )
 
     suspend fun clearPlaybackState()
-
-    // Retorna o estado combinando dados da tabela de playback com a tabela de capítulos/livros
     fun getLatestPlaybackState(): Flow<PlaybackState?>
-
-
     fun getFavorites(): Flow<List<ChapterWithBookInfo>>
-
     fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
 }
 
 // Domain Model (Mantido para uso na UI/Service)
 data class PlaybackState(
-    val chapterId: String,
+    val chapterId: Int,
     val positionMs: Long,
     val duration: Long,
     val title: String,

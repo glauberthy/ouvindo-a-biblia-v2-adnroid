@@ -49,7 +49,7 @@ import coil.compose.AsyncImage
 
 @Composable
 fun FavoritesScreen(
-    onPlayChapter: (String, String, String, Int) -> Unit,
+    onPlayChapter: (Int, String, String, Int) -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -64,7 +64,7 @@ fun FavoritesScreen(
 @Composable
 fun FavoritesScreenContent(
     uiState: FavoritesUiState,
-    onPlayChapter: (String, String, String, Int) -> Unit,
+    onPlayChapter: (Int, String, String, Int) -> Unit,
     onRemove: (Long) -> Unit
 ) {
     LazyColumn(
