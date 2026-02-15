@@ -189,10 +189,13 @@ class PlayerViewModel @Inject constructor(
     fun playBook(bookId: String, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
         val controller = mediaController ?: return
 
-        // Evita recarregar se já estivermos tocando este livro
-        val currentBookId = controller.currentMediaItem?.mediaMetadata?.extras?.getString("book_id")
+        // 1. Verificamos o ID atual. Como agora usamos o formato "ID|INDEX",
+        // precisamos pegar apenas a primeira parte para comparar o ID do livro.
+        val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
+        val currentBookId = currentMediaId.split("|").firstOrNull()
+
         if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
-            // Se já for o mesmo livro, apenas move para o capítulo desejado se ele for diferente do atual
+            // Se já é o mesmo livro, apenas movemos para o capítulo (seek)
             if (controller.currentMediaItemIndex != initialIndex) {
                 controller.seekTo(initialIndex, 0L)
             }
@@ -203,15 +206,19 @@ class PlayerViewModel @Inject constructor(
         // Atualiza UI otimista
         _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
 
-        // Criamos o item de pasta, e passamos o 'start_index' nos Extras para o Service ler
+        // 2. O SEGREDO: Criamos o mediaId no formato "ID_DO_LIVRO|INDICE"
+        // Exemplo: "genesis|18"
+        val mediaIdWithIndex = "$bookId|$initialIndex"
+
         val bookFolderItem = MediaItem.Builder()
-            .setMediaId(bookId)
+            .setMediaId(mediaIdWithIndex)
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(bookTitle)
                     .setArtworkUri(coverUrl.toUri())
-                    .setIsBrowsable(true) // Sinaliza que é uma pasta/livro
+                    .setIsBrowsable(true)
                     .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+                    // Mantemos o extra por segurança, mas o Service lerá do ID
                     .setExtras(android.os.Bundle().apply {
                         putInt("start_index", initialIndex)
                     })

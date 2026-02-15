@@ -111,6 +111,7 @@ class PlaybackService : MediaLibraryService() {
 
     // --- LÓGICA DE RESTORE CORRIGIDA E CENTRALIZADA ---
 
+    @OptIn(UnstableApi::class)
     private fun restoreLastSession() {
         Log.d(TAG, "🔄 RestoreLastSession: INICIANDO...")
         serviceScope.launch(Dispatchers.IO) {
@@ -124,7 +125,7 @@ class PlaybackService : MediaLibraryService() {
                 if (result != null) {
                     withContext(Dispatchers.Main) {
                         if (player.mediaItemCount == 0) {
-                            Log.d(TAG, "✅ Restore: Sucesso! ${state.title}")
+//                            Log.d(TAG, "✅ Restore: Sucesso! ${state.title}")
                             player.setMediaItems(
                                 result.mediaItems,
                                 result.startIndex,
@@ -134,12 +135,14 @@ class PlaybackService : MediaLibraryService() {
                             player.playWhenReady = false
                         }
                     }
-                } else {
-                    Log.w(TAG, "⚠️ Restore: Falha ao reconstruir playlist (Livro não encontrado?)")
                 }
-            } else {
-                Log.d(TAG, "⚠️ Restore: Nada salvo no banco.")
+//                else {
+//                    Log.w(TAG, "⚠️ Restore: Falha ao reconstruir playlist (Livro não encontrado?)")
+//                }
             }
+//            else {
+//                Log.d(TAG, "⚠️ Restore: Nada salvo no banco.")
+//            }
         }
     }
 
@@ -314,31 +317,50 @@ class PlaybackService : MediaLibraryService() {
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
             mediaItems: MutableList<MediaItem>,
-            startIndex: Int,
+            startIndex: Int, // Este startIndex do sistema costuma ser 0 em pastas
             startPositionMs: Long
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
             val item = mediaItems.firstOrNull()
             val isBookFolder = item?.mediaMetadata?.isBrowsable == true
 
             if (mediaItems.size == 1 && isBookFolder) {
-                val bookId = item.mediaId
+
+                // --- 1. DECODIFICAÇÃO DO ID ---
+                // Separamos o ID do livro do índice solicitado (Ex: "2Kings|18")
+                val parts = item.mediaId.split("|")
+                val actualBookId = parts[0]
+                val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
+
                 return CallbackToFutureAdapter.getFuture { completer ->
                     serviceScope.launch(Dispatchers.IO) {
                         try {
-                            val chapters = repository.getChapters(bookId).first()
+                            // Buscamos capítulos usando o ID real (ex: "2Kings")
+                            val chapters = repository.getChapters(actualBookId).first()
+
                             if (chapters.isEmpty()) {
-                                completer.setException(IllegalStateException("Livro vazio: $bookId"))
+                                completer.setException(IllegalStateException("Livro vazio: $actualBookId"))
                                 return@launch
                             }
-                            val playlist = createMediaItemsFromChapters(chapters, bookId)
-                            completer.set(MediaSession.MediaItemsWithStartPosition(playlist, 0, 0))
+
+                            val playlist = createMediaItemsFromChapters(chapters, actualBookId)
+
+                            // --- 2. A CORREÇÃO MÁGICA ---
+                            // Agora passamos o requestedIndex. O Player começará exatamente no capítulo desejado!
+                            completer.set(
+                                MediaSession.MediaItemsWithStartPosition(
+                                    playlist,
+                                    requestedIndex,
+                                    0L
+                                )
+                            )
                         } catch (e: Exception) {
                             completer.setException(e)
                         }
                     }
-                    "Play Folder $bookId"
+                    "Play Folder $actualBookId"
                 }
             }
+
             return super.onSetMediaItems(
                 mediaSession,
                 controller,
