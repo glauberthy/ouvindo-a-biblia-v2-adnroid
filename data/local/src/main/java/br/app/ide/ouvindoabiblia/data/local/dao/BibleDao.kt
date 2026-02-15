@@ -30,7 +30,9 @@ interface BibleDao {
         SELECT 
             chapters.*, 
             books.name as bookName, 
-            books.image_url as coverUrl 
+            books.image_url as coverUrl, 
+            books.testament as testament,
+            books.total_chapters as totalChapters
         FROM chapters 
         INNER JOIN books ON chapters.book_id = books.book_id 
         WHERE chapters.book_id = :bookId
@@ -84,15 +86,17 @@ interface BibleDao {
     @Transaction
     @Query(
         """
-        SELECT 
-            chapters.*, 
-            books.name as bookName, 
-            books.image_url as coverUrl 
-        FROM chapters 
-        INNER JOIN books ON chapters.book_id = books.book_id 
-        WHERE chapters.audio_url = :audioUrl OR chapters.book_id = :audioUrl 
-        LIMIT 1
-    """
+    SELECT 
+        chapters.*, 
+        books.name as bookName, 
+        books.image_url as coverUrl,
+        books.testament as testament,      -- Adicionado
+        books.total_chapters as totalChapters -- Adicionado
+    FROM chapters 
+    INNER JOIN books ON chapters.book_id = books.book_id 
+    WHERE chapters.audio_url = :audioUrl OR chapters.book_id = :audioUrl 
+    LIMIT 1
+"""
     )
     suspend fun getChapterWithBookInfoById(audioUrl: String): ChapterWithBookInfo?
 
@@ -137,18 +141,19 @@ interface BibleDao {
     @Transaction
     @Query(
         """
-        SELECT 
-            chapters.*, 
-            books.name as bookName, 
-            books.image_url as coverUrl 
-        FROM chapters 
-        INNER JOIN books ON chapters.book_id = books.book_id 
-        WHERE chapters.is_favorite = 1
-        ORDER BY books.name ASC, chapters.chapter_number ASC
-    """
+    SELECT 
+        chapters.*, 
+        books.name as bookName, 
+        books.image_url as coverUrl,
+        books.testament as testament,
+        books.total_chapters as totalChapters
+    FROM chapters 
+    INNER JOIN books ON chapters.book_id = books.book_id 
+    WHERE chapters.is_favorite = 1
+    ORDER BY books.numericId ASC, CAST(chapters.chapter_number AS INTEGER) ASC
+"""
     )
     fun getFavoriteChapters(): Flow<List<ChapterWithBookInfo>>
-
     // No BibleDao.kt
 
     @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
