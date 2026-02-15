@@ -150,9 +150,9 @@ private fun HomeContent(
         }
 
         // 4. Header Lista
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            SectionHeader(title = "Livros (${state.filteredBooks.size})")
-        }
+//        item(span = { GridItemSpan(maxLineSpan) }) {
+//            SectionHeader(title = "Livros (${state.filteredBooks.size})")
+//        }
 
         // 5. Grid Principal
         items(
