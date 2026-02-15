@@ -23,6 +23,7 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import br.app.ide.ouvindoabiblia.MainActivity
+import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.PlaybackState
@@ -72,7 +73,12 @@ class PlaybackService : MediaLibraryService() {
             .setBitmapLoader(CoilBitmapLoader())
             .build()
 
-        setMediaNotificationProvider(DefaultMediaNotificationProvider(this))
+
+        val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
+            .setChannelId(DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID)
+            .build()
+        notificationProvider.setSmallIcon(R.drawable.ic_notificacao)
+        setMediaNotificationProvider(notificationProvider)
 
         setupAutoSaveListener()
         restoreLastSession()
@@ -176,11 +182,16 @@ class PlaybackService : MediaLibraryService() {
     ): List<MediaItem> {
         return chapters.map { chapterInfo ->
             val metadata = MediaMetadata.Builder()
+                // PARA A NOTIFICAÇÃO: [Livro] [Capítulo]
                 .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
-                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
-                .setArtist("Ouvindo a Bíblia")
-                .setArtworkUri(chapterInfo.coverUrl?.toUri())
+                // PARA O MINI/FULL PLAYER (Linha 1): [Livro]
                 .setAlbumTitle(chapterInfo.bookName)
+                // PARA O MINI/FULL PLAYER (Linha 2): [Capítulo]
+                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
+                //PARA A NOTIFICAÇÃO (Linha 2)
+                .setArtist("Ouvindo a Bíblia")
+
+                .setArtworkUri(chapterInfo.coverUrl?.toUri())
                 .setIsBrowsable(false)
                 .setIsPlayable(true)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)

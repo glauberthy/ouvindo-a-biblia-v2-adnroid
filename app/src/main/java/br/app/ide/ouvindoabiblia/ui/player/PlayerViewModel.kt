@@ -348,13 +348,19 @@ class PlayerViewModel @Inject constructor(
         val player = mediaController ?: return
 
         _uiState.update { state ->
+            val meta = player.mediaMetadata
             state.copy(
                 isPlaying = player.isPlaying,
                 isBuffering = player.playbackState == Player.STATE_BUFFERING,
-                title = player.mediaMetadata.title?.toString() ?: state.title,
-                subtitle = player.mediaMetadata.subtitle?.toString() ?: "",
-                artist = player.mediaMetadata.artist?.toString() ?: "Ouvindo a Bíblia",
-                imageUrl = player.mediaMetadata.artworkUri?.toString() ?: state.imageUrl,
+
+                // 1. AJUSTE: Pegamos o AlbumTitle para ser o Título principal da UI (Livro)
+                title = meta.albumTitle?.toString() ?: meta.title?.toString() ?: state.title,
+
+                // 2. AJUSTE: Pegamos o Subtitle para ser a segunda linha da UI (Capítulo)
+                subtitle = meta.subtitle?.toString() ?: "",
+
+                artist = meta.artist?.toString() ?: "Ouvindo a Bíblia",
+                imageUrl = meta.artworkUri?.toString() ?: state.imageUrl,
                 duration = player.duration.coerceAtLeast(0L),
                 currentChapterIndex = player.currentMediaItemIndex,
                 playbackSpeed = player.playbackParameters.speed,
