@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.data.local.dao
 
+import MomentWithAudio
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -7,7 +8,9 @@ import androidx.room.Query
 import androidx.room.Transaction
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.PlaybackStateDto
 import kotlinx.coroutines.flow.Flow
@@ -234,4 +237,54 @@ interface BibleDao {
 
     @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
     fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
+
+
+    // --- TEMAS E MOMENTOS ---
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertThemeIgnore(theme: ThemeEntity): Long
+
+    @Query("UPDATE themes SET title = :title, description = :description, imageUrl = :imageUrl WHERE id = :id")
+    suspend fun updateThemeMetadata(id: Int, title: String, description: String, imageUrl: String?)
+
+    @Query("DELETE FROM moments WHERE themeId = :themeId")
+    suspend fun deleteMomentsByTheme(themeId: Int)
+
+    @Insert
+    suspend fun insertMoments(moments: List<MomentEntity>)
+
+    @Transaction
+    suspend fun refreshThemesData(themes: List<ThemeEntity>, moments: List<MomentEntity>) {
+        // 1. Sincroniza os Temas (Categorias)
+        themes.forEach { theme ->
+            val rowId = insertThemeIgnore(theme)
+            if (rowId == -1L) {
+                updateThemeMetadata(theme.id, theme.title, theme.description, theme.imageUrl)
+            }
+        }
+
+        // 2. Sincroniza os Momentos (Playlist do Tema)
+        // Como momentos não têm estado de usuário, limpamos e inserimos os novos
+        // para garantir que a ordem do JSON seja respeitada.
+        themes.forEach { theme ->
+            deleteMomentsByTheme(theme.id)
+        }
+        insertMoments(moments)
+    }
+
+    // Query para buscar os momentos com áudio (usaremos na UI em breve)
+    @Transaction
+    @Query(
+        """
+        SELECT 
+            M.*, 
+            C.audio_url as audioUrl,
+            B.name as bookName
+        FROM moments M
+        INNER JOIN chapters C ON M.bookId = C.book_id AND M.chapterNumber = C.chapter_number
+        INNER JOIN books B ON M.bookId = B.numericId
+        WHERE M.themeId = :themeId
+    """
+    )
+    fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
 }

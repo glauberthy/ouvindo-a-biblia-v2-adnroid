@@ -9,7 +9,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import br.app.ide.ouvindoabiblia.data.local.dao.BibleDao
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
@@ -30,6 +32,7 @@ class BibleRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "BibleRepository"
         private val KEY_BIBLE_VERSION = stringPreferencesKey("bible_data_version")
+        private val KEY_THEMES_VERSION = stringPreferencesKey("themes_data_version")
     }
 
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
@@ -167,4 +170,57 @@ class BibleRepositoryImpl @Inject constructor(
     override fun getFavorites(): Flow<List<ChapterWithBookInfo>> = dao.getFavoriteChapters()
     override fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?> =
         dao.getChapterByIdFlow(chapterId)
+
+
+    override suspend fun syncThemes(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getThemes()
+            val remoteVersion = response.meta.version
+            val preferences = dataStore.data.first()
+            val localVersion = preferences[KEY_THEMES_VERSION]
+
+            // Só atualiza se a versão for diferente
+            if (localVersion == remoteVersion) return@withContext Result.success(Unit)
+
+            val (themesToInsert, momentsToInsert) = withContext(Dispatchers.Default) {
+                val themes = mutableListOf<ThemeEntity>()
+                val moments = mutableListOf<MomentEntity>()
+
+                response.themes.forEach { themeDto ->
+                    themes.add(
+                        ThemeEntity(
+                            id = themeDto.id,
+                            title = themeDto.title,
+                            description = themeDto.description,
+                            imageUrl = themeDto.imageUrl
+                        )
+                    )
+
+                    themeDto.moments.forEach { momentDto ->
+                        moments.add(
+                            MomentEntity(
+                                themeId = themeDto.id,
+                                bookId = momentDto.bookId,
+                                chapterNumber = momentDto.chapter,
+                                title = momentDto.title,
+                                startMs = momentDto.startMs,
+                                endMs = momentDto.endMs,
+                                reference = momentDto.reference
+                            )
+                        )
+                    }
+                }
+                Pair(themes, moments)
+            }
+
+            // SINALIZAÇÃO: Chamada ao DAO para atualizar (seguindo padrão do refreshBibleData)
+            dao.refreshThemesData(themesToInsert, momentsToInsert)
+            dataStore.edit { it[KEY_THEMES_VERSION] = remoteVersion }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }

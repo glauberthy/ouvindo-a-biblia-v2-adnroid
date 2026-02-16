@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
     suspend fun syncBibleData(): Result<Unit>
+    suspend fun syncThemes(): Result<Unit>
     fun getBooks(): Flow<List<BookEntity>>
     fun getChapters(bookId: Int): Flow<List<ChapterWithBookInfo>>
     suspend fun getBook(bookId: Int): BookEntity?
