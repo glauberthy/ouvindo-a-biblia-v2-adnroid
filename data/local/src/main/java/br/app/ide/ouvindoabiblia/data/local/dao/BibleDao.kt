@@ -193,19 +193,19 @@ interface BibleDao {
     @Transaction
     @Query(
         """
-        SELECT 
-            P.chapterId, 
-            P.positionMs, 
-            C.audio_url as audioUrl,
-            C.chapter_number as chapterNumber,
-            C.book_id as bookId,
-            B.name as bookName,
-            B.image_url as coverUrl
-        FROM playback_state P
-        INNER JOIN chapters C ON P.chapterId = C.id
-        INNER JOIN books B ON C.book_id = B.book_id
-        WHERE P.id = 1
-    """
+    SELECT 
+        P.chapterId, 
+        P.positionMs, 
+        C.audio_url as audioUrl,
+        C.chapter_number as chapterNumber,
+        C.book_id as bookId,
+        B.name as bookName,
+        B.image_url as coverUrl
+    FROM playback_state P
+    INNER JOIN chapters C ON P.chapterId = C.id
+    INNER JOIN books B ON C.book_id = B.numericId 
+    WHERE P.id = 1
+"""
     )
     fun getLastPlaybackState(): Flow<PlaybackStateDto?>
 

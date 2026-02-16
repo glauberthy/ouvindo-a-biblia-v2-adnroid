@@ -92,6 +92,16 @@ dependencies {
     // --- DataStore ---
     implementation(libs.androidx.datastore.preferences)
 
+    implementation(libs.material)
+    implementation(libs.androidx.palette.ktx)
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.concurrent.futures)
+    // --- Google Cast ---
+    implementation(libs.play.services.cast.framework)
+
+
     // --- Testing & Debug ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -100,14 +110,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    implementation(libs.androidx.compose.ui.text.google.fonts)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.concurrent.futures)
+    debugImplementation(libs.leakcanary.android)
 
-    implementation(libs.material)
-    implementation(libs.androidx.palette.ktx)
-    implementation(libs.androidx.core.splashscreen)
-
-    // --- Google Cast ---
-    implementation(libs.play.services.cast.framework)
 }
