@@ -19,6 +19,7 @@ import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
 import br.app.ide.ouvindoabiblia.ui.themas.ThemesScreen
+import br.app.ide.ouvindoabiblia.ui.themes.ThemeDetailsScreen
 
 @Composable
 fun NavigationGraph(
@@ -60,7 +61,16 @@ fun NavigationGraph(
             )
         }
 
-
+        composable<Screen.ThemeDetails> {
+            ThemeDetailsScreen(
+                onBackClick = { navController.popBackStack() }, // Botão voltar
+                onPlayMoment = { momentWithAudio ->
+                    // AQUI É ONDE A MÁGICA DO CLIPPING VAI ACONTECER NO PRÓXIMO PASSO!
+                    // Por enquanto vamos apenas printar no Log ou chamar uma função vazia
+                    println("Clicou para tocar: ${momentWithAudio.moment.reference} do tempo ${momentWithAudio.moment.startMs} até ${momentWithAudio.moment.endMs}")
+                }
+            )
+        }
         composable<Screen.History> { PlaceholderScreen("Histórico") }
 
         composable<Screen.More> {

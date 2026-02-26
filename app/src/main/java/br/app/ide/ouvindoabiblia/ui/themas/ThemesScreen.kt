@@ -93,7 +93,7 @@ private fun ThemesContent(
     ) {
         item {
             Text(
-                text = "Cura Bíblica",
+                text = "Temas Bíblicos",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = DeepBlueDark,
