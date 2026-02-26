@@ -11,7 +11,7 @@ sealed interface Screen {
     data object Favorites : Screen
 
     @Serializable
-    data object Search : Screen
+    data object Themes : Screen
 
     @Serializable
     data object History : Screen
@@ -31,6 +31,12 @@ sealed interface Screen {
     data class Chapters(
         val bookId: Int,
         val bookName: String
+    ) : Screen
+
+    @Serializable
+    data class ThemeDetails(
+        val themeId: Int,
+        val themeTitle: String
     ) : Screen
 
     // Conteúdo do Menu "Mais"

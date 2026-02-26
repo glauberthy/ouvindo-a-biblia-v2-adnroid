@@ -23,8 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -203,7 +203,7 @@ fun MainScreen(
                         val items = listOf(
                             BottomNavItem("Início", Icons.Default.Home, Screen.Home),
                             BottomNavItem("Favoritos", Icons.Default.Favorite, Screen.Favorites),
-                            BottomNavItem("Busca", Icons.Default.Search, Screen.Search),
+                            BottomNavItem("Temas", Icons.Default.LocalFlorist, Screen.Themes),
                             BottomNavItem("Histórico", Icons.Default.History, Screen.History),
                             BottomNavItem("Mais", Icons.Default.Menu, Screen.More),
                         )

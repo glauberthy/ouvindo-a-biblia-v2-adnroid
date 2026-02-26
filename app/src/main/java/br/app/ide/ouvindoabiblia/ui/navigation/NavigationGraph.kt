@@ -18,6 +18,7 @@ import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
+import br.app.ide.ouvindoabiblia.ui.themas.ThemesScreen
 
 @Composable
 fun NavigationGraph(
@@ -51,7 +52,15 @@ fun NavigationGraph(
                 }
             )
         }
-        composable<Screen.Search> { PlaceholderScreen("Busca") }
+        composable<Screen.Themes> {
+            ThemesScreen(
+                onThemeClick = { id, title ->
+                    navController.navigate(Screen.ThemeDetails(id, title))
+                }
+            )
+        }
+
+
         composable<Screen.History> { PlaceholderScreen("Histórico") }
 
         composable<Screen.More> {
