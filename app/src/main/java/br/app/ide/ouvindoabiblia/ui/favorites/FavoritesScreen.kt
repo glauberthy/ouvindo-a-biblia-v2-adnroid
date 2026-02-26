@@ -34,18 +34,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent2
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
-import coil.compose.AsyncImage
 
 @Composable
 fun FavoritesScreen(
@@ -71,7 +70,7 @@ fun FavoritesScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .background(CreamBackground), // Fundo papel antigo
-        contentPadding = PaddingValues(top = 80.dp, bottom = 150.dp, start = 20.dp, end = 20.dp)
+        contentPadding = PaddingValues(top = 80.dp, bottom = 56.dp, start = 20.dp, end = 20.dp)
     ) {
         // 1. TÍTULO
         item {
@@ -132,15 +131,14 @@ fun FavoritesScreenContent(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 // Cabeçalho do Livro
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    AsyncImage(
-                                        model = info.coverUrl,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
+                                    AppAsyncImage(
+                                        imageUrl = info.coverUrl,
+                                        contentDescription = "Capa do livro ${info.bookName}",
                                         modifier = Modifier
                                             .width(60.dp)
                                             .height(90.dp)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(RosyBeige)
+                                            .background(RosyBeige) // Mantém a cor de fundo enquanto carrega
                                     )
 
                                     Column(modifier = Modifier.padding(start = 16.dp)) {

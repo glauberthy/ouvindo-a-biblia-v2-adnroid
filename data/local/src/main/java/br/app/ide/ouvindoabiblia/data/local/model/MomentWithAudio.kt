@@ -1,9 +1,10 @@
-import androidx.room.ColumnInfo
+package br.app.ide.ouvindoabiblia.data.local.model
+
 import androidx.room.Embedded
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 
 data class MomentWithAudio(
     @Embedded val moment: MomentEntity,
-    @ColumnInfo(name = "audioUrl") val audioUrl: String,
-    @ColumnInfo(name = "bookName") val bookName: String
+    val audioUrl: String,
+    val bookName: String
 )
