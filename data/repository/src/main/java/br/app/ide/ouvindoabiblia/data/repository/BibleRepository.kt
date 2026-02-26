@@ -3,7 +3,9 @@ package br.app.ide.ouvindoabiblia.data.repository
 import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
@@ -33,6 +35,10 @@ interface BibleRepository {
     fun getLatestPlaybackState(): Flow<PlaybackState?>
     fun getFavorites(): Flow<List<ChapterWithBookInfo>>
     fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
+
+
+    fun getThemes(): Flow<List<ThemeEntity>>
+    fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
 }
 
 // Domain Model (Mantido para uso na UI/Service)

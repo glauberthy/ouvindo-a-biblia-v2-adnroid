@@ -13,6 +13,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import kotlinx.coroutines.Dispatchers
@@ -172,6 +173,7 @@ class BibleRepositoryImpl @Inject constructor(
         dao.getChapterByIdFlow(chapterId)
 
 
+    //    themas
     override suspend fun syncThemes(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.getThemes()
@@ -222,5 +224,9 @@ class BibleRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override fun getThemes(): Flow<List<ThemeEntity>> = dao.getAllThemes()
+    override fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>> =
+        dao.getMomentsForTheme(themeId)
 
 }

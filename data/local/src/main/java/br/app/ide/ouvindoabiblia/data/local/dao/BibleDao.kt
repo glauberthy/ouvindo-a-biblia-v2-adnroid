@@ -1,6 +1,5 @@
 package br.app.ide.ouvindoabiblia.data.local.dao
 
-import MomentWithAudio
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -12,6 +11,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.PlaybackStateDto
 import kotlinx.coroutines.flow.Flow
 
@@ -241,11 +241,12 @@ interface BibleDao {
 
     // --- TEMAS E MOMENTOS ---
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertThemeIgnore(theme: ThemeEntity): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTheme(theme: ThemeEntity)
 
-    @Query("UPDATE themes SET title = :title, description = :description, imageUrl = :imageUrl WHERE id = :id")
-    suspend fun updateThemeMetadata(id: Int, title: String, description: String, imageUrl: String?)
+    @Query("SELECT * FROM themes ORDER BY id ASC")
+    fun getAllThemes(): Flow<List<ThemeEntity>>
+
 
     @Query("DELETE FROM moments WHERE themeId = :themeId")
     suspend fun deleteMomentsByTheme(themeId: Int)
@@ -255,17 +256,12 @@ interface BibleDao {
 
     @Transaction
     suspend fun refreshThemesData(themes: List<ThemeEntity>, moments: List<MomentEntity>) {
-        // 1. Sincroniza os Temas (Categorias)
+
         themes.forEach { theme ->
-            val rowId = insertThemeIgnore(theme)
-            if (rowId == -1L) {
-                updateThemeMetadata(theme.id, theme.title, theme.description, theme.imageUrl)
-            }
+            insertTheme(theme)
         }
 
-        // 2. Sincroniza os Momentos (Playlist do Tema)
-        // Como momentos não têm estado de usuário, limpamos e inserimos os novos
-        // para garantir que a ordem do JSON seja respeitada.
+       
         themes.forEach { theme ->
             deleteMomentsByTheme(theme.id)
         }
@@ -281,8 +277,9 @@ interface BibleDao {
             C.audio_url as audioUrl,
             B.name as bookName
         FROM moments M
-        INNER JOIN chapters C ON M.bookId = C.book_id AND M.chapterNumber = C.chapter_number
-        INNER JOIN books B ON M.bookId = B.numericId
+        -- SINALIZAÇÃO: Usando os nomes das colunas do SQLite (snake_case)
+        INNER JOIN chapters C ON M.book_id = C.book_id AND M.chapter_number = C.chapter_number
+        INNER JOIN books B ON M.book_id = B.numericId
         WHERE M.themeId = :themeId
     """
     )
