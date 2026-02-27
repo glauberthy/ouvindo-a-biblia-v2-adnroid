@@ -261,9 +261,15 @@ fun MainScreen(
                         modifier = Modifier.fillMaxSize(),
                         navController = navController,
                         windowSizeClass = windowSizeClass,
-                        onPlayBook = { numericId, name, cover, index -> // Adicionamos o 'index' aqui
-                            // Agora repassamos os 4 parâmetros para o ViewModel
-                            playerViewModel.playBook(numericId, name, cover, index)
+                        onPlayBook = { numericId, name, cover, index, startMs, endMs ->
+                            playerViewModel.playBook(
+                                bookId = numericId,
+                                bookTitle = name,
+                                coverUrl = cover,
+                                initialIndex = index,
+                                startMs = startMs,
+                                endMs = endMs
+                            )
                         }
                     )
                 }

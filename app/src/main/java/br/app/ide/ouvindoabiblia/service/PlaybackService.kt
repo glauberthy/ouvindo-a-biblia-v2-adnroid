@@ -176,21 +176,51 @@ class PlaybackService : MediaLibraryService() {
         return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
     }
 
+//    private fun createMediaItemsFromChapters(
+//        chapters: List<ChapterWithBookInfo>,
+//        bookId: String
+//    ): List<MediaItem> {
+//        return chapters.map { chapterInfo ->
+//            val metadata = MediaMetadata.Builder()
+//                // PARA A NOTIFICAÇÃO: [Livro] [Capítulo]
+//                .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
+//                // PARA O MINI/FULL PLAYER (Linha 1): [Livro]
+//                .setAlbumTitle(chapterInfo.bookName)
+//                // PARA O MINI/FULL PLAYER (Linha 2): [Capítulo]
+//                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
+//                //PARA A NOTIFICAÇÃO (Linha 2)
+//                .setArtist("Ouvindo a Bíblia")
+//
+//                .setArtworkUri(chapterInfo.coverUrl?.toUri())
+//                .setIsBrowsable(false)
+//                .setIsPlayable(true)
+//                .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
+//                .setExtras(Bundle().apply {
+//                    putString("book_id", bookId)
+//                    putBoolean("is_favorite", chapterInfo.chapter.isFavorite)
+//                })
+//                .build()
+//
+//            MediaItem.Builder()
+//                .setMediaId(chapterInfo.chapter.id.toString())
+//                .setUri(chapterInfo.chapter.audioUrl)
+//                .setMediaMetadata(metadata)
+//                .build()
+//        }
+//    }
+
     private fun createMediaItemsFromChapters(
         chapters: List<ChapterWithBookInfo>,
-        bookId: String
+        bookId: String,
+        targetChapterIndex: Int = -1, // NOVO: Qual capítulo recebe o recorte?
+        clippingConfig: MediaItem.ClippingConfiguration = MediaItem.ClippingConfiguration.UNSET // NOVO: A configuração em si
     ): List<MediaItem> {
-        return chapters.map { chapterInfo ->
+        return chapters.mapIndexed { index, chapterInfo ->
             val metadata = MediaMetadata.Builder()
-                // PARA A NOTIFICAÇÃO: [Livro] [Capítulo]
                 .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
-                // PARA O MINI/FULL PLAYER (Linha 1): [Livro]
                 .setAlbumTitle(chapterInfo.bookName)
-                // PARA O MINI/FULL PLAYER (Linha 2): [Capítulo]
                 .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
-                //PARA A NOTIFICAÇÃO (Linha 2)
                 .setArtist("Ouvindo a Bíblia")
-
                 .setArtworkUri(chapterInfo.coverUrl?.toUri())
                 .setIsBrowsable(false)
                 .setIsPlayable(true)
@@ -201,11 +231,17 @@ class PlaybackService : MediaLibraryService() {
                 })
                 .build()
 
-            MediaItem.Builder()
+            val builder = MediaItem.Builder()
                 .setMediaId(chapterInfo.chapter.id.toString())
                 .setUri(chapterInfo.chapter.audioUrl)
                 .setMediaMetadata(metadata)
-                .build()
+
+            // SINALIZAÇÃO: Aplica o recorte APENAS se for o capítulo que o usuário clicou
+            if (index == targetChapterIndex) {
+                builder.setClippingConfiguration(clippingConfig)
+            }
+
+            builder.build()
         }
     }
 
@@ -383,6 +419,72 @@ class PlaybackService : MediaLibraryService() {
 //            )
 //        }
 
+        //        override fun onSetMediaItems(
+//            mediaSession: MediaSession,
+//            controller: MediaSession.ControllerInfo,
+//            mediaItems: MutableList<MediaItem>,
+//            startIndex: Int,
+//            startPositionMs: Long
+//        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+//            val item = mediaItems.firstOrNull() ?: return super.onSetMediaItems(
+//                mediaSession,
+//                controller,
+//                mediaItems,
+//                startIndex,
+//                startPositionMs
+//            )
+//            val isBookFolder = item.mediaMetadata.isBrowsable == true
+//
+//            if (isBookFolder) {
+//                val parts = item.mediaId.split("|")
+//                // CONVERSÃO NECESSÁRIA: De String para Int
+//                val bookIdInt = parts[0].toIntOrNull() ?: return super.onSetMediaItems(
+//                    mediaSession,
+//                    controller,
+//                    mediaItems,
+//                    startIndex,
+//                    startPositionMs
+//                )
+//                val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
+//
+//                return CallbackToFutureAdapter.getFuture { completer ->
+//                    serviceScope.launch(Dispatchers.IO) {
+//                        try {
+//                            // Agora passamos o Int (6) para o repositório
+//                            val chapters = repository.getChapters(bookIdInt).first()
+//
+//                            if (chapters.isEmpty()) {
+//                                completer.setException(IllegalStateException("Livro vazio no banco: $bookIdInt"))
+//                                return@launch
+//                            }
+//
+//                            // Passamos o ID como String para o MediaItem, mas os dados vieram do Int
+//                            val playlist =
+//                                createMediaItemsFromChapters(chapters, bookIdInt.toString())
+//
+//                            completer.set(
+//                                MediaSession.MediaItemsWithStartPosition(
+//                                    playlist,
+//                                    requestedIndex,
+//                                    0L
+//                                )
+//                            )
+//                        } catch (e: Exception) {
+//                            completer.setException(e)
+//                        }
+//                    }
+//                    "Play Book $bookIdInt"
+//                }
+//            }
+//            return super.onSetMediaItems(
+//                mediaSession,
+//                controller,
+//                mediaItems,
+//                startIndex,
+//                startPositionMs
+//            )
+//        }
+        
         override fun onSetMediaItems(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
@@ -401,7 +503,6 @@ class PlaybackService : MediaLibraryService() {
 
             if (isBookFolder) {
                 val parts = item.mediaId.split("|")
-                // CONVERSÃO NECESSÁRIA: De String para Int
                 val bookIdInt = parts[0].toIntOrNull() ?: return super.onSetMediaItems(
                     mediaSession,
                     controller,
@@ -411,10 +512,12 @@ class PlaybackService : MediaLibraryService() {
                 )
                 val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
 
+                // SINALIZAÇÃO: Captura a configuração de recorte que enviamos do ViewModel
+                val incomingClippingConfig = item.clippingConfiguration
+
                 return CallbackToFutureAdapter.getFuture { completer ->
                     serviceScope.launch(Dispatchers.IO) {
                         try {
-                            // Agora passamos o Int (6) para o repositório
                             val chapters = repository.getChapters(bookIdInt).first()
 
                             if (chapters.isEmpty()) {
@@ -422,15 +525,19 @@ class PlaybackService : MediaLibraryService() {
                                 return@launch
                             }
 
-                            // Passamos o ID como String para o MediaItem, mas os dados vieram do Int
-                            val playlist =
-                                createMediaItemsFromChapters(chapters, bookIdInt.toString())
+                            // SINALIZAÇÃO: Passa o índice e o recorte para a fábrica de itens
+                            val playlist = createMediaItemsFromChapters(
+                                chapters = chapters,
+                                bookId = bookIdInt.toString(),
+                                targetChapterIndex = requestedIndex,
+                                clippingConfig = incomingClippingConfig
+                            )
 
                             completer.set(
                                 MediaSession.MediaItemsWithStartPosition(
                                     playlist,
                                     requestedIndex,
-                                    0L
+                                    0L // Deixe 0L aqui, o ClippingConfig internamente lida com o start!
                                 )
                             )
                         } catch (e: Exception) {

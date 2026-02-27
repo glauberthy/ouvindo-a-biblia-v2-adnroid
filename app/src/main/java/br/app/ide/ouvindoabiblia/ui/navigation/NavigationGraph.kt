@@ -25,7 +25,7 @@ import br.app.ide.ouvindoabiblia.ui.themes.ThemeDetailsScreen
 fun NavigationGraph(
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
-    onPlayBook: (Int, String, String, Int) -> Unit,
+    onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -40,7 +40,7 @@ fun NavigationGraph(
                 onNavigateToBook = { numericId, name, cover ->
                     // Ao clicar num livro, não navegamos mais para uma nova tela.
                     // Nós chamamos essa função para abrir o Player (Bottom Sheet) por cima.
-                    onPlayBook(numericId, name, cover, 0)
+                    onPlayBook(numericId, name, cover, 0, 0L, 0L)
                 }
             )
         }
@@ -49,7 +49,7 @@ fun NavigationGraph(
         composable<Screen.Favorites> {
             FavoritesScreen(
                 onPlayChapter = { numericId, name, cover, index -> // Recebe o index da tela
-                    onPlayBook(numericId, name, cover, index)     // Repassa para a Main
+                    onPlayBook(numericId, name, cover, index, 0L, 0L)     // Repassa para a Main
                 }
             )
         }
@@ -61,16 +61,25 @@ fun NavigationGraph(
             )
         }
 
+        // --- DETALHES DO TEMA ---
         composable<Screen.ThemeDetails> {
             ThemeDetailsScreen(
                 onBackClick = { navController.popBackStack() }, // Botão voltar
                 onPlayMoment = { momentWithAudio ->
-                    // AQUI É ONDE A MÁGICA DO CLIPPING VAI ACONTECER NO PRÓXIMO PASSO!
-                    // Por enquanto vamos apenas printar no Log ou chamar uma função vazia
-                    println("Clicou para tocar: ${momentWithAudio.moment.reference} do tempo ${momentWithAudio.moment.startMs} até ${momentWithAudio.moment.endMs}")
+                    val chapterIndex = (momentWithAudio.moment.chapterNumber - 1).coerceAtLeast(0)
+                    onPlayBook(
+                        momentWithAudio.moment.bookId,    // ID numérico do Livro (ex: 1 para Gênesis)
+                        momentWithAudio.bookName,         // Nome do Livro (ex: "Gênesis")
+                        momentWithAudio.coverUrl ?: "",   // Capa do Livro (se houver)
+                        chapterIndex,                     // Índice do capítulo no ExoPlayer
+                        momentWithAudio.moment.startMs,   // Início do recorte (ex: 45000)
+                        momentWithAudio.moment.endMs      // Fim do recorte (ex: 110000)
+                    )
                 }
             )
         }
+
+
         composable<Screen.History> { PlaceholderScreen("Histórico") }
 
         composable<Screen.More> {

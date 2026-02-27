@@ -261,13 +261,13 @@ interface BibleDao {
             insertTheme(theme)
         }
 
-       
+
         themes.forEach { theme ->
             deleteMomentsByTheme(theme.id)
         }
         insertMoments(moments)
     }
-
+    
     // Query para buscar os momentos com áudio (usaremos na UI em breve)
     @Transaction
     @Query(
@@ -275,9 +275,9 @@ interface BibleDao {
         SELECT 
             M.*, 
             C.audio_url as audioUrl,
-            B.name as bookName
+            B.name as bookName,
+            B.image_url as coverUrl
         FROM moments M
-        -- SINALIZAÇÃO: Usando os nomes das colunas do SQLite (snake_case)
         INNER JOIN chapters C ON M.book_id = C.book_id AND M.chapter_number = C.chapter_number
         INNER JOIN books B ON M.book_id = B.numericId
         WHERE M.themeId = :themeId

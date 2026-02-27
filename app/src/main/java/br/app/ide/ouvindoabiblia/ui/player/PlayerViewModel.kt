@@ -187,17 +187,74 @@ class PlayerViewModel @Inject constructor(
     // No PlayerViewModel.kt
 
     // 1. ALTERADO: bookId agora é Int
-    fun playBook(bookId: Int, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
+//    fun playBook(bookId: Int, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
+//        val controller = mediaController ?: return
+//
+//        // 2. CORREÇÃO DE COMPARAÇÃO:
+//        // Pegamos o ID da mídia atual e convertemos para Int para comparar com o novo bookId
+//        val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
+//        val currentBookId = currentMediaId.split("|").firstOrNull()?.toIntOrNull()
+//
+//        if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
+//            if (controller.currentMediaItemIndex != initialIndex) {
+//                controller.seekTo(initialIndex, 0L)
+//            }
+//            if (!controller.isPlaying) controller.play()
+//            return
+//        }
+//
+//        _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
+//
+//        // 3. O mediaId continua sendo uma String no formato "NUMERIC_ID|INDEX"
+//        // Exemplo: "1|18" (Gênesis Capítulo 19)
+//        val mediaIdWithIndex = "$bookId|$initialIndex"
+//
+//        val bookFolderItem = MediaItem.Builder()
+//            .setMediaId(mediaIdWithIndex)
+//            .setMediaMetadata(
+//                MediaMetadata.Builder()
+//                    .setTitle(bookTitle)
+//                    .setArtworkUri(coverUrl.toUri())
+//                    .setIsBrowsable(true)
+//                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+//                    .setExtras(android.os.Bundle().apply {
+//                        putInt("start_index", initialIndex)
+//                    })
+//                    .build()
+//            )
+//            .build()
+//
+//        controller.setMediaItems(listOf(bookFolderItem))
+//        controller.prepare()
+//        controller.play()
+//    }
+
+
+    // 1. A assinatura aceita os tempos do recorte
+    fun playBook(
+        bookId: Int,
+        bookTitle: String,
+        coverUrl: String,
+        initialIndex: Int = 0,
+        startMs: Long = 0L,
+        endMs: Long = 0L
+    ) {
         val controller = mediaController ?: return
 
-        // 2. CORREÇÃO DE COMPARAÇÃO:
-        // Pegamos o ID da mídia atual e convertemos para Int para comparar com o novo bookId
+        // 2. Verifica se já está tocando O MESMO LIVRO no MESMO CAPÍTULO
         val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
         val currentBookId = currentMediaId.split("|").firstOrNull()?.toIntOrNull()
 
         if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
+            // Se for o mesmo livro, mas mudou de capítulo (ou queremos forçar o seek do clipping)
             if (controller.currentMediaItemIndex != initialIndex) {
-                controller.seekTo(initialIndex, 0L)
+                controller.seekTo(
+                    initialIndex,
+                    0L
+                ) // O Clipping nativo trata o startMs como o tempo 0L da nova mídia
+            } else {
+                // Se já estiver na faixa certa, apenas volta pro começo do recorte
+                controller.seekTo(0L)
             }
             if (!controller.isPlaying) controller.play()
             return
@@ -205,12 +262,25 @@ class PlayerViewModel @Inject constructor(
 
         _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
 
-        // 3. O mediaId continua sendo uma String no formato "NUMERIC_ID|INDEX"
-        // Exemplo: "1|18" (Gênesis Capítulo 19)
         val mediaIdWithIndex = "$bookId|$initialIndex"
+
+        Log.d("PLAYER_CLIPPING", "Iniciando faixa: $bookTitle, Capítulo Index: $initialIndex")
+        Log.d("PLAYER_CLIPPING", "Tempo Original Recebido -> startMs: $startMs, endMs: $endMs")
+
+        // 3. SINALIZAÇÃO: A Mágica do Clipping Nativo do Media3
+        val clippingConfigBuilder = MediaItem.ClippingConfiguration.Builder()
+        if (startMs > 0) {
+            clippingConfigBuilder.setStartPositionMs(startMs)
+            Log.d("PLAYER_CLIPPING", "Aplicado Start Position: $startMs ms")
+        }
+        if (endMs > startMs) { // Garante que o fim é maior que o início para não crashar
+            clippingConfigBuilder.setEndPositionMs(endMs)
+            Log.d("PLAYER_CLIPPING", "Aplicado End Position: $endMs ms")
+        }
 
         val bookFolderItem = MediaItem.Builder()
             .setMediaId(mediaIdWithIndex)
+            .setClippingConfiguration(clippingConfigBuilder.build())
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(bookTitle)
