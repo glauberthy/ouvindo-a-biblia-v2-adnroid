@@ -264,18 +264,18 @@ class PlayerViewModel @Inject constructor(
 
         val mediaIdWithIndex = "$bookId|$initialIndex"
 
-        Log.d("PLAYER_CLIPPING", "Iniciando faixa: $bookTitle, Capítulo Index: $initialIndex")
-        Log.d("PLAYER_CLIPPING", "Tempo Original Recebido -> startMs: $startMs, endMs: $endMs")
+//        Log.d("PLAYER_CLIPPING", "Iniciando faixa: $bookTitle, Capítulo Index: $initialIndex")
+//        Log.d("PLAYER_CLIPPING", "Tempo Original Recebido -> startMs: $startMs, endMs: $endMs")
 
         // 3. SINALIZAÇÃO: A Mágica do Clipping Nativo do Media3
         val clippingConfigBuilder = MediaItem.ClippingConfiguration.Builder()
         if (startMs > 0) {
             clippingConfigBuilder.setStartPositionMs(startMs)
-            Log.d("PLAYER_CLIPPING", "Aplicado Start Position: $startMs ms")
+//            Log.d("PLAYER_CLIPPING", "Aplicado Start Position: $startMs ms")
         }
         if (endMs > startMs) { // Garante que o fim é maior que o início para não crashar
             clippingConfigBuilder.setEndPositionMs(endMs)
-            Log.d("PLAYER_CLIPPING", "Aplicado End Position: $endMs ms")
+//            Log.d("PLAYER_CLIPPING", "Aplicado End Position: $endMs ms")
         }
 
         val bookFolderItem = MediaItem.Builder()
