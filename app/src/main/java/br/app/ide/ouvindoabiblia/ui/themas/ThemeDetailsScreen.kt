@@ -59,7 +59,7 @@ fun ThemeDetailsScreen(
     viewModel: ThemeDetailsViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     // SINALIZAÇÃO: Vamos passar o objeto inteiro para que a navegação saiba tudo sobre o áudio e o tempo
-    onPlayMoment: (MomentWithAudio) -> Unit
+    onPlayTheme: (moments: List<MomentWithAudio>, startIndex: Int, themeTitle: String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val themeTitle = viewModel.themeTitle
@@ -103,7 +103,8 @@ fun ThemeDetailsScreen(
                 is ThemeDetailsUiState.Success -> {
                     MomentsList(
                         moments = state.moments,
-                        onPlayMoment = onPlayMoment
+                        themeTitle = themeTitle,
+                        onPlayTheme = onPlayTheme
                     )
                 }
             }
@@ -114,7 +115,8 @@ fun ThemeDetailsScreen(
 @Composable
 private fun MomentsList(
     moments: List<MomentWithAudio>,
-    onPlayMoment: (MomentWithAudio) -> Unit
+    themeTitle: String,
+    onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -139,9 +141,11 @@ private fun MomentsList(
 
         itemsIndexed(moments, key = { _, item -> item.moment.id }) { index, momentAudio ->
             MomentListItem(
-                index = index + 1, // Para mostrar "1", "2", "3"...
+                index = index + 1,
                 item = momentAudio,
-                onClick = { onPlayMoment(momentAudio) }
+                onClick = {
+                    onPlayTheme(moments, index, themeTitle)
+                }
             )
         }
     }

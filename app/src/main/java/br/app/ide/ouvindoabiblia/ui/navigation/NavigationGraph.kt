@@ -14,6 +14,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
@@ -26,6 +27,7 @@ fun NavigationGraph(
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
     onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
+    onPlayTheme: (String, String, List<MomentWithAudio>, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -64,16 +66,14 @@ fun NavigationGraph(
         // --- DETALHES DO TEMA ---
         composable<Screen.ThemeDetails> {
             ThemeDetailsScreen(
-                onBackClick = { navController.popBackStack() }, // Botão voltar
-                onPlayMoment = { momentWithAudio ->
-                    val chapterIndex = (momentWithAudio.moment.chapterNumber - 1).coerceAtLeast(0)
-                    onPlayBook(
-                        momentWithAudio.moment.bookId,    // ID numérico do Livro (ex: 1 para Gênesis)
-                        momentWithAudio.bookName,         // Nome do Livro (ex: "Gênesis")
-                        momentWithAudio.coverUrl ?: "",   // Capa do Livro (se houver)
-                        chapterIndex,                     // Índice do capítulo no ExoPlayer
-                        momentWithAudio.moment.startMs,   // Início do recorte (ex: 45000)
-                        momentWithAudio.moment.endMs      // Fim do recorte (ex: 110000)
+                onBackClick = { navController.popBackStack() },
+                onPlayTheme = { momentsList, startIndex, themeTitle ->
+                    // Aciona o novo callback repassando a fila inteira
+                    onPlayTheme(
+                        themeTitle,
+                        "", // URL da capa do tema, se aplicável, ou string vazia
+                        momentsList,
+                        startIndex
                     )
                 }
             )

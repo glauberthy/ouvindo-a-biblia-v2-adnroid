@@ -270,6 +270,14 @@ fun MainScreen(
                                 startMs = startMs,
                                 endMs = endMs
                             )
+                        },
+                        onPlayTheme = { themeTitle, themeCoverUrl, moments, startIndex ->
+                            playerViewModel.playThemePlaylist(
+                                themeTitle,
+                                themeCoverUrl,
+                                moments,
+                                startIndex
+                            )
                         }
                     )
                 }

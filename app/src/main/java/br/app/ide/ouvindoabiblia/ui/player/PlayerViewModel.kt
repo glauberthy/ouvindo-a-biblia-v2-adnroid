@@ -14,6 +14,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
@@ -229,6 +230,55 @@ class PlayerViewModel @Inject constructor(
 //        controller.play()
 //    }
 
+
+    // --- AÇÃO PRINCIPAL: TOCAR TEMA/MOMENTOS ---
+
+    fun playThemePlaylist(
+        themeTitle: String,
+        themeCoverUrl: String,
+        moments: List<MomentWithAudio>,
+        startIndex: Int = 0
+    ) {
+        val controller = mediaController ?: return
+
+        _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl) }
+
+        val themeMediaItems = moments.map { item ->
+            val moment = item.moment
+            val audioUrl = item.audioUrl
+            val bookName = item.bookName
+            val coverUrl = item.coverUrl ?: themeCoverUrl
+
+            val clippingConfigBuilder = MediaItem.ClippingConfiguration.Builder()
+            if (moment.startMs > 0) {
+                clippingConfigBuilder.setStartPositionMs(moment.startMs)
+            }
+            if (moment.endMs > moment.startMs) {
+                clippingConfigBuilder.setEndPositionMs(moment.endMs)
+            }
+
+            MediaItem.Builder()
+                .setMediaId("moment_${moment.id}")
+                .setUri(audioUrl)
+                .setClippingConfiguration(clippingConfigBuilder.build())
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle("$bookName ${moment.chapterNumber}")
+                        .setAlbumTitle(themeTitle)
+                        .setSubtitle("${moment.title} (${moment.reference})")
+                        .setArtist("Ouvindo a Bíblia")
+                        .setArtworkUri(coverUrl.toUri())
+                        .setIsBrowsable(false)
+                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                        .build()
+                )
+                .build()
+        }
+
+        controller.setMediaItems(themeMediaItems, startIndex, 0L)
+        controller.prepare()
+        controller.play()
+    }
 
     // 1. A assinatura aceita os tempos do recorte
     fun playBook(
