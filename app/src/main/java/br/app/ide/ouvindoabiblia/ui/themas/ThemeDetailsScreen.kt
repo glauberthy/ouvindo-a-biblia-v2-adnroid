@@ -1,4 +1,4 @@
-package br.app.ide.ouvindoabiblia.ui.themes
+package br.app.ide.ouvindoabiblia.ui.themas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,8 +48,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
-import br.app.ide.ouvindoabiblia.ui.themas.ThemeDetailsUiState
-import br.app.ide.ouvindoabiblia.ui.themas.ThemeDetailsViewModel
+import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
+import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
@@ -57,12 +58,20 @@ import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 @Composable
 fun ThemeDetailsScreen(
     viewModel: ThemeDetailsViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(), // Injeção do estado do player
     onBackClick: () -> Unit,
-    // SINALIZAÇÃO: Vamos passar o objeto inteiro para que a navegação saiba tudo sobre o áudio e o tempo
-    onPlayTheme: (moments: List<MomentWithAudio>, startIndex: Int, themeTitle: String) -> Unit
+    onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val themeTitle = viewModel.themeTitle
+
+    // Identifica qual índice está tocando se o tema ativo for igual ao desta tela
+    val playingIndex = if (playerState.title == themeTitle) {
+        playerState.currentChapterIndex
+    } else {
+        -1
+    }
 
     Scaffold(
         topBar = {
@@ -104,6 +113,7 @@ fun ThemeDetailsScreen(
                     MomentsList(
                         moments = state.moments,
                         themeTitle = themeTitle,
+                        playingIndex = playingIndex, // Novo parâmetro
                         onPlayTheme = onPlayTheme
                     )
                 }
@@ -116,6 +126,7 @@ fun ThemeDetailsScreen(
 private fun MomentsList(
     moments: List<MomentWithAudio>,
     themeTitle: String,
+    playingIndex: Int, // Novo parâmetro
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -140,12 +151,13 @@ private fun MomentsList(
         }
 
         itemsIndexed(moments, key = { _, item -> item.moment.id }) { index, momentAudio ->
+            val isPlaying = index == playingIndex
+
             MomentListItem(
                 index = index + 1,
                 item = momentAudio,
-                onClick = {
-                    onPlayTheme(moments, index, themeTitle)
-                }
+                isPlaying = isPlaying, // Informa se este item específico está tocando
+                onClick = { onPlayTheme(moments, index, themeTitle) }
             )
         }
     }
@@ -155,6 +167,7 @@ private fun MomentsList(
 fun MomentListItem(
     index: Int,
     item: MomentWithAudio,
+    isPlaying: Boolean,
     onClick: () -> Unit
 ) {
     Card(
@@ -162,7 +175,10 @@ fun MomentListItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
+        // Fundo sempre branco
         colors = CardDefaults.cardColors(containerColor = Color.White),
+        // Adiciona borda colorida apenas se estiver tocando
+        border = if (isPlaying) androidx.compose.foundation.BorderStroke(2.dp, Accent) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -171,39 +187,41 @@ fun MomentListItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Número / Índice circular
+            // Círculo do Número (Ex: "4")
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    // Cor de fundo do número muda se estiver tocando
+                    .background(if (isPlaying) Accent else DeepBlueDark),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    // Cor do texto do número
+                    color = if (isPlaying) DeepBlueDark else Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Textos (Referência e Nome)
+            // Textos (Mantidos sem alteração de cor de fundo)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${item.bookName} ${item.moment.reference}", // Ex: Gênesis 1
+                    text = "${item.bookName} ${item.moment.reference}",
                     style = MaterialTheme.typography.labelMedium,
                     color = LavenderGray
                 )
                 Text(
-                    text = item.moment.reference, // Ex: Versículos 1-5
+                    text = item.moment.reference,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = DeepBlueDark
                 )
                 Text(
-                    text = item.moment.title, // Ex: A Criação do Mundo
+                    text = item.moment.title,
                     style = MaterialTheme.typography.bodyMedium,
                     color = DeepBlueDark.copy(alpha = 0.8f),
                     maxLines = 1,
@@ -213,17 +231,22 @@ fun MomentListItem(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Ícone de Play
+            // Círculo do Ícone de Play (Ex: ">")
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(DeepBlueDark.copy(alpha = 0.05f)),
+                    // Cor de fundo do Play muda se estiver tocando
+                    .background(if (isPlaying) Accent else DeepBlueDark.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Ouvir Versículo",
+                    imageVector = if (isPlaying) {
+                        androidx.compose.material.icons.Icons.Default.Replay
+                    } else {
+                        androidx.compose.material.icons.Icons.Default.PlayArrow
+                    },
+                    contentDescription = if (isPlaying) "Reiniciar Versículo" else "Ouvir Versículo",
                     tint = DeepBlueDark
                 )
             }
