@@ -209,11 +209,11 @@ fun MomentListItem(
 
             // Textos (Mantidos sem alteração de cor de fundo)
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${item.bookName} ${item.moment.reference}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = LavenderGray
-                )
+//                Text(
+//                    text = "${item.bookName} ${item.moment.reference}",
+//                    style = MaterialTheme.typography.labelMedium,
+//                    color = LavenderGray
+//                )
                 Text(
                     text = item.moment.reference,
                     style = MaterialTheme.typography.titleMedium,
@@ -224,7 +224,7 @@ fun MomentListItem(
                     text = item.moment.title,
                     style = MaterialTheme.typography.bodyMedium,
                     color = DeepBlueDark.copy(alpha = 0.8f),
-                    maxLines = 1,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -242,9 +242,9 @@ fun MomentListItem(
             ) {
                 Icon(
                     imageVector = if (isPlaying) {
-                        androidx.compose.material.icons.Icons.Default.Replay
+                        Icons.Default.Replay
                     } else {
-                        androidx.compose.material.icons.Icons.Default.PlayArrow
+                        Icons.Default.PlayArrow
                     },
                     contentDescription = if (isPlaying) "Reiniciar Versículo" else "Ouvir Versículo",
                     tint = DeepBlueDark

@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,25 +70,34 @@ fun FavoritesScreenContent(
     onPlayChapter: (Int, String, String, Int) -> Unit,
     onRemove: (Long) -> Unit
 ) {
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground), // Fundo papel antigo
-        contentPadding = PaddingValues(top = 80.dp, bottom = 56.dp, start = 20.dp, end = 20.dp)
+            .background(CreamBackground),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            end = 20.dp,
+            top = statusBarPadding + 24.dp, // Substitui o 80.dp fixo
+            bottom = navBarPadding + 56.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // 1. TÍTULO
         item {
-            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+            Column(modifier = Modifier.padding(bottom = 8.dp)) {
                 Text(
                     text = "Meus Favoritos",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = DeepBlueDark, // Texto principal escuro
+                    color = DeepBlueDark,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Sua coleção particular de capítulos",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = SlateBlue // Texto secundário suave
+                    color = SlateBlue
                 )
             }
         }
@@ -124,9 +137,7 @@ fun FavoritesScreenContent(
                             color = Color.White,
                             shape = RoundedCornerShape(20.dp),
                             shadowElevation = 2.dp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 10.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 // Cabeçalho do Livro

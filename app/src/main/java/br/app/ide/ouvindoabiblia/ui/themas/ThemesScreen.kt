@@ -51,6 +51,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
+import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun ThemesScreen(
@@ -84,21 +85,28 @@ private fun ThemesContent(
             .fillMaxSize()
             .background(CreamBackground),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = statusBarPadding + 16.dp,
+            start = 20.dp, // Padronizado com Favoritos (era 16.dp)
+            end = 20.dp,   // Padronizado com Favoritos (era 16.dp)
+            top = statusBarPadding + 24.dp, // Padronizado com Favoritos
             bottom = navBarPadding + 56.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(
-                text = "Temas Bíblicos",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = DeepBlueDark,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Column(modifier = Modifier.padding(bottom = 8.dp)) { // O verticalArrangement da lista adiciona o restante do espaço
+                Text(
+                    text = "Temas Bíblicos",
+                    style = MaterialTheme.typography.headlineLarge, // Padronizado com Favoritos (era headlineMedium)
+                    fontWeight = FontWeight.Bold,
+                    color = DeepBlueDark
+                )
+                // Subtítulo adicionado para manter a mesma estrutura de UI de Favoritos
+                Text(
+                    text = "Passagens selecionadas por assunto",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SlateBlue
+                )
+            }
         }
 
         // ALTERADO: items para itemsIndexed para calcular par ou ímpar
