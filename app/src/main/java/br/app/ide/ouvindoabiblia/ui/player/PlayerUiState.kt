@@ -17,7 +17,8 @@ data class PlayerUiState(
     val activeSleepTimerMinutes: Int = 0, // 0 significa Desativado
     // Lista e índice
     val currentChapterIndex: Int = 0,
-    val chapters: List<ChapterWithBookInfo> = emptyList()
+    val chapters: List<ChapterWithBookInfo> = emptyList(),
+    val isThemeMode: Boolean = false
 ) {
     val progress: Float
         get() = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(

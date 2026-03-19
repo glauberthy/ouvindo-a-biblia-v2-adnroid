@@ -182,19 +182,20 @@ fun SharedPlayerScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                            contentDescription = "Favoritar",
-                            tint = if (isFavorite) playerControlsColor else playerControlsColor.copy(
-                                alpha = 0.7f
-                            ),
-                            modifier = Modifier.size(28.dp)
-                        )
+                    if (!uiState.isThemeMode) {
+                        IconButton(
+                            onClick = onToggleFavorite,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = "Favoritar",
+                                tint = if (isFavorite) playerControlsColor else playerControlsColor.copy(
+                                    alpha = 0.7f
+                                ),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
 
@@ -429,12 +430,14 @@ fun SharedPlayerScreen(
                             maxLines = 1
                         )
                     }
-                    IconButton(onClick = onToggleFavorite) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                            contentDescription = "Fav",
-                            tint = miniContentColor
-                        )
+                    if (!uiState.isThemeMode) {
+                        IconButton(onClick = onToggleFavorite) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = "Fav",
+                                tint = miniContentColor
+                            )
+                        }
                     }
 
                     IconButton(onClick = onSkipToPreviousChapter) {

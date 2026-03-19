@@ -468,7 +468,9 @@ class PlayerViewModel @Inject constructor(
         val player = mediaController ?: return
 
         _uiState.update { state ->
+            val currentItem = player.currentMediaItem
             val meta = player.mediaMetadata
+            val isTheme = currentItem?.mediaId?.startsWith("moment_") == true
             state.copy(
                 isPlaying = player.isPlaying,
                 isBuffering = player.playbackState == Player.STATE_BUFFERING,
@@ -485,7 +487,8 @@ class PlayerViewModel @Inject constructor(
                 currentChapterIndex = player.currentMediaItemIndex,
                 playbackSpeed = player.playbackParameters.speed,
                 isShuffleEnabled = player.shuffleModeEnabled,
-                chapters = extractChaptersFromPlayer(player)
+                chapters = extractChaptersFromPlayer(player),
+                isThemeMode = isTheme
             )
         }
     }
