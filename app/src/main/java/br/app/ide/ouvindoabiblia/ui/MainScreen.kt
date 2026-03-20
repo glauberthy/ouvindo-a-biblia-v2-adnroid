@@ -211,8 +211,34 @@ fun MainScreen(
                         val currentDestination = navBackStackEntry?.destination
 
                         items.forEach { item ->
-                            val isSelected = currentDestination?.hierarchy?.any {
-                                it.route?.contains(item.screen::class.simpleName ?: "") == true
+
+                            val isSelected = currentDestination?.hierarchy?.any { navDestination ->
+                                val currentRoute = navDestination.route ?: ""
+
+                                when (item.screen) {
+                                    is Screen.Themes -> {
+                                        // O ícone de Temas fica ativo tanto na tela de lista quanto na de detalhes
+                                        currentRoute.contains(
+                                            Screen.Themes::class.simpleName ?: ""
+                                        ) || currentRoute.contains(
+                                            Screen.ThemeDetails::class.simpleName ?: ""
+                                        )
+                                    }
+
+                                    is Screen.Home -> {
+                                        // O ícone de Início fica ativo na Home e também na tela de Capítulos
+                                        currentRoute.contains(
+                                            Screen.Home::class.simpleName ?: ""
+                                        ) || currentRoute.contains(
+                                            Screen.Chapters::class.simpleName ?: ""
+                                        )
+                                    }
+
+                                    else -> {
+                                        // Comportamento padrão para as outras telas
+                                        currentRoute.contains(item.screen::class.simpleName ?: "")
+                                    }
+                                }
                             } == true
 
                             NavigationBarItem(

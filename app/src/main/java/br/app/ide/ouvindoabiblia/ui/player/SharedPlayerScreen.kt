@@ -303,44 +303,45 @@ fun SharedPlayerScreen(
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 56.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        onClick = { showChapters = true },
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            Color.White.copy(alpha = 0.5f)
-                        ),
-                        modifier = Modifier.height(50.dp)
+                if (!uiState.isThemeMode) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 56.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 32.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        Surface(
+                            onClick = { showChapters = true },
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.2f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                Color.White.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier.height(50.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 32.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
 
-                            Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
 
-                            Text(
-                                text = "CAPÍTULOS",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.2.sp
-                            )
+                                Text(
+                                    text = "CAPÍTULOS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp
+                                )
+                            }
                         }
                     }
                 }
