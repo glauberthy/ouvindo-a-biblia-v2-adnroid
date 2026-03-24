@@ -1,6 +1,7 @@
 package br.app.ide.ouvindoabiblia.data.remote.api
 
 import br.app.ide.ouvindoabiblia.data.remote.dto.BibleResponseDto
+import br.app.ide.ouvindoabiblia.data.remote.dto.StudyResponseDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.ThemesResponse
 import retrofit2.http.GET
 
@@ -11,4 +12,7 @@ interface BibleApi {
 
     @GET("themes.json")
     suspend fun getThemes(): ThemesResponse
+
+    @GET("estudos.json")
+    suspend fun getStudies(): StudyResponseDto
 }

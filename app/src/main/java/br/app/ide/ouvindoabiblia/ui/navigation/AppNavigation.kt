@@ -14,7 +14,14 @@ sealed interface Screen {
     data object Themes : Screen
 
     @Serializable
-    data object History : Screen
+    data object Estudos : Screen
+
+    // Adicione nas Telas de Detalhe
+    @Serializable
+    data class StudyDetails(
+        val studyId: Int,
+        val studyTitle: String
+    ) : Screen
 
     @Serializable
     data object More : Screen

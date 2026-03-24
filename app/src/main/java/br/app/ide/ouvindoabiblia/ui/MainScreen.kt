@@ -204,7 +204,7 @@ fun MainScreen(
                             BottomNavItem("Início", Icons.Default.Home, Screen.Home),
                             BottomNavItem("Favoritos", Icons.Default.Favorite, Screen.Favorites),
                             BottomNavItem("Temas", Icons.Default.LocalFlorist, Screen.Themes),
-                            BottomNavItem("Histórico", Icons.Default.History, Screen.History),
+                            BottomNavItem("Estudos", Icons.Default.History, Screen.Estudos),
                             BottomNavItem("Mais", Icons.Default.Menu, Screen.More),
                         )
                         val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -222,6 +222,14 @@ fun MainScreen(
                                             Screen.Themes::class.simpleName ?: ""
                                         ) || currentRoute.contains(
                                             Screen.ThemeDetails::class.simpleName ?: ""
+                                        )
+                                    }
+
+                                    is Screen.Estudos -> {
+                                        currentRoute.contains(
+                                            Screen.Estudos::class.simpleName ?: ""
+                                        ) || currentRoute.contains(
+                                            Screen.StudyDetails::class.simpleName ?: ""
                                         )
                                     }
 

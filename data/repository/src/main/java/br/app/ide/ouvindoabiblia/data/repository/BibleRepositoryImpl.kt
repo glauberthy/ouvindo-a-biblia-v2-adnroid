@@ -11,9 +11,12 @@ import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
+import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import kotlinx.coroutines.Dispatchers
@@ -229,4 +232,53 @@ class BibleRepositoryImpl @Inject constructor(
     override fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>> =
         dao.getMomentsForTheme(themeId)
 
+
+    //Estudo
+    override fun getStudies(): Flow<List<StudyEntity>> {
+        return dao.getStudies()
+    }
+
+    override fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons> {
+        return dao.getStudyWithLessons(studyId)
+    }
+
+    override suspend fun syncStudies() {
+        try {
+            // 1. Busca da rede
+            val response = api.getStudies()
+
+            // 2. Mapeamento DTO -> Entidades
+            val studyEntities = response.estudos.map { dto ->
+                StudyEntity(
+                    id = dto.id,
+                    title = dto.title,
+                    author = dto.author ?: "Autor Desconhecido", // Fallback seguro
+                    description = dto.description,
+                    imageUrl = dto.imageUrl
+                )
+            }
+
+            val lessonEntities = response.estudos.flatMap { studyDto ->
+                studyDto.audios.map { audioDto ->
+                    StudyLessonEntity(
+                        id = audioDto.id,
+                        studyId = studyDto.id,
+                        title = audioDto.title,
+                        url = audioDto.url,
+                        duration = audioDto.duration ?: 0L
+                    )
+                }
+            }
+
+            // 3. Salva no banco local (Transação implícita ou explícita idealmente)
+            dao.clearStudyLessons()
+            dao.clearStudies()
+            dao.insertStudies(studyEntities)
+            dao.insertStudyLessons(lessonEntities)
+
+        } catch (e: Exception) {
+            // Lidar com erro de rede/sincronização. O app continuará funcionando com dados em cache (Room).
+            e.printStackTrace()
+        }
+    }
 }

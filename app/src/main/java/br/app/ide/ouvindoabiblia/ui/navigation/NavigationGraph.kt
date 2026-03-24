@@ -19,6 +19,7 @@ import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
+import br.app.ide.ouvindoabiblia.ui.studies.StudiesScreen
 import br.app.ide.ouvindoabiblia.ui.themas.ThemeDetailsScreen
 import br.app.ide.ouvindoabiblia.ui.themas.ThemesScreen
 
@@ -80,7 +81,20 @@ fun NavigationGraph(
         }
 
 
-        composable<Screen.History> { PlaceholderScreen("Histórico") }
+        // --- ESTUDOS (MASTER) ---
+        composable<Screen.Estudos> {
+            StudiesScreen(
+                onStudyClick = { id, title ->
+                    navController.navigate(Screen.StudyDetails(id, title))
+                }
+            )
+        }
+
+        // --- DETALHES DO ESTUDO (DETAIL) ---
+        composable<Screen.StudyDetails> {
+            // Placeholder temporário. O Collapsing Toolbar será implementado aqui.
+            PlaceholderScreen("Detalhes do Estudo")
+        }
 
         composable<Screen.More> {
             MoreScreen(onNavigateToItem = { /* Navegação futura */ })

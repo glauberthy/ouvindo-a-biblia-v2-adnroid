@@ -7,6 +7,8 @@ import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 
 @Database(
@@ -15,9 +17,11 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
         ChapterEntity::class,
         PlaybackStateEntity::class,
         ThemeEntity::class,
-        MomentEntity::class
+        MomentEntity::class,
+        StudyEntity::class,
+        StudyLessonEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false // Para desenvolvimento inicial, deixamos falso
 )
 abstract class BibleDatabase : RoomDatabase() {

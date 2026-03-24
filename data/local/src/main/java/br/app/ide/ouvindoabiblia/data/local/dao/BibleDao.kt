@@ -9,10 +9,13 @@ import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.PlaybackStateDto
+import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -267,7 +270,7 @@ interface BibleDao {
         }
         insertMoments(moments)
     }
-    
+
     // Query para buscar os momentos com áudio (usaremos na UI em breve)
     @Transaction
     @Query(
@@ -284,4 +287,24 @@ interface BibleDao {
     """
     )
     fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
+
+    //Estudos
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStudies(studies: List<StudyEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStudyLessons(lessons: List<StudyLessonEntity>)
+
+    @Query("SELECT * FROM studies")
+    fun getStudies(): Flow<List<StudyEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM studies WHERE id = :studyId")
+    fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons>
+
+    @Query("DELETE FROM studies")
+    suspend fun clearStudies()
+
+    @Query("DELETE FROM study_lessons")
+    suspend fun clearStudyLessons()
 }

@@ -3,9 +3,11 @@ package br.app.ide.ouvindoabiblia.data.repository
 import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
+import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
@@ -39,6 +41,12 @@ interface BibleRepository {
 
     fun getThemes(): Flow<List<ThemeEntity>>
     fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
+
+
+    //Estudo
+    fun getStudies(): Flow<List<StudyEntity>>
+    fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons>
+    suspend fun syncStudies()
 }
 
 // Domain Model (Mantido para uso na UI/Service)
