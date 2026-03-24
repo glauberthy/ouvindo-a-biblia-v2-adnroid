@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.Menu
@@ -204,7 +204,7 @@ fun MainScreen(
                             BottomNavItem("Início", Icons.Default.Home, Screen.Home),
                             BottomNavItem("Favoritos", Icons.Default.Favorite, Screen.Favorites),
                             BottomNavItem("Temas", Icons.Default.LocalFlorist, Screen.Themes),
-                            BottomNavItem("Estudos", Icons.Default.History, Screen.Estudos),
+                            BottomNavItem("Estudos", Icons.Default.AutoStories, Screen.Estudos),
                             BottomNavItem("Mais", Icons.Default.Menu, Screen.More),
                         )
                         val navBackStackEntry by navController.currentBackStackEntryAsState()
