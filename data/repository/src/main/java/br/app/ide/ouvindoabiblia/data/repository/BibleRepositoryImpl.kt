@@ -184,8 +184,13 @@ class BibleRepositoryImpl @Inject constructor(
             val preferences = dataStore.data.first()
             val localVersion = preferences[KEY_THEMES_VERSION]
 
-            // Só atualiza se a versão for diferente
-            if (localVersion == remoteVersion) return@withContext Result.success(Unit)
+            // VERIFICAÇÃO DE SEGURANÇA: O banco de temas está vazio?
+            val isDbEmpty = dao.getThemesCount() == 0
+
+            // Só ignora a atualização se a versão for igual E o banco NÃO estiver vazio
+            if (localVersion == remoteVersion && !isDbEmpty) {
+                return@withContext Result.success(Unit)
+            }
 
             val (themesToInsert, momentsToInsert) = withContext(Dispatchers.Default) {
                 val themes = mutableListOf<ThemeEntity>()
@@ -218,7 +223,7 @@ class BibleRepositoryImpl @Inject constructor(
                 Pair(themes, moments)
             }
 
-            // SINALIZAÇÃO: Chamada ao DAO para atualizar (seguindo padrão do refreshBibleData)
+            // SINALIZAÇÃO: Chamada ao DAO para atualizar
             dao.refreshThemesData(themesToInsert, momentsToInsert)
             dataStore.edit { it[KEY_THEMES_VERSION] = remoteVersion }
 

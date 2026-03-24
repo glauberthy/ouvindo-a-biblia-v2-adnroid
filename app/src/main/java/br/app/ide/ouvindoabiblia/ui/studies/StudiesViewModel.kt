@@ -28,7 +28,7 @@ class StudiesViewModel @Inject constructor(
     val uiState: StateFlow<StudiesUiState> = combine(
         _isLoading,
         _error,
-        repository.getStudies() // Vem do DAO
+        repository.getStudies()
     ) { isLoading, error, studies ->
         if (studies.isNotEmpty()) {
             StudiesUiState.Success(studies = studies)
@@ -37,7 +37,7 @@ class StudiesViewModel @Inject constructor(
         } else if (error != null) {
             StudiesUiState.Error(error)
         } else {
-            StudiesUiState.Loading
+            StudiesUiState.Error("Nenhum estudo encontrado. Verifique sua conexão e tente novamente.")
         }
     }
         .flowOn(Dispatchers.Default)

@@ -28,9 +28,8 @@ class ThemesViewModel @Inject constructor(
     val uiState: StateFlow<ThemesUiState> = combine(
         _isLoading,
         _error,
-        repository.getThemes() // Vem do seu BibleDao.getAllThemes()
+        repository.getThemes()
     ) { isLoading, error, themes ->
-
         if (themes.isNotEmpty()) {
             ThemesUiState.Success(themes = themes)
         } else if (isLoading) {
@@ -38,10 +37,10 @@ class ThemesViewModel @Inject constructor(
         } else if (error != null) {
             ThemesUiState.Error(error)
         } else {
-            ThemesUiState.Loading
+            ThemesUiState.Error("Nenhum tema encontrado. Verifique sua conexão e tente novamente.")
         }
     }
-        .flowOn(Dispatchers.Default) // Processamento de estado fora da Main Thread
+        .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),

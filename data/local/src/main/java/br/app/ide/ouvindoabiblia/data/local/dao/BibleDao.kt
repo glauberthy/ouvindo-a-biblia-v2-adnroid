@@ -307,4 +307,8 @@ interface BibleDao {
 
     @Query("DELETE FROM study_lessons")
     suspend fun clearStudyLessons()
+
+
+    @Query("SELECT COUNT(*) FROM themes")
+    suspend fun getThemesCount(): Int
 }
