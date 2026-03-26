@@ -1,8 +1,10 @@
 package br.app.ide.ouvindoabiblia.ui.studies
 
+
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,16 +23,19 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -48,13 +52,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
+import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
@@ -78,13 +83,14 @@ fun StudiesScreen(
 
 @Composable
 private fun StudiesContent(
-    studies: List<StudyEntity>,
+    studies: List<StudyWithLessons>,
     onStudyClick: (Int, String) -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = Modifier
             .fillMaxSize()
             .background(CreamBackground),
@@ -92,11 +98,12 @@ private fun StudiesContent(
             start = 20.dp,
             end = 20.dp,
             top = statusBarPadding + 24.dp,
-            bottom = navBarPadding + 56.dp
+            bottom = navBarPadding + 80.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.padding(bottom = 8.dp)) {
                 Text(
                     text = "Estudos Bíblicos",
@@ -112,104 +119,208 @@ private fun StudiesContent(
             }
         }
 
-        items(studies, key = { it.id }) { study ->
-            StudyListItem(
+        items(
+            items = studies,
+            key = { it.study.id }
+        ) { study ->
+            StudyGridItem(
                 study = study,
-                onClick = { onStudyClick(study.id, study.title) }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(248.dp),
+                onClick = { onStudyClick(study.study.id, study.study.title) }
             )
         }
     }
 }
 
 @Composable
-fun StudyListItem(
-    study: StudyEntity,
+fun StudyGridItem(
+    study: StudyWithLessons,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    val audioCount = study.lessons.size
+    val totalDurationSeconds = study.lessons.sumOf { it.duration }
+    val audioCountLabel = formatAudioCount(audioCount)
+    val totalDurationLabel = formatTotalDuration(totalDurationSeconds)
+
+
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
-        label = "CardPressAnimation"
+        label = "StudyCardPressAnimation"
     )
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .scale(scale)
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple()
             ) { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isPressed) 1.dp else 4.dp
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFFCFA)
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = RosyBeige.copy(alpha = 0.28f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp,
+            pressedElevation = 3.dp
+        )
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            // Imagem cobrindo o topo do card (aspectRatio 16:9 como um banner de vídeo)
-            AppAsyncImage(
-                imageUrl = study.imageUrl,
-                contentDescription = study.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop // Garante que a imagem preencha o espaço
+            Text(
+                text = study.study.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = DeepBlueDark,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 21.sp
             )
 
-            // Conteúdo textual abaixo da imagem
-            Column(
-                modifier = Modifier.padding(16.dp)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = study.study.author,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = SlateBlue,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = study.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark,
-                    lineHeight = 24.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                StudyMetaChip(text = audioCountLabel)
+                StudyMetaChip(text = totalDurationLabel)
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                // Linha com o autor
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Autor",
-                        tint = SlateBlue,
-                        modifier = Modifier.size(16.dp)
+            Text(
+                text = study.study.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = LavenderGray,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Surface(
+                    modifier = Modifier.height(40.dp),
+                    shape = RoundedCornerShape(999.dp),
+                    color = CreamBackground,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = RosyBeige.copy(alpha = 0.45f)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = study.author,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = SlateBlue,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = DeepBlueDark,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Ouvir",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = DeepBlueDark,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = study.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderGray,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 20.sp
-                )
+                Surface(
+                    modifier = Modifier.size(52.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                ) {
+                    AppAsyncImage(
+                        imageUrl = study.study.imageUrl,
+                        contentDescription = "Autor ${study.study.author}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun StudyMetaChip(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(999.dp),
+        color = RosyBeige.copy(alpha = 0.22f),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = DeepBlueDark,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+private fun formatAudioCount(count: Int): String {
+    return if (count == 1) "1 áudio" else "$count áudios"
+}
+
+private fun formatTotalDuration(totalSeconds: Long): String {
+    val totalMinutes = totalSeconds / 60
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return if (hours > 0) {
+        "${hours}h ${minutes}min"
+    } else {
+        "${minutes}min"
     }
 }

@@ -266,7 +266,7 @@ class BibleRepositoryImpl @Inject constructor(
             val lessonEntities = response.estudos.flatMap { studyDto ->
                 studyDto.audios.map { audioDto ->
                     StudyLessonEntity(
-                        id = audioDto.id,
+                        remoteId = audioDto.id,
                         studyId = studyDto.id,
                         title = audioDto.title,
                         url = audioDto.url,
@@ -285,5 +285,9 @@ class BibleRepositoryImpl @Inject constructor(
             // Lidar com erro de rede/sincronização. O app continuará funcionando com dados em cache (Room).
             e.printStackTrace()
         }
+    }
+
+    override fun getStudiesWithLessons(): Flow<List<StudyWithLessons>> {
+        return dao.getStudiesWithLessons()
     }
 }

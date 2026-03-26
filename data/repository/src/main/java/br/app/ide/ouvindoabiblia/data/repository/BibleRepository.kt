@@ -47,6 +47,8 @@ interface BibleRepository {
     fun getStudies(): Flow<List<StudyEntity>>
     fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons>
     suspend fun syncStudies()
+
+    fun getStudiesWithLessons(): Flow<List<StudyWithLessons>>
 }
 
 // Domain Model (Mantido para uso na UI/Service)

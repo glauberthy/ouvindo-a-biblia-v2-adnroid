@@ -24,11 +24,10 @@ class StudiesViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
 
-    // Observa o banco de dados (Room) continuamente
     val uiState: StateFlow<StudiesUiState> = combine(
         _isLoading,
         _error,
-        repository.getStudies()
+        repository.getStudiesWithLessons()
     ) { isLoading, error, studies ->
         if (studies.isNotEmpty()) {
             StudiesUiState.Success(studies = studies)
@@ -61,7 +60,7 @@ class StudiesViewModel @Inject constructor(
 
     private fun syncData() {
         viewModelScope.launch {
-            val currentStudies = repository.getStudies().firstOrNull()
+            val currentStudies = repository.getStudiesWithLessons().firstOrNull()
             if (currentStudies.isNullOrEmpty()) {
                 _isLoading.value = true
             }
@@ -69,7 +68,6 @@ class StudiesViewModel @Inject constructor(
             _error.value = null
 
             try {
-                // Chama a sincronização que implementamos no BibleRepositoryImpl
                 repository.syncStudies()
             } catch (exception: Exception) {
                 if (currentStudies.isNullOrEmpty()) {

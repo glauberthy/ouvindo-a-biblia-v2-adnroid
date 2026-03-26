@@ -311,4 +311,9 @@ interface BibleDao {
 
     @Query("SELECT COUNT(*) FROM themes")
     suspend fun getThemesCount(): Int
+
+    @Transaction
+    @Query("SELECT * FROM studies")
+    fun getStudiesWithLessons(): Flow<List<StudyWithLessons>>
+
 }

@@ -16,11 +16,21 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["studyId"])]
+    indices = [
+        Index(value = ["studyId"]),
+        Index(value = ["studyId", "remoteId"], unique = true)
+    ]
 )
 data class StudyLessonEntity(
-    @PrimaryKey val id: Int,
-    @ColumnInfo(name = "studyId") val studyId: Int,
+    @PrimaryKey(autoGenerate = true)
+    val localId: Long = 0,
+
+    @ColumnInfo(name = "remoteId")
+    val remoteId: Int,
+
+    @ColumnInfo(name = "studyId")
+    val studyId: Int,
+
     val title: String,
     val url: String,
     val duration: Long

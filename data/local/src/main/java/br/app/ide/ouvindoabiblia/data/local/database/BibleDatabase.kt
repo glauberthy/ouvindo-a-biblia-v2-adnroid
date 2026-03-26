@@ -21,7 +21,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
         StudyEntity::class,
         StudyLessonEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false // Para desenvolvimento inicial, deixamos falso
 )
 abstract class BibleDatabase : RoomDatabase() {
