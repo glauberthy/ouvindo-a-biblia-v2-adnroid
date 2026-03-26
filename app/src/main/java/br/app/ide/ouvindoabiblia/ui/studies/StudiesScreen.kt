@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -77,7 +79,11 @@ fun StudiesScreen(
 
     when (val uiState = state) {
         is StudiesUiState.Loading -> LoadingScreen()
-        is StudiesUiState.Error -> ErrorScreen(uiState.message) { viewModel.handle(StudiesIntent.Retry) }
+        is StudiesUiState.Empty -> EmptyStudiesScreen()
+        is StudiesUiState.Error -> ErrorScreen(uiState.message) {
+            viewModel.handle(StudiesIntent.Retry)
+        }
+
         is StudiesUiState.Success -> {
             StudiesContent(
                 studies = uiState.studies,
@@ -101,17 +107,29 @@ private fun StudiesContent(
             .fillMaxSize()
             .background(CreamBackground)
     ) {
+
+        val horizontalScreenPadding = 20.dp
+        val gridSpacing = 16.dp
+        val bottomBreathingRoom = 4.dp
+
+        val resolvedBottomPadding =
+            if (bottomContentPadding == 0.dp) {
+                horizontalScreenPadding
+            } else {
+                bottomContentPadding + bottomBreathingRoom
+            }
+
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
+                start = horizontalScreenPadding,
+                end = horizontalScreenPadding,
                 top = 24.dp,
-                bottom = bottomContentPadding + 16.dp
+                bottom = resolvedBottomPadding
             ),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing),
+            verticalArrangement = Arrangement.spacedBy(gridSpacing)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(
@@ -363,5 +381,43 @@ private fun formatTotalDuration(totalSeconds: Long): String {
         hours > 0 && minutes > 0 -> "${hours}h${minutes.toString().padStart(2, '0')}m"
         hours > 0 -> "${hours}h"
         else -> "${minutes}min"
+    }
+}
+
+
+@Composable
+private fun EmptyStudiesScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CreamBackground)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.LibraryBooks,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = RosyBeige
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Nenhum estudo disponível",
+            style = MaterialTheme.typography.titleMedium,
+            color = SlateBlue,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Quando novos estudos estiverem disponíveis,\neles aparecerão aqui para você ouvir.",
+            color = LavenderGray,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }

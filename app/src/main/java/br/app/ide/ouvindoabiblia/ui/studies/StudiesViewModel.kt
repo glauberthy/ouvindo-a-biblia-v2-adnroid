@@ -21,7 +21,7 @@ class StudiesViewModel @Inject constructor(
     private val repository: BibleRepository
 ) : ViewModel() {
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     private val _error = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<StudiesUiState> = combine(
@@ -30,13 +30,14 @@ class StudiesViewModel @Inject constructor(
         repository.getStudiesWithLessons()
     ) { isLoading, error, studies ->
         if (studies.isNotEmpty()) {
+//            StudiesUiState.Empty
             StudiesUiState.Success(studies = studies)
         } else if (isLoading) {
             StudiesUiState.Loading
         } else if (error != null) {
             StudiesUiState.Error(error)
         } else {
-            StudiesUiState.Error("Nenhum estudo encontrado. Verifique sua conexão e tente novamente.")
+            StudiesUiState.Empty
         }
     }
         .flowOn(Dispatchers.Default)
@@ -67,17 +68,17 @@ class StudiesViewModel @Inject constructor(
 
             _error.value = null
 
-            try {
-                repository.syncStudies()
-            } catch (exception: Exception) {
+            val result = repository.syncStudies()
+
+            result.onFailure { exception ->
                 if (currentStudies.isNullOrEmpty()) {
                     _error.value = "Erro ao carregar estudos: ${exception.localizedMessage}"
                 } else {
                     Log.w("StudiesViewModel", "Falha no sync silencioso: ${exception.message}")
                 }
-            } finally {
-                _isLoading.value = false
             }
+
+            _isLoading.value = false
         }
     }
 }

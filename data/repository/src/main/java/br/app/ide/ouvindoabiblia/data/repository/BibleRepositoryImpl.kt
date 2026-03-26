@@ -37,6 +37,7 @@ class BibleRepositoryImpl @Inject constructor(
         private const val TAG = "BibleRepository"
         private val KEY_BIBLE_VERSION = stringPreferencesKey("bible_data_version")
         private val KEY_THEMES_VERSION = stringPreferencesKey("themes_data_version")
+        private val KEY_STUDIES_VERSION = stringPreferencesKey("studies_data_version")
     }
 
     override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
@@ -247,43 +248,56 @@ class BibleRepositoryImpl @Inject constructor(
         return dao.getStudyWithLessons(studyId)
     }
 
-    override suspend fun syncStudies() {
+    override suspend fun syncStudies(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // 1. Busca da rede
             val response = api.getStudies()
+            val remoteVersion = response.meta.version
+            val preferences = dataStore.data.first()
+            val localVersion = preferences[KEY_STUDIES_VERSION]
 
-            // 2. Mapeamento DTO -> Entidades
-            val studyEntities = response.estudos.map { dto ->
-                StudyEntity(
-                    id = dto.id,
-                    title = dto.title,
-                    author = dto.author ?: "Autor Desconhecido", // Fallback seguro
-                    description = dto.description,
-                    imageUrl = dto.imageUrl
-                )
+            val isDbEmpty = dao.getStudiesCount() == 0
+
+            if (localVersion == remoteVersion && !isDbEmpty) {
+                return@withContext Result.success(Unit)
             }
 
-            val lessonEntities = response.estudos.flatMap { studyDto ->
-                studyDto.audios.map { audioDto ->
-                    StudyLessonEntity(
-                        remoteId = audioDto.id,
-                        studyId = studyDto.id,
-                        title = audioDto.title,
-                        url = audioDto.url,
-                        duration = audioDto.duration ?: 0L
+            val (studiesToInsert, lessonsToInsert) = withContext(Dispatchers.Default) {
+                val studies = mutableListOf<StudyEntity>()
+                val lessons = mutableListOf<StudyLessonEntity>()
+
+                response.estudos.forEach { studyDto ->
+                    studies.add(
+                        StudyEntity(
+                            id = studyDto.id,
+                            title = studyDto.title,
+                            author = studyDto.author ?: "Autor Desconhecido",
+                            description = studyDto.description,
+                            imageUrl = studyDto.imageUrl
+                        )
                     )
+
+                    studyDto.audios.forEach { audioDto ->
+                        lessons.add(
+                            StudyLessonEntity(
+                                remoteId = audioDto.id,
+                                studyId = studyDto.id,
+                                title = audioDto.title,
+                                url = audioDto.url,
+                                duration = audioDto.duration ?: 0L
+                            )
+                        )
+                    }
                 }
+
+                Pair(studies, lessons)
             }
 
-            // 3. Salva no banco local (Transação implícita ou explícita idealmente)
-            dao.clearStudyLessons()
-            dao.clearStudies()
-            dao.insertStudies(studyEntities)
-            dao.insertStudyLessons(lessonEntities)
+            dao.refreshStudiesData(studiesToInsert, lessonsToInsert)
+            dataStore.edit { it[KEY_STUDIES_VERSION] = remoteVersion }
 
+            Result.success(Unit)
         } catch (e: Exception) {
-            // Lidar com erro de rede/sincronização. O app continuará funcionando com dados em cache (Room).
-            e.printStackTrace()
+            Result.failure(e)
         }
     }
 

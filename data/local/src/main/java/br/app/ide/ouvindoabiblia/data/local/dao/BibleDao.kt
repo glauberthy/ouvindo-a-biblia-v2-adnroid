@@ -316,4 +316,17 @@ interface BibleDao {
     @Query("SELECT * FROM studies")
     fun getStudiesWithLessons(): Flow<List<StudyWithLessons>>
 
+    @Query("SELECT COUNT(*) FROM studies")
+    suspend fun getStudiesCount(): Int
+
+    @Transaction
+    suspend fun refreshStudiesData(
+        studies: List<StudyEntity>,
+        lessons: List<StudyLessonEntity>
+    ) {
+        clearStudyLessons()
+        clearStudies()
+        insertStudies(studies)
+        insertStudyLessons(lessons)
+    }
 }

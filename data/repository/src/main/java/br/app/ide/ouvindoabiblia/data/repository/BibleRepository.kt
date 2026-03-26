@@ -46,7 +46,7 @@ interface BibleRepository {
     //Estudo
     fun getStudies(): Flow<List<StudyEntity>>
     fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons>
-    suspend fun syncStudies()
+    suspend fun syncStudies(): Result<Unit>
 
     fun getStudiesWithLessons(): Flow<List<StudyWithLessons>>
 }
