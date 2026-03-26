@@ -10,7 +10,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +22,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -44,10 +47,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -64,8 +69,9 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun StudiesScreen(
-    viewModel: StudiesViewModel = hiltViewModel(),
-    onStudyClick: (Int, String) -> Unit
+    onStudyClick: (Int, String) -> Unit,
+    bottomContentPadding: Dp = 0.dp,
+    viewModel: StudiesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -75,7 +81,8 @@ fun StudiesScreen(
         is StudiesUiState.Success -> {
             StudiesContent(
                 studies = uiState.studies,
-                onStudyClick = onStudyClick
+                onStudyClick = onStudyClick,
+                bottomContentPadding = bottomContentPadding
             )
         }
     }
@@ -84,56 +91,83 @@ fun StudiesScreen(
 @Composable
 private fun StudiesContent(
     studies: List<StudyWithLessons>,
-    onStudyClick: (Int, String) -> Unit
+    onStudyClick: (Int, String) -> Unit,
+    bottomContentPadding: Dp
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
-        contentPadding = PaddingValues(
-            start = 20.dp,
-            end = 20.dp,
-            top = statusBarPadding + 24.dp,
-            bottom = navBarPadding + 80.dp
-        ),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(CreamBackground)
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Column(modifier = Modifier.padding(bottom = 8.dp)) {
-                Text(
-                    text = "Estudos Bíblicos",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark
-                )
-                Text(
-                    text = "Séries de exposições em áudio",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SlateBlue
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = 24.dp,
+                bottom = bottomContentPadding + 16.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(
+                    modifier = Modifier.padding(
+                        top = statusBarPadding + 8.dp,
+                        bottom = 8.dp
+                    )
+                ) {
+                    Text(
+                        text = "Estudos Bíblicos",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepBlueDark
+                    )
+                    Text(
+                        text = "Séries de exposições em áudio",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SlateBlue
+                    )
+                }
+            }
+
+            items(
+                items = studies,
+                key = { it.study.id }
+            ) { study ->
+                StudyGridItem(
+                    study = study,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(248.dp),
+                    onClick = { onStudyClick(study.study.id, study.study.title) }
                 )
             }
         }
 
-        items(
-            items = studies,
-            key = { it.study.id }
-        ) { study ->
-            StudyGridItem(
-                study = study,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(248.dp),
-                onClick = { onStudyClick(study.study.id, study.study.title) }
-            )
-        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(statusBarPadding + 56.dp)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            CreamBackground.copy(alpha = 0.98f),
+                            CreamBackground.copy(alpha = 0.88f),
+                            CreamBackground.copy(alpha = 0.55f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StudyGridItem(
     study: StudyWithLessons,
@@ -207,9 +241,9 @@ fun StudyGridItem(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StudyMetaChip(text = audioCountLabel)
                 StudyMetaChip(text = totalDurationLabel)
@@ -293,19 +327,26 @@ private fun StudyMetaChip(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.heightIn(min = 28.dp),
         shape = RoundedCornerShape(999.dp),
-        color = RosyBeige.copy(alpha = 0.22f),
+        color = SlateBlue.copy(alpha = 0.08f),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = DeepBlueDark,
-            fontWeight = FontWeight.Medium
-        )
+        Box(
+            modifier = Modifier.padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = DeepBlueDark,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip
+            )
+        }
     }
 }
 
@@ -318,9 +359,9 @@ private fun formatTotalDuration(totalSeconds: Long): String {
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
 
-    return if (hours > 0) {
-        "${hours}h ${minutes}min"
-    } else {
-        "${minutes}min"
+    return when {
+        hours > 0 && minutes > 0 -> "${hours}h${minutes.toString().padStart(2, '0')}m"
+        hours > 0 -> "${hours}h"
+        else -> "${minutes}min"
     }
 }

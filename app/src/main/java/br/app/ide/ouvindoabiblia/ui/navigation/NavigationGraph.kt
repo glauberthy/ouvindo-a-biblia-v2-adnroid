@@ -9,6 +9,8 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -29,6 +31,7 @@ fun NavigationGraph(
     windowSizeClass: WindowSizeClass,
     onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
     onPlayTheme: (String, String, List<MomentWithAudio>, Int) -> Unit,
+    bottomContentPadding: Dp = 0.dp,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -86,7 +89,8 @@ fun NavigationGraph(
             StudiesScreen(
                 onStudyClick = { id, title ->
                     navController.navigate(Screen.StudyDetails(id, title))
-                }
+                },
+                bottomContentPadding = bottomContentPadding
             )
         }
 

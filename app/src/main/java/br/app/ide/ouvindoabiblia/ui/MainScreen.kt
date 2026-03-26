@@ -88,6 +88,20 @@ fun MainScreen(
         // Estado de expansão do player
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
+
+        val miniPlayerHeight = 64.dp
+        val playerFloatMargin = 24.dp
+
+        val extraBottomContentPadding by animateDpAsState(
+            targetValue = when {
+                isPlayerExpanded -> 0.dp
+                hasMedia -> miniPlayerHeight + playerFloatMargin
+                else -> 0.dp
+            },
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+            label = "ExtraBottomContentPadding"
+        )
+
         // --- 1. DIMENSÕES E PROGRESSO ---
         val displayMetrics = context.resources.displayMetrics
         val screenHeightPx = displayMetrics.heightPixels
@@ -98,7 +112,7 @@ fun MainScreen(
         val playerContainerHeight by animateDpAsState(
             targetValue = when {
                 isPlayerExpanded -> screenHeight
-                hasMedia -> 64.dp // Altura do Mini Player
+                hasMedia -> miniPlayerHeight // Altura do Mini Player
                 else -> 0.dp
             },
             animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -312,7 +326,8 @@ fun MainScreen(
                                 moments,
                                 startIndex
                             )
-                        }
+                        },
+                        bottomContentPadding = extraBottomContentPadding
                     )
                 }
             }
@@ -325,7 +340,7 @@ fun MainScreen(
                 // Se expandido: 0 (ocupa tudo)
                 // Se minimizado: Altura da NavBar (80) + Espaço (16) + Inset de Navegação do Sistema (se houver)
                 val navBarHeight = 85.dp // Altura padrão da Material 3 NavigationBar
-                val floatMargin = 24.dp
+                val floatMargin = playerFloatMargin
 
                 // Anima o padding para subir/descer suavemente
                 val animatedBottomPadding by animateDpAsState(
