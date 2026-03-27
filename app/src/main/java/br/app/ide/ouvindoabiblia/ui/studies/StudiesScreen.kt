@@ -12,13 +12,12 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,11 +25,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
@@ -119,8 +115,7 @@ private fun StudiesContent(
                 bottomContentPadding + bottomBreathingRoom
             }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = horizontalScreenPadding,
@@ -128,10 +123,9 @@ private fun StudiesContent(
                 top = 24.dp,
                 bottom = resolvedBottomPadding
             ),
-            horizontalArrangement = Arrangement.spacedBy(gridSpacing),
             verticalArrangement = Arrangement.spacedBy(gridSpacing)
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 Column(
                     modifier = Modifier.padding(
                         top = statusBarPadding + 8.dp,
@@ -156,11 +150,9 @@ private fun StudiesContent(
                 items = studies,
                 key = { it.study.id }
             ) { study ->
-                StudyGridItem(
+                StudyListItem(
                     study = study,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(248.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = { onStudyClick(study.study.id, study.study.title) }
                 )
             }
@@ -185,9 +177,9 @@ private fun StudiesContent(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+
 @Composable
-fun StudyGridItem(
+private fun StudyListItem(
     study: StudyWithLessons,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -195,24 +187,22 @@ fun StudyGridItem(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.985f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "StudyListItemScale"
+    )
+
     val audioCount = study.lessons.size
     val totalDurationSeconds = study.lessons.sumOf { it.duration }
     val audioCountLabel = formatAudioCount(audioCount)
     val totalDurationLabel = formatTotalDuration(totalDurationSeconds)
 
-
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "StudyCardPressAnimation"
-    )
-
     Card(
         modifier = modifier
-            .fillMaxWidth()
             .scale(scale)
             .clickable(
                 interactionSource = interactionSource,
@@ -221,7 +211,7 @@ fun StudyGridItem(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFFFFCFA)
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
             width = 1.dp,
             color = RosyBeige.copy(alpha = 0.28f)
@@ -231,75 +221,98 @@ fun StudyGridItem(
             pressedElevation = 3.dp
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = study.study.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = DeepBlueDark,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 21.sp
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = study.study.author,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = SlateBlue,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Surface(
+                modifier = Modifier.size(width = 72.dp, height = 96.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp,
+                shadowElevation = 2.dp,
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
             ) {
-                StudyMetaChip(text = audioCountLabel)
-                StudyMetaChip(text = totalDurationLabel)
+                AppAsyncImage(
+                    imageUrl = study.study.imageUrl,
+                    contentDescription = "Autor ${study.study.author}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = study.study.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = LavenderGray,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 18.sp
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
             ) {
+                Text(
+                    text = study.study.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepBlueDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 22.sp
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = study.study.author,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SlateBlue,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StudyMetaChip(text = audioCountLabel)
+                    StudyMetaChip(text = totalDurationLabel)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = study.study.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LavenderGray.copy(alpha = 0.92f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Surface(
-                    modifier = Modifier.height(40.dp),
+                    modifier = Modifier
+                        .height(36.dp)
+                        .defaultMinSize(minWidth = 116.dp),
                     shape = RoundedCornerShape(999.dp),
-                    color = CreamBackground,
+                    color = RosyBeige.copy(alpha = 0.16f),
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
                     border = BorderStroke(
                         width = 1.dp,
-                        color = RosyBeige.copy(alpha = 0.45f)
+                        color = RosyBeige.copy(alpha = 0.50f)
                     )
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
@@ -307,6 +320,7 @@ fun StudyGridItem(
                             tint = DeepBlueDark,
                             modifier = Modifier.size(18.dp)
                         )
+
                         Text(
                             text = "Ouvir",
                             style = MaterialTheme.typography.labelMedium,
@@ -314,25 +328,6 @@ fun StudyGridItem(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                }
-
-                Surface(
-                    modifier = Modifier.size(52.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 1.dp,
-                    shadowElevation = 2.dp,
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                ) {
-                    AppAsyncImage(
-                        imageUrl = study.study.imageUrl,
-                        contentDescription = "Autor ${study.study.author}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
                 }
             }
         }
