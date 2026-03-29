@@ -12,12 +12,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface ThemeDetailsUiState {
     data object Loading : ThemeDetailsUiState
-    data class Success(val moments: List<MomentWithAudio>) : ThemeDetailsUiState
+    data class Success(
+        val theme: br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity,
+        val moments: List<MomentWithAudio>
+    ) : ThemeDetailsUiState
+
     data class Error(val message: String) : ThemeDetailsUiState
 }
 
@@ -42,13 +47,26 @@ class ThemeDetailsViewModel @Inject constructor(
     fun loadMoments() {
         viewModelScope.launch {
             _uiState.value = ThemeDetailsUiState.Loading
-            repository.getMomentsForTheme(themeId)
+
+            combine(
+                repository.getThemeById(themeId),
+                repository.getMomentsForTheme(themeId)
+            ) { theme, moments ->
+                theme to moments
+            }
                 .catch { e ->
                     _uiState.value =
-                        ThemeDetailsUiState.Error(e.message ?: "Erro ao carregar versículos")
+                        ThemeDetailsUiState.Error(e.message ?: "Erro ao carregar tema")
                 }
-                .collect { moments ->
-                    _uiState.value = ThemeDetailsUiState.Success(moments)
+                .collect { (theme, moments) ->
+                    if (theme == null) {
+                        _uiState.value = ThemeDetailsUiState.Error("Tema não encontrado")
+                    } else {
+                        _uiState.value = ThemeDetailsUiState.Success(
+                            theme = theme,
+                            moments = moments
+                        )
+                    }
                 }
         }
     }

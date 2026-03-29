@@ -38,8 +38,9 @@ interface BibleRepository {
     fun getFavorites(): Flow<List<ChapterWithBookInfo>>
     fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
 
-
+    //temas
     fun getThemes(): Flow<List<ThemeEntity>>
+    fun getThemeById(themeId: Int): Flow<ThemeEntity?>
     fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
 
 

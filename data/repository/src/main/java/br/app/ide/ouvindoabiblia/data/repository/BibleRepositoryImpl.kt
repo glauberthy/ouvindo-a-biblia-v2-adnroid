@@ -304,4 +304,8 @@ class BibleRepositoryImpl @Inject constructor(
     override fun getStudiesWithLessons(): Flow<List<StudyWithLessons>> {
         return dao.getStudiesWithLessons()
     }
+
+    override fun getThemeById(themeId: Int): Flow<ThemeEntity?> {
+        return dao.getThemeById(themeId)
+    }
 }

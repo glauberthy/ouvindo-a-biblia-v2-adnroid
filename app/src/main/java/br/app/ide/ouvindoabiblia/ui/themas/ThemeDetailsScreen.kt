@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui.themas
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,11 +11,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -30,22 +35,26 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
+import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
@@ -53,12 +62,15 @@ import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
+import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
+import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
+import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeDetailsScreen(
     viewModel: ThemeDetailsViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = hiltViewModel(), // Injeção do estado do player
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
@@ -66,57 +78,28 @@ fun ThemeDetailsScreen(
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val themeTitle = viewModel.themeTitle
 
-    // Identifica qual índice está tocando se o tema ativo for igual ao desta tela
     val playingIndex = if (playerState.title == themeTitle) {
         playerState.currentChapterIndex
     } else {
         -1
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = themeTitle,
-                        fontWeight = FontWeight.Bold,
-                        color = DeepBlueDark,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar",
-                            tint = DeepBlueDark
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = CreamBackground // Mantém a imersão na paleta
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CreamBackground)
+    ) {
+        when (val state = uiState) {
+            is ThemeDetailsUiState.Loading -> LoadingScreen()
+            is ThemeDetailsUiState.Error -> ErrorScreen(state.message) { viewModel.loadMoments() }
+            is ThemeDetailsUiState.Success -> {
+                ThemeDetailsContent(
+                    theme = state.theme,
+                    moments = state.moments,
+                    playingIndex = playingIndex,
+                    onBackClick = onBackClick,
+                    onPlayTheme = onPlayTheme
                 )
-            )
-        },
-        containerColor = CreamBackground
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-        ) {
-            when (val state = uiState) {
-                is ThemeDetailsUiState.Loading -> LoadingScreen()
-                is ThemeDetailsUiState.Error -> ErrorScreen(state.message) { viewModel.loadMoments() }
-                is ThemeDetailsUiState.Success -> {
-                    MomentsList(
-                        moments = state.moments,
-                        themeTitle = themeTitle,
-                        playingIndex = playingIndex, // Novo parâmetro
-                        onPlayTheme = onPlayTheme
-                    )
-                }
             }
         }
     }
@@ -124,9 +107,10 @@ fun ThemeDetailsScreen(
 
 @Composable
 private fun MomentsList(
+    theme: ThemeEntity,
     moments: List<MomentWithAudio>,
-    themeTitle: String,
-    playingIndex: Int, // Novo parâmetro
+    playingIndex: Int,
+    onBackClick: () -> Unit,
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -134,31 +118,30 @@ private fun MomentsList(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
-            bottom = navBarPadding + 48.dp // Espaço para o player flutuante!
+            bottom = navBarPadding + 48.dp
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+
         item {
-            Text(
-                text = "Versículos Selecionados",
-                style = MaterialTheme.typography.titleMedium,
-                color = LavenderGray,
-                modifier = Modifier.padding(bottom = 8.dp)
+            ThemeDetailsHeader(
+                theme = theme,
+                moments = moments,
+                onBackClick = onBackClick
             )
         }
 
         itemsIndexed(moments, key = { _, item -> item.moment.id }) { index, momentAudio ->
-            val isPlaying = index == playingIndex
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                val isPlaying = index == playingIndex
 
-            MomentListItem(
-                index = index + 1,
-                item = momentAudio,
-                isPlaying = isPlaying, // Informa se este item específico está tocando
-                onClick = { onPlayTheme(moments, index, themeTitle) }
-            )
+                MomentListItem(
+                    index = index + 1,
+                    item = momentAudio,
+                    isPlaying = isPlaying,
+                    onClick = { onPlayTheme(moments, index, theme.title) }
+                )
+            }
         }
     }
 }
@@ -209,11 +192,7 @@ fun MomentListItem(
 
             // Textos (Mantidos sem alteração de cor de fundo)
             Column(modifier = Modifier.weight(1f)) {
-//                Text(
-//                    text = "${item.bookName} ${item.moment.reference}",
-//                    style = MaterialTheme.typography.labelMedium,
-//                    color = LavenderGray
-//                )
+
                 Text(
                     text = item.moment.reference,
                     style = MaterialTheme.typography.titleMedium,
@@ -252,4 +231,296 @@ fun MomentListItem(
             }
         }
     }
+}
+
+
+@Composable
+private fun ThemeDetailsHeader(
+    theme: ThemeEntity,
+    moments: List<MomentWithAudio>,
+    onBackClick: () -> Unit
+) {
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+    val totalDurationMs = moments.sumOf {
+        (it.moment.endMs - it.moment.startMs).coerceAtLeast(0L)
+    }
+
+    val totalMinutes = (totalDurationMs / 1000L / 60L).toInt()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    val durationLabel = when {
+        hours > 0 && minutes > 0 -> "${hours}h${minutes.toString().padStart(2, '0')}m"
+        hours > 0 -> "${hours}h"
+        else -> "${minutes}min"
+    }
+
+    Column {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+        ) {
+            AppAsyncImage(
+                imageUrl = theme.imageUrl,
+                contentDescription = theme.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                DeepBlueDark.copy(alpha = 0.42f),
+                                DeepBlueDark.copy(alpha = 0.16f),
+                                Color.Transparent,
+                                DeepBlueDark.copy(alpha = 0.18f)
+                            )
+                        )
+                    )
+            )
+
+            Surface(
+                modifier = Modifier
+                    .padding(start = 16.dp, top = statusBarPadding + 8.dp)
+                    .size(40.dp)
+                    .align(Alignment.TopStart),
+                shape = CircleShape,
+                color = CreamBackground.copy(alpha = 0.92f),
+                tonalElevation = 0.dp,
+                shadowElevation = 2.dp
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = DeepBlueDark
+                    )
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Text(
+                text = theme.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = DeepBlueDark
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = theme.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LavenderGray
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ThemeMetaChip(text = "${moments.size} áudios")
+                ThemeMetaChip(text = durationLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeMetaChip(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.heightIn(min = 28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = RosyBeige.copy(alpha = 0.72f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = SlateBlue,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Clip
+        )
+    }
+}
+
+@Composable
+private fun ThemeDetailsContent(
+    theme: ThemeEntity,
+    moments: List<MomentWithAudio>,
+    playingIndex: Int,
+    onBackClick: () -> Unit,
+    onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CreamBackground)
+    ) {
+        MomentsList(
+            theme = theme,
+            moments = moments,
+            playingIndex = playingIndex,
+            onBackClick = onBackClick,
+            onPlayTheme = onPlayTheme
+        )
+    }
+}
+
+private fun previewTheme(): ThemeEntity {
+    return ThemeEntity(
+        id = 1,
+        title = "Ansiedade e confiança em Deus",
+        description = "A ansiedade é combatida pela confiança na providência paternal de Deus, alimentada por Palavra e oração.",
+        imageUrl = "https://images.unsplash.com/photo-1504052434569-70ad5836ab65"
+    )
+}
+
+@Preview(
+    name = "Theme details header",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412
+)
+@Composable
+private fun PreviewThemeDetailsHeader() {
+    OuvindoABibliaTheme {
+        ThemeDetailsHeader(
+            theme = previewThemeEntity(),
+            moments = previewMomentsList(),
+            onBackClick = {}
+        )
+    }
+}
+
+@Preview(
+    name = "Moment item",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412
+)
+@Composable
+private fun PreviewMomentListItem() {
+    OuvindoABibliaTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CreamBackground)
+                .padding(16.dp)
+        ) {
+            MomentListItem(
+                index = 1,
+                item = previewMomentsList().first(),
+                isPlaying = false,
+                onClick = {}
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Theme details screen",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 915
+)
+@Composable
+private fun PreviewThemeDetailsContent() {
+    OuvindoABibliaTheme {
+        ThemeDetailsContent(
+            theme = previewThemeEntity(),
+            moments = previewMomentsList(),
+            playingIndex = 1,
+            onBackClick = {},
+            onPlayTheme = { _, _, _ -> }
+        )
+    }
+}
+
+
+private fun previewThemeEntity(): ThemeEntity {
+    return ThemeEntity(
+        id = 1,
+        title = "Ansiedade e confiança em Deus",
+        description = "A ansiedade é combatida pela confiança na providência paternal de Deus, alimentada por Palavra e oração.",
+        imageUrl = "https://images.unsplash.com/photo-1504052434569-70ad5836ab65"
+    )
+}
+
+private fun previewMomentWithAudio(
+    id: Long,
+    reference: String,
+    title: String,
+    startMs: Long,
+    endMs: Long,
+    bookId: Int = 1,
+    chapterNumber: Int = 1,
+    themeId: Int = 1,
+    audioUrl: String = "https://example.com/audio.mp3",
+    bookName: String = "Mateus",
+    coverUrl: String? = null
+): MomentWithAudio {
+    return MomentWithAudio(
+        moment = MomentEntity(
+            id = id,
+            themeId = themeId,
+            bookId = bookId,
+            chapterNumber = chapterNumber,
+            title = title,
+            startMs = startMs,
+            endMs = endMs,
+            reference = reference
+        ),
+        audioUrl = audioUrl,
+        bookName = bookName,
+        coverUrl = coverUrl
+    )
+}
+
+private fun previewMomentsList(): List<MomentWithAudio> {
+    return listOf(
+        previewMomentWithAudio(
+            id = 1,
+            reference = "Mateus 6:25-34",
+            title = "Não andeis ansiosos pela vossa vida",
+            startMs = 0L,
+            endMs = 180000L,
+            bookName = "Mateus"
+        ),
+        previewMomentWithAudio(
+            id = 2,
+            reference = "Filipenses 4:6-7",
+            title = "Não andeis ansiosos por coisa alguma",
+            startMs = 0L,
+            endMs = 150000L,
+            bookName = "Filipenses"
+        ),
+        previewMomentWithAudio(
+            id = 3,
+            reference = "Salmos 56:3",
+            title = "Em me vindo o temor, hei de confiar em ti",
+            startMs = 0L,
+            endMs = 90000L,
+            bookName = "Salmos"
+        )
+    )
 }

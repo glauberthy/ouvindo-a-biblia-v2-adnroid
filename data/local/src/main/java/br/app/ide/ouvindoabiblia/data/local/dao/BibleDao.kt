@@ -250,6 +250,9 @@ interface BibleDao {
     @Query("SELECT * FROM themes ORDER BY id ASC")
     fun getAllThemes(): Flow<List<ThemeEntity>>
 
+    @Query("SELECT * FROM themes WHERE id = :themeId LIMIT 1")
+    fun getThemeById(themeId: Int): Flow<ThemeEntity?>
+
 
     @Query("DELETE FROM moments WHERE themeId = :themeId")
     suspend fun deleteMomentsByTheme(themeId: Int)

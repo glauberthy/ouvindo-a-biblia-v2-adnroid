@@ -212,7 +212,7 @@ fun ThemeListItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = "Abrir tema",
-                tint = Accent.copy(alpha = 0.90f),
+                tint = RosyBeige.copy(alpha = 0.85f),
                 modifier = Modifier.size(16.dp)
             )
         }

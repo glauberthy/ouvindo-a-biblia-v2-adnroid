@@ -318,7 +318,7 @@ private fun StudyListItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = "Abrir estudo",
-                tint = Accent.copy(alpha = 0.90f),
+                tint = RosyBeige.copy(alpha = 0.85f),
                 modifier = Modifier.size(16.dp)
             )
         }
