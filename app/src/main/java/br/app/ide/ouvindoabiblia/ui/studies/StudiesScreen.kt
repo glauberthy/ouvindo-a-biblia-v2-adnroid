@@ -30,8 +30,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -147,7 +147,7 @@ private fun StudiesContent(
                     )
                     Text(
                         text = "Séries de exposições em áudio",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = SlateBlue
                     )
                 }
@@ -228,126 +228,99 @@ private fun StudyListItem(
             pressedElevation = 2.dp
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(75.dp),
-                    shape = CircleShape,
-                    color = Accent.copy(alpha = 0.14f),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = Accent.copy(alpha = 0.90f),
-//                        color = CreamBackground
-                    ),
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp
-                ) {
-                    AppAsyncImage(
-                        imageUrl = study.study.imageUrl,
-                        contentDescription = "Autor ${study.study.author}",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = study.study.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = DeepBlueDark,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 22.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = study.study.author,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.W400,
-//                        color = Accent.copy(alpha = 0.95f),
-                        color = SlateBlue,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StudyMetaChip(text = audioCountLabel)
-                StudyMetaChip(text = totalDurationLabel)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = study.study.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LavenderGray,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(38.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = Accent.copy(alpha = 0.90f),
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
-//                border = BorderStroke(
-//                    width = 1.dp,
-//                    color = SlateBlue.copy(alpha = 0.24f)
-//                )
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(75.dp),
+                        shape = CircleShape,
+                        color = Accent.copy(alpha = 0.14f),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = Accent.copy(alpha = 0.90f)
+                        ),
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp
                     ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = DeepBlueDark,
-                        modifier = Modifier.size(16.dp)
-                    )
+                        AppAsyncImage(
+                            imageUrl = study.study.imageUrl,
+                            contentDescription = "Autor ${study.study.author}",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = study.study.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlueDark,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 22.sp
+                        )
 
-                    Text(
-                        text = "Ouvir",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = DeepBlueDark,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = study.study.author,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.W400,
+                            color = SlateBlue,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StudyMetaChip(text = audioCountLabel)
+                    StudyMetaChip(text = totalDurationLabel)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = study.study.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LavenderGray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
+                )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = "Abrir estudo",
+                tint = Accent.copy(alpha = 0.90f),
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -360,7 +333,7 @@ private fun StudyMetaChip(
     Surface(
         modifier = modifier.heightIn(min = 24.dp),
         shape = RoundedCornerShape(999.dp),
-        color = CreamBackground,
+        color = Accent.copy(alpha = 0.90f),
         border = BorderStroke(
             width = 1.dp,
             color = RosyBeige.copy(alpha = 0.72f)
