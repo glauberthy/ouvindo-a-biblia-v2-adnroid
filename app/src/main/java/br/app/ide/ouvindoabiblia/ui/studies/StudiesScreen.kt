@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,8 +24,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
@@ -43,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,18 +52,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
+import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
+import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
@@ -188,7 +195,7 @@ private fun StudyListItem(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.985f else 1f,
+        targetValue = if (isPressed) 0.99f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -211,123 +218,134 @@ private fun StudyListItem(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFFFFCFA)
         ),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.28f)
+            color = RosyBeige.copy(alpha = 0.55f)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,
-            pressedElevation = 3.dp
+            pressedElevation = 2.dp
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.Top
+                .padding(14.dp)
         ) {
-            Surface(
-                modifier = Modifier.size(width = 72.dp, height = 96.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
-                shadowElevation = 2.dp,
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                AppAsyncImage(
-                    imageUrl = study.study.imageUrl,
-                    contentDescription = "Autor ${study.study.author}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = study.study.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = study.study.author,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = SlateBlue,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StudyMetaChip(text = audioCountLabel)
-                    StudyMetaChip(text = totalDurationLabel)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = study.study.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderGray.copy(alpha = 0.92f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Surface(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .defaultMinSize(minWidth = 116.dp),
-                    shape = RoundedCornerShape(999.dp),
-                    color = RosyBeige.copy(alpha = 0.16f),
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
+                    modifier = Modifier.size(75.dp),
+                    shape = CircleShape,
+                    color = Accent.copy(alpha = 0.14f),
                     border = BorderStroke(
                         width = 1.dp,
-                        color = RosyBeige.copy(alpha = 0.50f)
-                    )
+                        color = Accent.copy(alpha = 0.90f),
+//                        color = CreamBackground
+                    ),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = DeepBlueDark,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    AppAsyncImage(
+                        imageUrl = study.study.imageUrl,
+                        contentDescription = "Autor ${study.study.author}",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
-                        Text(
-                            text = "Ouvir",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = DeepBlueDark,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = study.study.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepBlueDark,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 22.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = study.study.author,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.W400,
+//                        color = Accent.copy(alpha = 0.95f),
+                        color = SlateBlue,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StudyMetaChip(text = audioCountLabel)
+                StudyMetaChip(text = totalDurationLabel)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = study.study.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LavenderGray,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = Accent.copy(alpha = 0.90f),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+//                border = BorderStroke(
+//                    width = 1.dp,
+//                    color = SlateBlue.copy(alpha = 0.24f)
+//                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+
+                    ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = DeepBlueDark,
+                        modifier = Modifier.size(16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text(
+                        text = "Ouvir",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = DeepBlueDark,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
@@ -340,20 +358,24 @@ private fun StudyMetaChip(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.heightIn(min = 28.dp),
+        modifier = modifier.heightIn(min = 24.dp),
         shape = RoundedCornerShape(999.dp),
-        color = SlateBlue.copy(alpha = 0.08f),
+        color = CreamBackground,
+        border = BorderStroke(
+            width = 1.dp,
+            color = RosyBeige.copy(alpha = 0.72f)
+        ),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
         Box(
-            modifier = Modifier.padding(horizontal = 10.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelSmall,
-                color = DeepBlueDark,
+                color = SlateBlue,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 softWrap = false,
@@ -414,5 +436,127 @@ private fun EmptyStudiesScreen() {
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+
+//preview
+
+private fun previewStudy(
+    id: Int,
+    title: String,
+    author: String,
+    description: String
+): StudyWithLessons {
+    return StudyWithLessons(
+        study = StudyEntity(
+            id = id,
+            title = title,
+            author = author,
+            description = description,
+            imageUrl = "https://randomuser.me/api/portraits/men/11.jpg"
+        ),
+        lessons = listOf(
+            StudyLessonEntity(
+                localId = 1,
+                remoteId = 1,
+                studyId = id,
+                title = "Capítulo 1",
+                url = "https://example.com/audio1.mp3",
+                duration = 5886
+            ),
+            StudyLessonEntity(
+                localId = 2,
+                remoteId = 2,
+                studyId = id,
+                title = "Capítulo 2",
+                url = "https://example.com/audio2.mp3",
+                duration = 2400
+            )
+        )
+    )
+}
+
+private fun previewStudies(): List<StudyWithLessons> = listOf(
+    previewStudy(
+        id = 1,
+        title = "Estudos Expositivos em Apocalipse",
+        author = "Rev. Leandro Lima",
+        description = "Série de estudos bíblicos expositivos sobre o Apocalipse."
+    ),
+    previewStudy(
+        id = 2,
+        title = "Caminhando por Provérbios",
+        author = "Pr. Marcos Silva",
+        description = "Sabedoria milenar aplicada aos dilemas dos dias de hoje."
+    ),
+    previewStudy(
+        id = 3,
+        title = "A Graça que Transforma",
+        author = "Dra. Helena Souza",
+        description = "Um mergulho profundo nos primeiros capítulos da carta aos Romanos."
+    )
+)
+
+
+@Preview(
+    name = "Study item",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 360
+)
+@Composable
+private fun PreviewStudyListItem() {
+    OuvindoABibliaTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CreamBackground)
+                .padding(20.dp)
+        ) {
+            StudyListItem(
+                study = previewStudy(
+                    id = 1,
+                    title = "Estudos Expositivos em Apocalipse",
+                    author = "Rev. Leandro Lima",
+                    description = "Série de estudos bíblicos expositivos sobre o Apocalipse."
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {}
+            )
+        }
+    }
+}
+
+
+@Preview(
+    name = "Studies screen",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 915
+)
+@Composable
+private fun PreviewStudiesContent() {
+    OuvindoABibliaTheme {
+        StudiesContent(
+            studies = previewStudies(),
+            onStudyClick = { _, _ -> },
+            bottomContentPadding = 72.dp
+        )
+    }
+}
+
+@Preview(
+    name = "Studies empty",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 915
+)
+@Composable
+private fun PreviewEmptyStudiesScreen() {
+    OuvindoABibliaTheme {
+        EmptyStudiesScreen()
     }
 }
