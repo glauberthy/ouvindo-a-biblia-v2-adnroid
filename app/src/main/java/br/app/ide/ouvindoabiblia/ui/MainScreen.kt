@@ -46,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -67,6 +66,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
+import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import br.app.ide.ouvindoabiblia.util.ShareUtils
@@ -290,8 +290,8 @@ fun MainScreen(
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = CreamBackground,
+                                    indicatorColor = SlateBlue,
                                     selectedTextColor = CreamBackground,
-                                    indicatorColor = Color.Transparent,
                                     unselectedIconColor = LavenderGray.copy(alpha = 0.6f),
                                     unselectedTextColor = LavenderGray.copy(alpha = 0.6f)
                                 )
