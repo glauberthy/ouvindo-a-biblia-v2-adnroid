@@ -269,21 +269,6 @@ private fun ThemeDetailsHeader(
                 contentScale = ContentScale.Crop
             )
 
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                DeepBlueDark.copy(alpha = 0.42f),
-                                DeepBlueDark.copy(alpha = 0.16f),
-                                Color.Transparent,
-                                DeepBlueDark.copy(alpha = 0.18f)
-                            )
-                        )
-                    )
-            )
-
             Surface(
                 modifier = Modifier
                     .padding(start = 16.dp, top = statusBarPadding + 8.dp)
@@ -370,11 +355,13 @@ private fun ThemeDetailsContent(
     onBackClick: () -> Unit,
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(CreamBackground)
     ) {
+
         MomentsList(
             theme = theme,
             moments = moments,
@@ -382,6 +369,8 @@ private fun ThemeDetailsContent(
             onBackClick = onBackClick,
             onPlayTheme = onPlayTheme
         )
+
+
     }
 }
 

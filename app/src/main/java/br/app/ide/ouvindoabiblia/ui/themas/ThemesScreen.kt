@@ -135,22 +135,7 @@ private fun ThemesContent(
                 )
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(statusBarPadding + 56.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            CreamBackground.copy(alpha = 0.98f),
-                            CreamBackground.copy(alpha = 0.88f),
-                            CreamBackground.copy(alpha = 0.55f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
+
     }
 }
 
