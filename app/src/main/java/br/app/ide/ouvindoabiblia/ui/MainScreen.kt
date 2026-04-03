@@ -126,7 +126,7 @@ fun MainScreen(
         val hasMedia = playerUiState.title.isNotEmpty()
 
         val miniPlayerHeight = 64.dp
-        val playerFloatMargin = 24.dp
+        val playerFloatMargin = 26.dp
 
         val extraBottomContentPadding by animateDpAsState(
             targetValue = when {

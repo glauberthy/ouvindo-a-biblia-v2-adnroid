@@ -27,12 +27,12 @@ import br.app.ide.ouvindoabiblia.ui.themas.ThemesScreen
 
 @Composable
 fun NavigationGraph(
+    modifier: Modifier = Modifier,
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
     onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
     onPlayTheme: (String, String, List<MomentWithAudio>, Int) -> Unit,
     bottomContentPadding: Dp = 0.dp,
-    modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,
@@ -61,6 +61,7 @@ fun NavigationGraph(
         }
         composable<Screen.Themes> {
             ThemesScreen(
+                bottomContentPadding = bottomContentPadding,
                 onThemeClick = { id, title ->
                     navController.navigate(Screen.ThemeDetails(id, title))
                 }
@@ -70,6 +71,7 @@ fun NavigationGraph(
         // --- DETALHES DO TEMA ---
         composable<Screen.ThemeDetails> {
             ThemeDetailsScreen(
+                bottomContentPadding = bottomContentPadding,
                 onBackClick = { navController.popBackStack() },
                 onPlayTheme = { momentsList, startIndex, themeTitle ->
                     // Aciona o novo callback repassando a fila inteira

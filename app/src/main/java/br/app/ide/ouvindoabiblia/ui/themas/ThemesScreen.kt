@@ -19,14 +19,12 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -44,12 +42,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -69,6 +67,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 @Composable
 fun ThemesScreen(
     viewModel: ThemesViewModel = hiltViewModel(),
+    bottomContentPadding: Dp = 0.dp,
     onThemeClick: (Int, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,6 +78,7 @@ fun ThemesScreen(
         is ThemesUiState.Success -> {
             ThemesContent(
                 themes = uiState.themes,
+                bottomContentPadding = bottomContentPadding, // Pass the padding down
                 onThemeClick = onThemeClick
             )
         }
@@ -88,10 +88,18 @@ fun ThemesScreen(
 @Composable
 private fun ThemesContent(
     themes: List<ThemeEntity>,
+    bottomContentPadding: Dp, // Receive the padding
     onThemeClick: (Int, String) -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val horizontalSpacing = 4.dp
+    // Calculate resolved bottom padding
+    val resolvedBottomPadding = if (bottomContentPadding == 0.dp) {
+        horizontalSpacing + 16.dp
+    } else {
+        bottomContentPadding + horizontalSpacing
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -102,10 +110,10 @@ private fun ThemesContent(
                 .fillMaxSize()
                 .background(CreamBackground),
             contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
+                start = 16.dp,
+                end = 16.dp,
                 top = statusBarPadding + 24.dp,
-                bottom = navBarPadding + 56.dp
+                bottom = resolvedBottomPadding // Use resolved padding
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -339,6 +347,7 @@ private fun PreviewThemesContent() {
     OuvindoABibliaTheme {
         ThemesContent(
             themes = previewThemes(),
+            bottomContentPadding = 90.dp, // Test with padding
             onThemeClick = { _, _ -> }
         )
     }

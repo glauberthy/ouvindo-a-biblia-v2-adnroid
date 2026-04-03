@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -42,13 +41,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
@@ -71,6 +71,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 fun ThemeDetailsScreen(
     viewModel: ThemeDetailsViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel(),
+    bottomContentPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
@@ -97,6 +98,7 @@ fun ThemeDetailsScreen(
                     theme = state.theme,
                     moments = state.moments,
                     playingIndex = playingIndex,
+                    bottomContentPadding = bottomContentPadding,
                     onBackClick = onBackClick,
                     onPlayTheme = onPlayTheme
                 )
@@ -110,15 +112,24 @@ private fun MomentsList(
     theme: ThemeEntity,
     moments: List<MomentWithAudio>,
     playingIndex: Int,
+    bottomContentPadding: Dp,
     onBackClick: () -> Unit,
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
-    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // Igual ao padding horizontal do seu MomentListItem
+    val horizontalSpacing = 0.dp
+
+    // Se não tiver player (0.dp), usa só o respiro. Se tiver, soma o player + respiro.
+    val resolvedBottomPadding = if (bottomContentPadding == 0.dp) {
+        horizontalSpacing + 16.dp
+    } else {
+        bottomContentPadding + horizontalSpacing
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            bottom = navBarPadding + 48.dp
+            bottom = resolvedBottomPadding
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -303,7 +314,8 @@ private fun ThemeDetailsHeader(
 
             Text(
                 text = theme.description,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
+                lineHeight = 22.sp,
                 color = LavenderGray
             )
 
@@ -338,7 +350,7 @@ private fun ThemeMetaChip(
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = SlateBlue,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -352,6 +364,7 @@ private fun ThemeDetailsContent(
     theme: ThemeEntity,
     moments: List<MomentWithAudio>,
     playingIndex: Int,
+    bottomContentPadding: Dp,
     onBackClick: () -> Unit,
     onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
 ) {
@@ -366,6 +379,7 @@ private fun ThemeDetailsContent(
             theme = theme,
             moments = moments,
             playingIndex = playingIndex,
+            bottomContentPadding = bottomContentPadding,
             onBackClick = onBackClick,
             onPlayTheme = onPlayTheme
         )
@@ -439,6 +453,7 @@ private fun PreviewThemeDetailsContent() {
             theme = previewThemeEntity(),
             moments = previewMomentsList(),
             playingIndex = 1,
+            bottomContentPadding = 72.dp, // <-- SIMULA O PLAYER ABERTO
             onBackClick = {},
             onPlayTheme = { _, _, _ -> }
         )
