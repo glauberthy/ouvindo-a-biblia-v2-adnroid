@@ -353,13 +353,13 @@ fun MainScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(statusBarPadding + 16.dp)
+                    .height(statusBarPadding + 32.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
                             0.0f to baseColor.copy(alpha = 1f),
-                            0.1f to baseColor.copy(alpha = 0.8f),
-                            0.8f to baseColor.copy(alpha = 0.0f),
+                            0.1f to baseColor.copy(alpha = 0.7f),
+                            0.7f to baseColor.copy(alpha = 0.0f),
                         )
                     )
             )
