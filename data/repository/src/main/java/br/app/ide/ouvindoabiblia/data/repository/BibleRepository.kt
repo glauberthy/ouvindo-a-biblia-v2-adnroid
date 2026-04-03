@@ -24,7 +24,7 @@ interface BibleRepository {
 
     // --- PLAYBACK STATE (Agora gerenciado via Room) ---
     suspend fun savePlaybackState(
-        chapterId: String,
+        mediaId: String,
         positionMs: Long,
         duration: Long,
         title: String,
@@ -54,7 +54,7 @@ interface BibleRepository {
 
 // Domain Model (Mantido para uso na UI/Service)
 data class PlaybackState(
-    val chapterId: Int,
+    val mediaId: String,
     val positionMs: Long,
     val duration: Long,
     val title: String,

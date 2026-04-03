@@ -6,7 +6,12 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "playback_state")
 data class PlaybackStateEntity(
     @PrimaryKey val id: Int = 1, // ID fixo para garantir apenas 1 registro (Singleton)
-    val chapterId: Long,         // O ID do capítulo (Long para bater com a tabela chapters)
-    val positionMs: Long,        // Posição em milissegundos
-    val timestamp: Long = System.currentTimeMillis() // Opcional: saber quando foi salvo
+    val mediaId: String,         // Mudamos para String! Assim aceita "15" ou "study_12"
+    val positionMs: Long,
+    val duration: Long,
+    val title: String,
+    val subtitle: String,
+    val imageUrl: String?,
+    val audioUrl: String,
+    val timestamp: Long = System.currentTimeMillis()
 )

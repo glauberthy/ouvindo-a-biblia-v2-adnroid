@@ -14,7 +14,6 @@ import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
-import br.app.ide.ouvindoabiblia.data.local.model.PlaybackStateDto
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import kotlinx.coroutines.flow.Flow
 
@@ -196,25 +195,27 @@ interface BibleDao {
 
     // 3. A Query Mestra: Busca o estado + dados do Capítulo + dados do Livro
     // Se o capítulo ou livro não existirem mais, isso não retorna nada (evitando erro!)
-    @Transaction
-    @Query(
-        """
-    SELECT 
-        P.chapterId, 
-        P.positionMs, 
-        C.audio_url as audioUrl,
-        C.chapter_number as chapterNumber,
-        C.book_id as bookId,
-        B.name as bookName,
-        B.image_url as coverUrl
-    FROM playback_state P
-    INNER JOIN chapters C ON P.chapterId = C.id
-    INNER JOIN books B ON C.book_id = B.numericId 
-    WHERE P.id = 1
-"""
-    )
-    fun getLastPlaybackState(): Flow<PlaybackStateDto?>
+//    @Transaction
+//    @Query(
+//        """
+//    SELECT
+//        P.chapterId,
+//        P.positionMs,
+//        C.audio_url as audioUrl,
+//        C.chapter_number as chapterNumber,
+//        C.book_id as bookId,
+//        B.name as bookName,
+//        B.image_url as coverUrl
+//    FROM playback_state P
+//    INNER JOIN chapters C ON P.chapterId = C.id
+//    INNER JOIN books B ON C.book_id = B.numericId
+//    WHERE P.id = 1
+//"""
+//    )
+//    fun getLastPlaybackState(): Flow<PlaybackStateDto?>
 
+    @Query("SELECT * FROM playback_state WHERE id = 1")
+    fun getLastPlaybackState(): Flow<PlaybackStateEntity?>
 
     @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
     suspend fun getChapterById(chapterId: Long): ChapterEntity?

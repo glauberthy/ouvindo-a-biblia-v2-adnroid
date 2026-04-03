@@ -96,6 +96,25 @@ class PlaybackService : MediaLibraryService() {
         })
     }
 
+//    private fun saveCurrentState() {
+//        val currentMediaItem = player.currentMediaItem ?: return
+//        val position = player.currentPosition
+//        val duration = player.duration
+//        val meta = currentMediaItem.mediaMetadata
+//
+//        serviceScope.launch(Dispatchers.IO) {
+//            repository.savePlaybackState(
+//                chapterId = currentMediaItem.mediaId,
+//                positionMs = position,
+//                duration = if (duration > 0) duration else 0L,
+//                title = meta.title?.toString() ?: "",
+//                subtitle = meta.subtitle?.toString() ?: "",
+//                imageUrl = meta.artworkUri?.toString(),
+//                audioUrl = currentMediaItem.requestMetadata.mediaUri?.toString() ?: ""
+//            )
+//        }
+//    }
+
     private fun saveCurrentState() {
         val currentMediaItem = player.currentMediaItem ?: return
         val position = player.currentPosition
@@ -104,7 +123,7 @@ class PlaybackService : MediaLibraryService() {
 
         serviceScope.launch(Dispatchers.IO) {
             repository.savePlaybackState(
-                chapterId = currentMediaItem.mediaId,
+                mediaId = currentMediaItem.mediaId, // Agora o Repo aceita a String "study_12" ou "15"
                 positionMs = position,
                 duration = if (duration > 0) duration else 0L,
                 title = meta.title?.toString() ?: "",
@@ -158,19 +177,49 @@ class PlaybackService : MediaLibraryService() {
      */
     @OptIn(UnstableApi::class)
     private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? {
-        // Busca ID do livro
-        val bookNumericId = repository.getBookNumericIdFromChapter(state.chapterId) ?: return null
+        val mediaId = state.mediaId
 
-        // Carrega capítulos
+        // 1. CENÁRIO: RESTORE DE ESTUDOS (mediaId começa com "study_")
+        if (mediaId.startsWith("study_")) {
+            val studyId = mediaId.removePrefix("study_").toIntOrNull() ?: return null
+
+            // Busca os dados do estudo e suas lições no banco
+            val studyData = repository.getStudyWithLessons(studyId).first()
+
+            val playlist = studyData.lessons.map { lesson ->
+                MediaItem.Builder()
+                    .setMediaId("study_${lesson.remoteId}")
+                    .setUri(lesson.url)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(studyData.study.title)
+                            .setAlbumTitle(studyData.study.title)
+                            .setSubtitle(lesson.title)
+                            .setArtist("Ouvindo a Bíblia")
+                            .setArtworkUri(studyData.study.imageUrl.toUri())
+                            .setIsBrowsable(false)
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                            .setExtras(Bundle().apply { putString("type", "study") })
+                            .build()
+                    ).build()
+            }
+
+            val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
+            return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
+        }
+
+        // 2. CENÁRIO: RESTORE DE BÍBLIA (mediaId é apenas um número)
+        val chapterIdInt =
+            mediaId.toIntOrNull() ?: return null // Converte String para Int com segurança
+        val bookNumericId = repository.getBookNumericIdFromChapter(chapterIdInt) ?: return null
+
         val chapters = repository.getChapters(bookNumericId).first()
         if (chapters.isEmpty()) return null
 
-        // Cria playlist
         val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
 
-        // Acha índice
         val startIndex = playlist.indexOfFirst {
-            it.mediaId == state.chapterId.toString()
+            it.mediaId == mediaId
         }.coerceAtLeast(0)
 
         return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)

@@ -53,7 +53,7 @@ class BibleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun savePlaybackState(
-        chapterId: String,
+        mediaId: String,
         positionMs: Long,
         duration: Long,
         title: String,
@@ -61,24 +61,32 @@ class BibleRepositoryImpl @Inject constructor(
         imageUrl: String?,
         audioUrl: String
     ) {
-        val idLong = chapterId.toLongOrNull() ?: return
-        val entity = PlaybackStateEntity(chapterId = idLong, positionMs = positionMs)
+        // Nada de toLongOrNull()! Passamos tudo direto para a entidade Universal.
+        val entity = PlaybackStateEntity(
+            mediaId = mediaId,
+            positionMs = positionMs,
+            duration = duration,
+            title = title,
+            subtitle = subtitle,
+            imageUrl = imageUrl,
+            audioUrl = audioUrl
+        )
+
         dao.savePlaybackState(entity)
     }
 
     override fun getLatestPlaybackState(): Flow<PlaybackState?> {
         return dao.getLastPlaybackState()
-            .map { dto ->
-                if (dto == null) null else {
+            .map { entity ->
+                if (entity == null) null else {
                     PlaybackState(
-                        // SINALIZAÇÃO: Convertendo Long do banco para Int do domínio
-                        chapterId = dto.chapterId.toInt(),
-                        positionMs = dto.positionMs,
-                        duration = 0L,
-                        title = "${dto.bookName} ${dto.chapterNumber}",
-                        subtitle = "Capítulo ${dto.chapterNumber}",
-                        imageUrl = dto.coverUrl,
-                        audioUrl = dto.audioUrl.toUri()
+                        mediaId = entity.mediaId,
+                        positionMs = entity.positionMs,
+                        duration = entity.duration,
+                        title = entity.title,
+                        subtitle = entity.subtitle,
+                        imageUrl = entity.imageUrl,
+                        audioUrl = entity.audioUrl.toUri()
                     )
                 }
             }
