@@ -1,6 +1,11 @@
 package br.app.ide.ouvindoabiblia.ui
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.PowerManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -12,8 +17,10 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,12 +93,34 @@ fun MainScreen(
     shouldOpenPlayer: Boolean,
     onPlayerOpened: () -> Unit
 ) {
+    val context = LocalContext.current
+    val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as PowerManager }
+
+    // Estado para monitorar se a economia de bateria está ativa
+    var isPowerSaveMode by remember { mutableStateOf(powerManager.isPowerSaveMode) }
+
+    // Registra um receiver para ouvir a mudança do sistema em tempo real
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                isPowerSaveMode = powerManager.isPowerSaveMode
+            }
+        }
+
+        val filter = IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+        context.registerReceiver(receiver, filter)
+
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
     OuvindoABibliaTheme {
         val navController = rememberNavController()
         val playerViewModel: PlayerViewModel = hiltViewModel()
         val playerUiState by playerViewModel.uiState.collectAsState()
-        val context = LocalContext.current
         val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
         // Estado de expansão do player
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
@@ -167,7 +198,9 @@ fun MainScreen(
                 val useDarkIcons = if (isVisuallyExpanded) {
                     !animatedArtworkColor.isDark() // Se a arte for clara, ícones escuros
                 } else {
-                    !isSystemDark // Padrão do sistema
+                    // Se estiver em economia de energia (fundo escuro), queremos ícones claros (!true = false)
+                    // Caso contrário, queremos ícones escuros (!false = true) para aparecer no CreamBackground
+                    !isPowerSaveMode
                 }
 
                 controller.isAppearanceLightStatusBars = useDarkIcons
@@ -185,29 +218,6 @@ fun MainScreen(
 
         // --- 5. BACK HANDLER (Fechar player ao voltar) ---
         BackHandler(enabled = isPlayerExpanded) { isPlayerExpanded = false }
-
-        // --- 6. ANIMAÇÕES DE LAYOUT (Padding e Bordas) ---
-//        val bottomPadding by animateDpAsState(
-//            targetValue = if (isPlayerExpanded) 0.dp else 80.dp + 16.dp, // NavBar + Margem
-//            animationSpec = spring(stiffness = Spring.StiffnessLow),
-//            label = "BottomPadding"
-//        )
-//        val sidePadding by animateDpAsState(
-//            targetValue = if (isPlayerExpanded) 0.dp else 8.dp,
-//            label = "SidePadding"
-//        )
-//        val cornerRadius by animateDpAsState(
-//            targetValue = if (isPlayerExpanded) 0.dp else 12.dp,
-//            label = "Corner"
-//        )
-//        val containerColor by animateColorAsState(
-//            targetValue = if (isPlayerExpanded) Color.Transparent else animatedArtworkColor,
-//            label = "ContainerColor"
-//        )
-//        val elevation by animateDpAsState(
-//            targetValue = if (isPlayerExpanded || !hasMedia) 0.dp else 6.dp,
-//            label = "Elevation"
-//        )
 
         Box(modifier = Modifier.fillMaxSize()) {
 
@@ -236,33 +246,33 @@ fun MainScreen(
 
                                 when (item.screen) {
                                     is Screen.Themes -> {
-                                        // O ícone de Temas fica ativo tanto na tela de lista quanto na de detalhes
                                         currentRoute.contains(
                                             Screen.Themes::class.simpleName ?: ""
-                                        ) || currentRoute.contains(
-                                            Screen.ThemeDetails::class.simpleName ?: ""
-                                        )
+                                        ) ||
+                                                currentRoute.contains(
+                                                    Screen.ThemeDetails::class.simpleName ?: ""
+                                                )
                                     }
 
                                     is Screen.Estudos -> {
                                         currentRoute.contains(
                                             Screen.Estudos::class.simpleName ?: ""
-                                        ) || currentRoute.contains(
-                                            Screen.StudyDetails::class.simpleName ?: ""
-                                        )
+                                        ) ||
+                                                currentRoute.contains(
+                                                    Screen.StudyDetails::class.simpleName ?: ""
+                                                )
                                     }
 
                                     is Screen.Home -> {
-                                        // O ícone de Início fica ativo na Home e também na tela de Capítulos
                                         currentRoute.contains(
                                             Screen.Home::class.simpleName ?: ""
-                                        ) || currentRoute.contains(
-                                            Screen.Chapters::class.simpleName ?: ""
-                                        )
+                                        ) ||
+                                                currentRoute.contains(
+                                                    Screen.Chapters::class.simpleName ?: ""
+                                                )
                                     }
 
                                     else -> {
-                                        // Comportamento padrão para as outras telas
                                         currentRoute.contains(item.screen::class.simpleName ?: "")
                                     }
                                 }
@@ -337,18 +347,19 @@ fun MainScreen(
                 }
             }
 
+            // --- DEGRADÊ DA STATUS BAR (SOFT SCRIM) ---
+            val baseColor = if (isPowerSaveMode) DeepBlueDark else CreamBackground
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(statusBarPadding)
+                    .height(statusBarPadding + 16.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                CreamBackground.copy(alpha = 0.94f),
-                                CreamBackground.copy(alpha = 0.50f),
-                                Color.Transparent
-                            )
+                            0.0f to baseColor.copy(alpha = 1f),
+                            0.1f to baseColor.copy(alpha = 0.8f),
+                            0.8f to baseColor.copy(alpha = 0.0f),
                         )
                     )
             )
@@ -358,8 +369,6 @@ fun MainScreen(
             if (playerContainerHeight > 0.dp) {
 
                 // Calcula o padding inferior dinâmico
-                // Se expandido: 0 (ocupa tudo)
-                // Se minimizado: Altura da NavBar (80) + Espaço (16) + Inset de Navegação do Sistema (se houver)
                 val navBarHeight = 85.dp // Altura padrão da Material 3 NavigationBar
                 val floatMargin = playerFloatMargin
 
@@ -385,7 +394,7 @@ fun MainScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter) // Alinha no fundo da tela
                         .padding(
-                            bottom = animatedBottomPadding, // <--- AQUI O SEGREDO
+                            bottom = animatedBottomPadding,
                             start = animatedSidePadding,
                             end = animatedSidePadding
                         )
@@ -399,7 +408,6 @@ fun MainScreen(
                         .draggable(
                             state = rememberDraggableState { delta ->
                                 // delta > 0 = Arrastando para BAIXO (Fechar)
-                                // Aumentei a sensibilidade (> 15) para não fechar por acidente ao scrollar listas
                                 if (delta > 15 && isPlayerExpanded) {
                                     isPlayerExpanded = false
                                 }
@@ -441,5 +449,127 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
+
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFFFFFFF,
+    name = "Degradê Claro (Sobre Conteúdo)"
+)
+@Composable
+fun StatusBarGradientLightPreview() {
+    val mockStatusBarPadding = 24.dp
+    val baseColor = CreamBackground
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp) // Altura maior para ver o efeito
+    ) {
+        // 1. Simulando as capas dos livros rolando por baixo
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .background(Color.Gray)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .background(Color.DarkGray)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .background(Color.LightGray)
+            )
+        }
+
+        // 2. O seu degradê passando por cima de tudo
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(mockStatusBarPadding + 8.dp)
+                .height(mockStatusBarPadding)
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to baseColor.copy(alpha = 1f),
+                        0.1f to baseColor.copy(alpha = 0.8f),
+                        0.8f to baseColor.copy(alpha = 0.0f),
+                    )
+                )
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFFFFFFF,
+    name = "Degradê Escuro (Sobre Conteúdo)"
+)
+@Composable
+fun StatusBarGradientDarkPreview() {
+    val mockStatusBarPadding = 24.dp
+    val baseColor = DeepBlueDark
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+    ) {
+        // 1. Simulando as capas dos livros rolando por baixo
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .background(Color.Gray)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .background(Color.DarkGray)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .background(Color.LightGray)
+            )
+        }
+
+        // 2. O seu degradê passando por cima
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(mockStatusBarPadding + 8.dp)
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to baseColor.copy(alpha = 1f),
+                        0.1f to baseColor.copy(alpha = 0.8f),
+                        0.8f to baseColor.copy(alpha = 0.0f),
+                    )
+                )
+        )
     }
 }
