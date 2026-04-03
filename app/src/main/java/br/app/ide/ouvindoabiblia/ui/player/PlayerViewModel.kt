@@ -184,52 +184,6 @@ class PlayerViewModel @Inject constructor(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    // --- AÇÃO PRINCIPAL: TOCAR LIVRO ---
-    // No PlayerViewModel.kt
-
-    // 1. ALTERADO: bookId agora é Int
-//    fun playBook(bookId: Int, bookTitle: String, coverUrl: String, initialIndex: Int = 0) {
-//        val controller = mediaController ?: return
-//
-//        // 2. CORREÇÃO DE COMPARAÇÃO:
-//        // Pegamos o ID da mídia atual e convertemos para Int para comparar com o novo bookId
-//        val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
-//        val currentBookId = currentMediaId.split("|").firstOrNull()?.toIntOrNull()
-//
-//        if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
-//            if (controller.currentMediaItemIndex != initialIndex) {
-//                controller.seekTo(initialIndex, 0L)
-//            }
-//            if (!controller.isPlaying) controller.play()
-//            return
-//        }
-//
-//        _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
-//
-//        // 3. O mediaId continua sendo uma String no formato "NUMERIC_ID|INDEX"
-//        // Exemplo: "1|18" (Gênesis Capítulo 19)
-//        val mediaIdWithIndex = "$bookId|$initialIndex"
-//
-//        val bookFolderItem = MediaItem.Builder()
-//            .setMediaId(mediaIdWithIndex)
-//            .setMediaMetadata(
-//                MediaMetadata.Builder()
-//                    .setTitle(bookTitle)
-//                    .setArtworkUri(coverUrl.toUri())
-//                    .setIsBrowsable(true)
-//                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
-//                    .setExtras(android.os.Bundle().apply {
-//                        putInt("start_index", initialIndex)
-//                    })
-//                    .build()
-//            )
-//            .build()
-//
-//        controller.setMediaItems(listOf(bookFolderItem))
-//        controller.prepare()
-//        controller.play()
-//    }
-
 
     // --- AÇÃO PRINCIPAL: TOCAR TEMA/MOMENTOS ---
 
@@ -669,5 +623,60 @@ class PlayerViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // --- AÇÃO PRINCIPAL: TOCAR ESTUDO/AULAS ---
+
+    fun playStudyPlaylist(
+        studyTitle: String,
+        studyCoverUrl: String,
+        lessons: List<br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity>,
+        startIndex: Int = 0
+    ) {
+        val controller = mediaController ?: return
+
+        // --- PROTEÇÃO CONTRA RESTART (Inspirada no seu playBook!) ---
+        val currentExtras = controller.currentMediaItem?.mediaMetadata?.extras
+        val isPlayingStudyType = currentExtras?.getString("type") == "study"
+        val isSameStudy =
+            controller.currentMediaItem?.mediaMetadata?.albumTitle?.toString() == studyTitle
+
+        if (isPlayingStudyType && isSameStudy && controller.playbackState != Player.STATE_IDLE) {
+            // Se for o mesmo Estudo, mas clicou em uma Aula diferente
+            if (controller.currentMediaItemIndex != startIndex) {
+                controller.seekToDefaultPosition(startIndex) // Pula pra aula certa
+            }
+            if (!controller.isPlaying) controller.play() // Despausa
+            return // Cancela o recarregamento da playlist!
+        }
+        // -------------------------------------------------------------
+
+        _uiState.update { it.copy(title = studyTitle, imageUrl = studyCoverUrl) }
+
+        val studyMediaItems = lessons.map { lesson ->
+            MediaItem.Builder()
+                .setMediaId("study_${lesson.remoteId}")
+                .setUri(lesson.url)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(studyTitle)
+                        .setAlbumTitle(studyTitle)
+                        .setSubtitle(lesson.title)
+                        .setArtist("Ouvindo a Bíblia")
+                        .setArtworkUri(studyCoverUrl.toUri())
+                        .setIsBrowsable(false)
+                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                        .setExtras(android.os.Bundle().apply {
+                            putString("type", "study") // Usado na proteção ali em cima
+                            putInt("lesson_id", lesson.remoteId)
+                        })
+                        .build()
+                )
+                .build()
+        }
+
+        controller.setMediaItems(studyMediaItems, startIndex, 0L)
+        controller.prepare()
+        controller.play()
     }
 }

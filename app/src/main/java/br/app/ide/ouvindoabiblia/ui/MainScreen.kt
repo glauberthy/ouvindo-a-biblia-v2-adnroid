@@ -342,6 +342,14 @@ fun MainScreen(
                                 startIndex
                             )
                         },
+                        onPlayStudy = { studyTitle, studyCoverUrl, lessons, startIndex ->
+                            playerViewModel.playStudyPlaylist(
+                                studyTitle = studyTitle,
+                                studyCoverUrl = studyCoverUrl,
+                                lessons = lessons,
+                                startIndex = startIndex
+                            )
+                        },
                         bottomContentPadding = extraBottomContentPadding
                     )
                 }

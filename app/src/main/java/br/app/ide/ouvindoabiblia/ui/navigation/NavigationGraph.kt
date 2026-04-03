@@ -16,12 +16,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
 import br.app.ide.ouvindoabiblia.ui.studies.StudiesScreen
+import br.app.ide.ouvindoabiblia.ui.studies.StudyDetailsScreen
 import br.app.ide.ouvindoabiblia.ui.themas.ThemeDetailsScreen
 import br.app.ide.ouvindoabiblia.ui.themas.ThemesScreen
 
@@ -32,6 +34,7 @@ fun NavigationGraph(
     windowSizeClass: WindowSizeClass,
     onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
     onPlayTheme: (String, String, List<MomentWithAudio>, Int) -> Unit,
+    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit,
     bottomContentPadding: Dp = 0.dp,
 ) {
     NavHost(
@@ -96,10 +99,16 @@ fun NavigationGraph(
             )
         }
 
-        // --- DETALHES DO ESTUDO (DETAIL) ---
+
+        // --- DETALHES DO ESTUDO (Ajustado) ---
         composable<Screen.StudyDetails> {
-            // Placeholder temporário. O Collapsing Toolbar será implementado aqui.
-            PlaceholderScreen("Detalhes do Estudo")
+            StudyDetailsScreen(
+                bottomContentPadding = bottomContentPadding,
+                onBackClick = { navController.popBackStack() },
+                onPlayStudy = { title, cover, lessons, index ->
+                    onPlayStudy(title, cover, lessons, index)
+                }
+            )
         }
 
         composable<Screen.More> {

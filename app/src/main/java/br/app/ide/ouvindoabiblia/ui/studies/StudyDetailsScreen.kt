@@ -1,0 +1,485 @@
+package br.app.ide.ouvindoabiblia.ui.studies
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
+import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
+import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
+import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
+import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
+import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
+import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
+import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
+import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
+import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
+import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
+
+@Composable
+fun StudyDetailsScreen(
+    viewModel: StudyDetailsViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    bottomContentPadding: Dp = 0.dp,
+    onBackClick: () -> Unit,
+    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
+    val studyTitle = viewModel.studyTitle
+
+    // Verifica se o estudo atual é o que está tocando
+    val playingIndex = if (playerState.title == studyTitle) {
+        playerState.currentChapterIndex
+    } else {
+        -1
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CreamBackground)
+    ) {
+        when (val state = uiState) {
+            is StudyDetailsUiState.Loading -> LoadingScreen()
+            is StudyDetailsUiState.Error -> ErrorScreen(state.message) {
+                viewModel.handle(
+                    StudyDetailsIntent.Retry
+                )
+            }
+
+            is StudyDetailsUiState.Success -> {
+                StudyDetailsContent(
+                    studyWithLessons = state.studyWithLessons,
+                    playingIndex = playingIndex,
+                    bottomContentPadding = bottomContentPadding,
+                    onBackClick = onBackClick,
+                    onPlayStudy = onPlayStudy
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudyDetailsContent(
+    studyWithLessons: StudyWithLessons,
+    playingIndex: Int,
+    bottomContentPadding: Dp,
+    onBackClick: () -> Unit,
+    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CreamBackground)
+    ) {
+        LessonsList(
+            study = studyWithLessons.study,
+            lessons = studyWithLessons.lessons,
+            playingIndex = playingIndex,
+            bottomContentPadding = bottomContentPadding,
+            onBackClick = onBackClick,
+            onPlayStudy = onPlayStudy
+        )
+    }
+}
+
+@Composable
+private fun LessonsList(
+    study: StudyEntity,
+    lessons: List<StudyLessonEntity>,
+    playingIndex: Int,
+    bottomContentPadding: Dp,
+    onBackClick: () -> Unit,
+    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
+) {
+    // Mesma lógica de respiro dinâmico perfeito que usamos nos Temas!
+    val resolvedBottomPadding = bottomContentPadding + 16.dp
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            bottom = resolvedBottomPadding
+        ),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            StudyDetailsHeader(
+                study = study,
+                lessons = lessons,
+                onBackClick = onBackClick
+            )
+        }
+
+        itemsIndexed(lessons, key = { _, item -> item.localId }) { index, lesson ->
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                val isPlaying = index == playingIndex
+
+                LessonListItem(
+                    index = index + 1,
+                    lesson = lesson,
+                    isPlaying = isPlaying,
+                    onClick = { onPlayStudy(study.title, study.imageUrl, lessons, index) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LessonListItem(
+    index: Int,
+    lesson: StudyLessonEntity,
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = if (isPlaying) BorderStroke(2.dp, Accent) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(if (isPlaying) Accent else DeepBlueDark),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = index.toString(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isPlaying) DeepBlueDark else Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = lesson.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepBlueDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Exibe a duração formatada
+                val minutes = lesson.duration / 60
+                val seconds = lesson.duration % 60
+                Text(
+                    text = "${minutes}m ${seconds.toString().padStart(2, '0')}s",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = DeepBlueDark.copy(alpha = 0.8f)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if (isPlaying) Accent else DeepBlueDark.copy(alpha = 0.05f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Replay else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Reiniciar Estudo" else "Ouvir Estudo",
+                    tint = DeepBlueDark
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudyDetailsHeader(
+    study: StudyEntity,
+    lessons: List<StudyLessonEntity>,
+    onBackClick: () -> Unit
+) {
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+    // O banco armazena em segundos, então somamos tudo
+    val totalDurationSeconds = lessons.sumOf { it.duration }
+    val totalMinutes = totalDurationSeconds / 60
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    val durationLabel = when {
+        hours > 0 && minutes > 0 -> "${hours}h${minutes.toString().padStart(2, '0')}m"
+        hours > 0 -> "${hours}h"
+        else -> "${minutes}min"
+    }
+
+    Column {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+        ) {
+            AppAsyncImage(
+                imageUrl = study.imageUrl,
+                contentDescription = study.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Surface(
+                modifier = Modifier
+                    .padding(start = 16.dp, top = statusBarPadding + 8.dp)
+                    .size(40.dp)
+                    .align(Alignment.TopStart),
+                shape = CircleShape,
+                color = CreamBackground.copy(alpha = 0.92f),
+                tonalElevation = 0.dp,
+                shadowElevation = 2.dp
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = DeepBlueDark
+                    )
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Text(
+                text = study.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = DeepBlueDark
+            )
+
+            Text(
+                text = study.author,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = SlateBlue,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = study.description,
+                style = MaterialTheme.typography.bodyLarge,
+                lineHeight = 22.sp,
+                color = LavenderGray
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StudyMetaChip(text = "${lessons.size} áudios")
+                StudyMetaChip(text = durationLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudyMetaChip(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.heightIn(min = 28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = RosyBeige.copy(alpha = 0.72f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = SlateBlue,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Clip
+        )
+    }
+}
+
+// --- PREVIEWS ---
+
+private fun previewStudyEntity(): StudyEntity {
+    return StudyEntity(
+        id = 1,
+        title = "Estudos Expositivos em Apocalipse",
+        author = "Rev. Leandro Lima",
+        description = "Série de estudos bíblicos expositivos sobre o livro do Apocalipse, focando na esperança e soberania de Cristo.",
+        imageUrl = "https://images.unsplash.com/photo-1504052434569-70ad5836ab65"
+    )
+}
+
+private fun previewLessonsList(): List<StudyLessonEntity> {
+    return listOf(
+        StudyLessonEntity(
+            localId = 1,
+            remoteId = 1,
+            studyId = 1,
+            title = "A Revelação de Jesus Cristo",
+            url = "https://example.com/audio1.mp3",
+            duration = 3450 // 57m 30s
+        ),
+        StudyLessonEntity(
+            localId = 2,
+            remoteId = 2,
+            studyId = 1,
+            title = "A Igreja em Éfeso",
+            url = "https://example.com/audio2.mp3",
+            duration = 2805 // 46m 45s
+        ),
+        StudyLessonEntity(
+            localId = 3,
+            remoteId = 3,
+            studyId = 1,
+            title = "A Igreja em Esmirna",
+            url = "https://example.com/audio3.mp3",
+            duration = 3120 // 52m 00s
+        )
+    )
+}
+
+private fun previewStudyWithLessons(): StudyWithLessons {
+    return StudyWithLessons(
+        study = previewStudyEntity(),
+        lessons = previewLessonsList()
+    )
+}
+
+@Preview(
+    name = "Study details header",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412
+)
+@Composable
+private fun PreviewStudyDetailsHeader() {
+    OuvindoABibliaTheme {
+        StudyDetailsHeader(
+            study = previewStudyEntity(),
+            lessons = previewLessonsList(),
+            onBackClick = {}
+        )
+    }
+}
+
+@Preview(
+    name = "Lesson item",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412
+)
+@Composable
+private fun PreviewLessonListItem() {
+    OuvindoABibliaTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CreamBackground)
+                .padding(16.dp)
+        ) {
+            LessonListItem(
+                index = 1,
+                lesson = previewLessonsList().first(),
+                isPlaying = false,
+                onClick = {}
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Study details screen",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 915
+)
+@Composable
+private fun PreviewStudyDetailsContent() {
+    OuvindoABibliaTheme {
+        StudyDetailsContent(
+            studyWithLessons = previewStudyWithLessons(),
+            playingIndex = 1,
+            bottomContentPadding = 72.dp, // Simula o player aberto
+            onBackClick = {},
+            onPlayStudy = { _, _, _, _ -> }
+        )
+    }
+}
