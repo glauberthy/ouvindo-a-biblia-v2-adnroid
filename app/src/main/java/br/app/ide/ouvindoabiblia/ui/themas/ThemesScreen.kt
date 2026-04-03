@@ -175,7 +175,7 @@ fun ThemeListItem(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFFFFCFA)
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
             color = RosyBeige.copy(alpha = 0.55f)
@@ -217,12 +217,12 @@ fun ThemeListItem(
 private fun ThemeImage(theme: ThemeEntity) {
     Surface(
         modifier = Modifier.size(75.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = Accent.copy(alpha = 0.14f),
-        border = BorderStroke(
-            width = 1.dp,
-            color = Accent.copy(alpha = 0.90f),
-        ),
+        shape = RoundedCornerShape(16.dp),
+        color = Accent.copy(alpha = 1f),
+//        border = BorderStroke(
+//            width = 1.dp,
+//            color = Accent.copy(alpha = 0.90f),
+//        ),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
@@ -234,7 +234,7 @@ private fun ThemeImage(theme: ThemeEntity) {
                 .height(75.dp)
                 .fillMaxSize()
                 .padding(3.dp)
-                .clip(shape = RoundedCornerShape(10.dp)),
+                .clip(shape = RoundedCornerShape(16.dp)),
             contentScale = ContentScale.Crop
         )
     }

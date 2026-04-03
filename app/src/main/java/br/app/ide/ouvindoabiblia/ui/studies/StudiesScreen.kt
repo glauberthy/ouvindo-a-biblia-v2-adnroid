@@ -46,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -111,7 +110,7 @@ private fun StudiesContent(
             .background(CreamBackground)
     ) {
 
-        val horizontalScreenPadding = 20.dp
+        val horizontalScreenPadding = 16.dp
         val gridSpacing = 16.dp
         val bottomBreathingRoom = 4.dp
 
@@ -186,10 +185,10 @@ private fun StudyListItem(
         label = "StudyListItemScale"
     )
 
-    val audioCount = study.lessons.size
-    val totalDurationSeconds = study.lessons.sumOf { it.duration }
-    val audioCountLabel = formatAudioCount(audioCount)
-    val totalDurationLabel = formatTotalDuration(totalDurationSeconds)
+//    val audioCount = study.lessons.size
+//    val totalDurationSeconds = study.lessons.sumOf { it.duration }
+//    val audioCountLabel = formatAudioCount(audioCount)
+//    val totalDurationLabel = formatTotalDuration(totalDurationSeconds)
 
     Card(
         modifier = modifier
@@ -201,7 +200,7 @@ private fun StudyListItem(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFFFFCFA)
         ),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
             color = RosyBeige.copy(alpha = 0.55f)
@@ -223,16 +222,12 @@ private fun StudyListItem(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+//                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
                         modifier = Modifier.size(75.dp),
                         shape = CircleShape,
-                        color = Accent.copy(alpha = 0.14f),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = Accent.copy(alpha = 0.90f)
-                        ),
+                        color = Accent.copy(alpha = 1f),
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp
                     ) {
@@ -241,7 +236,7 @@ private fun StudyListItem(
                             contentDescription = "Autor ${study.study.author}",
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(4.dp)
+                                .padding(3.dp)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
@@ -271,29 +266,38 @@ private fun StudyListItem(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = study.study.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LavenderGray,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 18.sp
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StudyMetaChip(text = audioCountLabel)
-                    StudyMetaChip(text = totalDurationLabel)
-                }
+//                Row(
+//                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+//                    verticalAlignment = Alignment.CenterVertically
+//                ) {
+//                    StudyMetaChip(text = audioCountLabel)
+//                    StudyMetaChip(text = totalDurationLabel)
+//                }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = study.study.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderGray,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp
-                )
+//                Spacer(modifier = Modifier.height(8.dp))
+//
+//                Text(
+//                    text = study.study.description,
+//                    style = MaterialTheme.typography.bodyMedium,
+//                    color = LavenderGray,
+//                    maxLines = 3,
+//                    overflow = TextOverflow.Ellipsis,
+//                    lineHeight = 18.sp
+//                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))

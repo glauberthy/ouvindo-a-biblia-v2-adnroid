@@ -78,8 +78,8 @@ fun FavoritesScreenContent(
             .fillMaxSize()
             .background(CreamBackground),
         contentPadding = PaddingValues(
-            start = 20.dp,
-            end = 20.dp,
+            start = 16.dp,
+            end = 16.dp,
             top = statusBarPadding + 24.dp, // Substitui o 80.dp fixo
             bottom = navBarPadding + 56.dp
         ),
@@ -135,9 +135,10 @@ fun FavoritesScreenContent(
                         // CARD UNIFICADO POR LIVRO
                         Surface(
                             color = Color.White,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(16.dp),
                             shadowElevation = 2.dp,
                             modifier = Modifier.fillMaxWidth()
+                            
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 // Cabeçalho do Livro
