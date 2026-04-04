@@ -48,6 +48,7 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
 
     private var favoriteObservationJob: Job? = null
+    private var studyFavoriteObservationJob: Job? = null
 
     // --- ESTADO DA UI ---
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -76,6 +77,37 @@ class PlayerViewModel @Inject constructor(
         override fun onMetadataUpdated() {
             updateStateFromCast()
         }
+    }
+
+    private var lastTransportActionAt = 0L
+
+    private fun canRunTransportAction(minIntervalMs: Long = 500L): Boolean {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastTransportActionAt < minIntervalMs) return false
+        lastTransportActionAt = now
+        return true
+    }
+
+
+    private var isSourceSwitchInFlight = false
+    private var sourceSwitchUnlockJob: Job? = null
+
+    private fun tryBeginSourceSwitch(timeoutMs: Long = 1500L): Boolean {
+        if (isSourceSwitchInFlight) return false
+
+        isSourceSwitchInFlight = true
+        sourceSwitchUnlockJob?.cancel()
+        sourceSwitchUnlockJob = viewModelScope.launch {
+            delay(timeoutMs)
+            isSourceSwitchInFlight = false
+        }
+        return true
+    }
+
+    private fun finishSourceSwitch() {
+        isSourceSwitchInFlight = false
+        sourceSwitchUnlockJob?.cancel()
+        sourceSwitchUnlockJob = null
     }
 
     private val sessionManagerListener = object : SessionManagerListener<CastSession> {
@@ -196,7 +228,8 @@ class PlayerViewModel @Inject constructor(
         startIndex: Int = 0
     ) {
         val controller = mediaController ?: return
-
+        if (!tryBeginSourceSwitch()) return
+        
         _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl) }
 
         val themeMediaItems = moments.map { item ->
@@ -246,6 +279,7 @@ class PlayerViewModel @Inject constructor(
         endMs: Long = 0L
     ) {
         val controller = mediaController ?: return
+        if (!tryBeginSourceSwitch()) return
 
         // 2. Verifica se já está tocando O MESMO LIVRO no MESMO CAPÍTULO
         val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
@@ -332,11 +366,31 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun skipToNextChapter() {
-        mediaController?.seekToNextMediaItem()
+        if (!canRunTransportAction()) return
+        val controller = mediaController ?: return
+        val isPendingPlaylistExpansion =
+            controller.mediaItemCount <= 1 &&
+                    controller.currentMediaItem?.mediaMetadata?.isBrowsable == true
+
+        if (isPendingPlaylistExpansion) return
+        if (!controller.hasNextMediaItem()) return
+
+        controller.seekToNextMediaItem()
     }
 
     fun skipToPreviousChapter() {
-        mediaController?.seekToPreviousMediaItem()
+        if (!canRunTransportAction()) return
+
+        val controller = mediaController ?: return
+
+        val isPendingPlaylistExpansion =
+            controller.mediaItemCount <= 1 &&
+                    controller.currentMediaItem?.mediaMetadata?.isBrowsable == true
+
+        if (isPendingPlaylistExpansion) return
+        if (!controller.hasPreviousMediaItem() && controller.currentPosition < 3_000) return
+
+        controller.seekToPreviousMediaItem()
     }
 
     fun fastForward() {
@@ -376,42 +430,51 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleFavorite() {
         val controller = mediaController ?: return
-        val currentItem = controller.currentMediaItem ?: return
-        val extras = currentItem.mediaMetadata.extras ?: android.os.Bundle()
+        val currentIndex = controller.currentMediaItemIndex
+        if (currentIndex == -1) return
 
-        // Identifica se é estudo ou bíblia
+        val currentItem = controller.currentMediaItem ?: return
+        val extras = android.os.Bundle(currentItem.mediaMetadata.extras ?: android.os.Bundle())
+
         val type = extras.getString("type") ?: "bible"
-        val isCurrentlyFavorite = extras.getBoolean("is_favorite", false)
-        val newStatus = !isCurrentlyFavorite
+
+        val oldStatus = currentItem.mediaMetadata
+            .extras
+            ?.getBoolean("is_favorite", false) == true
+
+        val newStatus = !oldStatus
+
+        _uiState.update { it.copy(currentIsFavorite = newStatus) }
+        updatePlayerMetadata(controller, newStatus)
 
         viewModelScope.launch {
-            if (type == "study") {
-                // --- LÓGICA PARA ESTUDOS ---
-                val studyId = extras.getInt("study_id")
-                val lessonId = extras.getInt("lesson_id")
+            runCatching {
+                if (type == "study") {
+                    val studyId = extras.getInt("study_id")
+                    val lessonId = extras.getInt("lesson_id")
 
-                if (studyId != 0 && lessonId != 0) {
-                    repository.toggleStudyFavorite(studyId, lessonId, newStatus)
+                    require(studyId != 0) { "study_id inválido" }
+                    require(lessonId != 0) { "lesson_id inválido" }
+
+                    repository.toggleStudyFavorite(
+                        studyId = studyId,
+                        lessonId = lessonId,
+                        isFavorite = newStatus
+                    )
+                } else {
+                    val currentChapter = _uiState.value.chapters.getOrNull(currentIndex)
+                        ?: error("Capítulo atual não encontrado")
+
+                    repository.toggleFavorite(
+                        chapterId = currentChapter.chapter.id,
+                        isFavorite = newStatus
+                    )
                 }
-            } else {
-                // --- LÓGICA PARA BÍBLIA (Sua lógica antiga adaptada) ---
-                val currentIndex = controller.currentMediaItemIndex
-                val currentChapter = _uiState.value.chapters.getOrNull(currentIndex)
-                if (currentChapter != null) {
-                    repository.toggleFavorite(currentChapter.chapter.id, newStatus)
-                }
+            }.onFailure { error ->
+                android.util.Log.e("PlayerViewModel", "Erro ao alternar favorito", error)
+                _uiState.update { it.copy(currentIsFavorite = oldStatus) }
+                updatePlayerMetadata(controller, oldStatus)
             }
-
-            // --- ATUALIZAÇÃO VISUAL IMEDIATA NO PLAYER ---
-            val newExtras = extras.apply { putBoolean("is_favorite", newStatus) }
-            val newMetadata = currentItem.mediaMetadata.buildUpon()
-                .setExtras(newExtras)
-                .build()
-            val newItem = currentItem.buildUpon()
-                .setMediaMetadata(newMetadata)
-                .build()
-
-            controller.replaceMediaItem(controller.currentMediaItemIndex, newItem)
         }
     }
 
@@ -421,12 +484,21 @@ class PlayerViewModel @Inject constructor(
         newStatus: Boolean
     ) {
         val index = controller.currentMediaItemIndex
-        val item = controller.getMediaItemAt(index)
-        val extras = item.mediaMetadata.extras ?: android.os.Bundle()
-        extras.putBoolean("is_favorite", newStatus)
+        if (index == -1) return
 
-        val newMetadata = item.mediaMetadata.buildUpon().setExtras(extras).build()
-        val newItem = item.buildUpon().setMediaMetadata(newMetadata).build()
+        val item = controller.getMediaItemAt(index)
+        val extras = android.os.Bundle(item.mediaMetadata.extras ?: android.os.Bundle()).apply {
+            putBoolean("is_favorite", newStatus)
+        }
+
+        val newMetadata = item.mediaMetadata.buildUpon()
+            .setExtras(extras)
+            .build()
+
+        val newItem = item.buildUpon()
+            .setMediaMetadata(newMetadata)
+            .build()
+
         controller.replaceMediaItem(index, newItem)
     }
 
@@ -435,9 +507,33 @@ class PlayerViewModel @Inject constructor(
     private fun setupPlayerListener() {
         mediaController?.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
+                if (
+                    events.contains(Player.EVENT_TIMELINE_CHANGED) ||
+                    events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
+                    events.contains(Player.EVENT_PLAYER_ERROR)
+                ) {
+                    finishSourceSwitch()
+                }
+
                 syncStateWithController()
+
                 if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
-                    observeCurrentFavorite(player.currentMediaItem?.mediaId)
+                    val extras = player.currentMediaItem?.mediaMetadata?.extras
+                    val type = extras?.getString("type") ?: "bible"
+
+                    if (type == "study") {
+                        favoriteObservationJob?.cancel()
+
+                        val studyId = extras?.getInt("study_id") ?: 0
+                        val lessonId = extras?.getInt("lesson_id") ?: 0
+
+                        if (studyId != 0 && lessonId != 0) {
+                            observeCurrentStudyFavorite(studyId, lessonId)
+                        }
+                    } else {
+                        studyFavoriteObservationJob?.cancel()
+                        observeCurrentFavorite(player.currentMediaItem?.mediaId)
+                    }
                 }
             }
         })
@@ -450,6 +546,11 @@ class PlayerViewModel @Inject constructor(
             val currentItem = player.currentMediaItem
             val meta = player.mediaMetadata
             val isTheme = currentItem?.mediaId?.startsWith("moment_") == true
+
+            val currentIsFavorite = currentItem?.mediaMetadata
+                ?.extras
+                ?.getBoolean("is_favorite", false) == true
+
             state.copy(
                 isPlaying = player.isPlaying,
                 isBuffering = player.playbackState == Player.STATE_BUFFERING,
@@ -467,7 +568,8 @@ class PlayerViewModel @Inject constructor(
                 playbackSpeed = player.playbackParameters.speed,
                 isShuffleEnabled = player.shuffleModeEnabled,
                 chapters = extractChaptersFromPlayer(player),
-                isThemeMode = isTheme
+                isThemeMode = isTheme,
+                currentIsFavorite = currentIsFavorite
             )
         }
     }
@@ -624,27 +726,74 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
+//    private fun observeCurrentFavorite(chapterId: String?) {
+//        favoriteObservationJob?.cancel() // Para de vigiar o capítulo anterior
+//        val idLong = chapterId?.toLongOrNull() ?: return
+//
+//        favoriteObservationJob = viewModelScope.launch {
+//            // O Room enviará um novo valor aqui SEMPRE que o favorito mudar no banco
+//            repository.getChapterByIdFlow(idLong).collect { chapterEntity ->
+//                _uiState.update { state ->
+//                    // Atualiza o coração na lista interna do Player
+//                    val updatedChapters = state.chapters.map { chapterWithInfo ->
+//                        if (chapterWithInfo.chapter.id == idLong) {
+//                            chapterWithInfo.copy(
+//                                chapter = chapterWithInfo.chapter.copy(
+//                                    isFavorite = chapterEntity?.isFavorite ?: false
+//                                )
+//                            )
+//                        } else {
+//                            chapterWithInfo
+//                        }
+//                    }
+//                    state.copy(chapters = updatedChapters)
+//                }
+//            }
+//        }
+//    }
+
     private fun observeCurrentFavorite(chapterId: String?) {
-        favoriteObservationJob?.cancel() // Para de vigiar o capítulo anterior
+        favoriteObservationJob?.cancel()
+
         val idLong = chapterId?.toLongOrNull() ?: return
 
         favoriteObservationJob = viewModelScope.launch {
-            // O Room enviará um novo valor aqui SEMPRE que o favorito mudar no banco
             repository.getChapterByIdFlow(idLong).collect { chapterEntity ->
+                val isFavorite = chapterEntity?.isFavorite ?: false
+
                 _uiState.update { state ->
-                    // Atualiza o coração na lista interna do Player
                     val updatedChapters = state.chapters.map { chapterWithInfo ->
                         if (chapterWithInfo.chapter.id == idLong) {
                             chapterWithInfo.copy(
                                 chapter = chapterWithInfo.chapter.copy(
-                                    isFavorite = chapterEntity?.isFavorite ?: false
+                                    isFavorite = isFavorite
                                 )
                             )
                         } else {
                             chapterWithInfo
                         }
                     }
-                    state.copy(chapters = updatedChapters)
+
+                    val currentMediaId = mediaController
+                        ?.currentMediaItem
+                        ?.mediaId
+                        ?.toLongOrNull()
+
+                    state.copy(
+                        chapters = updatedChapters,
+                        currentIsFavorite = if (currentMediaId == idLong) {
+                            isFavorite
+                        } else {
+                            state.currentIsFavorite
+                        }
+                    )
+                }
+
+                val controller = mediaController
+                val currentMediaId = controller?.currentMediaItem?.mediaId?.toLongOrNull()
+
+                if (controller != null && currentMediaId == idLong) {
+                    updatePlayerMetadata(controller, isFavorite)
                 }
             }
         }
@@ -710,6 +859,9 @@ class PlayerViewModel @Inject constructor(
     // Adicione no seu PlayerViewModel.kt
 
     fun playStudyById(studyId: Int, title: String, cover: String, startIndex: Int) {
+
+        if (!tryBeginSourceSwitch()) return
+
         playStudyJob?.cancel()
         playStudyJob = viewModelScope.launch {
             val studyWithLessons = repository.getStudyWithLessons(studyId).first()
@@ -720,6 +872,31 @@ class PlayerViewModel @Inject constructor(
                 lessons = studyWithLessons.lessons,
                 startIndex = startIndex
             )
+        }
+    }
+
+    private fun observeCurrentStudyFavorite(studyId: Int, lessonId: Int) {
+        studyFavoriteObservationJob?.cancel()
+
+        studyFavoriteObservationJob = viewModelScope.launch {
+            repository.getStudyLessonByIdsFlow(studyId, lessonId).collect { lessonEntity ->
+                val isFavorite = lessonEntity?.isFavorite ?: false
+
+                _uiState.update { state ->
+                    state.copy(currentIsFavorite = isFavorite)
+                }
+
+                val controller = mediaController ?: return@collect
+                val currentExtras =
+                    controller.currentMediaItem?.mediaMetadata?.extras ?: return@collect
+
+                val currentStudyId = currentExtras.getInt("study_id")
+                val currentLessonId = currentExtras.getInt("lesson_id")
+
+                if (currentStudyId == studyId && currentLessonId == lessonId) {
+                    updatePlayerMetadata(controller, isFavorite)
+                }
+            }
         }
     }
 }

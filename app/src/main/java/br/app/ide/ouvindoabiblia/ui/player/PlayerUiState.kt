@@ -18,7 +18,8 @@ data class PlayerUiState(
     // Lista e índice
     val currentChapterIndex: Int = 0,
     val chapters: List<ChapterWithBookInfo> = emptyList(),
-    val isThemeMode: Boolean = false
+    val isThemeMode: Boolean = false,
+    val currentIsFavorite: Boolean = false
 ) {
     val progress: Float
         get() = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(

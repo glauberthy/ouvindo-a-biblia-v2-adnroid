@@ -4,6 +4,7 @@ import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
@@ -57,6 +58,8 @@ interface BibleRepository {
 
     // Novo: Fluxo de lições de estudos favoritas
     fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
+
+    fun getStudyLessonByIdsFlow(studyId: Int, lessonId: Int): Flow<StudyLessonEntity?>
 }
 
 // Domain Model (Mantido para uso na UI/Service)

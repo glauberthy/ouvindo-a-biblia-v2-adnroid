@@ -326,4 +326,11 @@ class BibleRepositoryImpl @Inject constructor(
         return dao.getFavoriteStudyLessons()
             .flowOn(Dispatchers.IO)
     }
+
+    override fun getStudyLessonByIdsFlow(
+        studyId: Int,
+        lessonId: Int
+    ): Flow<StudyLessonEntity?> {
+        return dao.getStudyLessonByIdsFlow(studyId, lessonId)
+    }
 }

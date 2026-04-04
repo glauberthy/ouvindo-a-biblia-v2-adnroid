@@ -330,4 +330,16 @@ interface BibleDao {
 """
     )
     fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
+
+    @Query(
+        """
+    SELECT * FROM study_lessons
+    WHERE studyId = :studyId AND remoteId = :lessonId
+    LIMIT 1
+"""
+    )
+    fun getStudyLessonByIdsFlow(
+        studyId: Int,
+        lessonId: Int
+    ): Flow<StudyLessonEntity?>
 }

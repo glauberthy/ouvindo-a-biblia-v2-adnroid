@@ -406,17 +406,15 @@ fun LazyListScope.renderStudyFavorites(
                     Spacer(modifier = Modifier.height(12.dp))
                     HorizontalDivider(color = CreamBackground)
 
-                    lessons.forEach { item ->
+                    lessons.forEachIndexed { index, item ->
                         StudyLessonFavoriteItem(
                             title = item.lesson.title,
                             onPlay = {
-                                // O player de estudos já está pronto para receber a lista toda!
-                                // Aqui podemos passar o startIndex correto da aula
                                 onPlayStudy(
                                     item.lesson.studyId,
                                     item.studyTitle,
                                     item.studyCoverUrl,
-                                    0
+                                    index
                                 )
                             },
                             onRemove = { onRemove(item.lesson.studyId, item.lesson.remoteId) }

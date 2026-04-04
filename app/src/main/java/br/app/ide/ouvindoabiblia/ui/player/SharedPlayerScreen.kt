@@ -93,9 +93,7 @@ fun SharedPlayerScreen(
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showSpeedSheet by remember { mutableStateOf(false) }
     var showChapters by remember { mutableStateOf(false) }
-
-    val currentChapter = uiState.chapters.getOrNull(uiState.currentChapterIndex)
-    val isFavorite = currentChapter?.chapter?.isFavorite == true
+    val isFavorite = uiState.currentIsFavorite
     val hasMedia = uiState.title.isNotEmpty()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
