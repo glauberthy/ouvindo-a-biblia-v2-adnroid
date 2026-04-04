@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -59,6 +60,7 @@ class PlayerViewModel @Inject constructor(
     // --- JOBS ---
     private var sleepTimerJob: Job? = null
     private var progressJob: Job? = null
+    private var playStudyJob: Job? = null
 
     // --- CAST VARS ---
     private var castContext: CastContext? = null
@@ -706,18 +708,18 @@ class PlayerViewModel @Inject constructor(
     }
 
     // Adicione no seu PlayerViewModel.kt
+
     fun playStudyById(studyId: Int, title: String, cover: String, startIndex: Int) {
-        viewModelScope.launch {
-            // Busca as lições no banco de dados usando o ID
-            repository.getStudyWithLessons(studyId).collect { studyWithLessons ->
-                // Agora que temos a lista (lessons), chamamos a função que você já criou
-                playStudyPlaylist(
-                    studyTitle = title,
-                    studyCoverUrl = cover,
-                    lessons = studyWithLessons.lessons,
-                    startIndex = startIndex
-                )
-            }
+        playStudyJob?.cancel()
+        playStudyJob = viewModelScope.launch {
+            val studyWithLessons = repository.getStudyWithLessons(studyId).first()
+
+            playStudyPlaylist(
+                studyTitle = title,
+                studyCoverUrl = cover,
+                lessons = studyWithLessons.lessons,
+                startIndex = startIndex
+            )
         }
     }
 }

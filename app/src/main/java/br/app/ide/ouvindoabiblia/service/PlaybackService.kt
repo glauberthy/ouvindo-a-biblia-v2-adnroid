@@ -190,6 +190,9 @@ class PlaybackService : MediaLibraryService() {
                             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                             .setExtras(Bundle().apply {
                                 putString("type", "study")
+                                putInt("study_id", lesson.studyId)
+                                putInt("lesson_id", lesson.remoteId)
+                                putBoolean("is_favorite", lesson.isFavorite)
                             })
                             .build()
                     ).build()
