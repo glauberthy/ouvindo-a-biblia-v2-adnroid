@@ -1,13 +1,8 @@
 package br.app.ide.ouvindoabiblia.ui.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -117,7 +112,20 @@ fun NavigationGraph(
         }
 
         composable<Screen.More> {
-            MoreScreen(onNavigateToItem = { /* Navegação futura */ })
+            MoreScreen(
+                bottomContentPadding = bottomContentPadding,
+                onAboutClick = { /* navegar para Sobre */ },
+                onMissionClick = { /* navegar para Missão */ },
+                onAudioRightsClick = { /* navegar para Direitos dos áudios */ },
+                onCoverRightsClick = { /* navegar para Direitos das capas */ },
+                onCurationClick = { /* navegar para Curadoria */ },
+                onContactClick = { /* ação de contato */ },
+                onReportBugClick = { /* ação reportar problema */ },
+                onSuggestImprovementClick = { /* ação sugerir melhoria */ },
+                onShareClick = { /* compartilhar app */ },
+                onPrivacyClick = { /* navegar para privacidade */ },
+                onLicensesClick = { /* navegar para licenças */ }
+            )
         }
 
         // --- CAPÍTULOS (Ainda é uma tela separada) ---
@@ -130,16 +138,7 @@ fun NavigationGraph(
             )
         }
 
-        // NOTA: A rota composable<Screen.Player> foi REMOVIDA daqui propositalmente.
+
     }
 }
 
-// Componente temporário para telas que ainda não existem
-@Composable
-fun PlaceholderScreen(title: String) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Box(contentAlignment = Alignment.Center) {
-            Text("Tela de $title", style = MaterialTheme.typography.headlineSmall)
-        }
-    }
-}
