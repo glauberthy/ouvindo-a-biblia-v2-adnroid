@@ -185,10 +185,6 @@ private fun StudyListItem(
         label = "StudyListItemScale"
     )
 
-//    val audioCount = study.lessons.size
-//    val totalDurationSeconds = study.lessons.sumOf { it.duration }
-//    val audioCountLabel = formatAudioCount(audioCount)
-//    val totalDurationLabel = formatTotalDuration(totalDurationSeconds)
 
     Card(
         modifier = modifier

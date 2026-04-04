@@ -218,11 +218,7 @@ private fun ThemeImage(theme: ThemeEntity) {
     Surface(
         modifier = Modifier.size(75.dp),
         shape = RoundedCornerShape(16.dp),
-        color = Accent.copy(alpha = 1f),
-//        border = BorderStroke(
-//            width = 1.dp,
-//            color = Accent.copy(alpha = 0.90f),
-//        ),
+        color = Accent,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
