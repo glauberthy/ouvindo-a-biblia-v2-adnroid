@@ -1,4 +1,4 @@
-package br.app.ide.ouvindoabiblia.ui.components
+package br.app.ide.ouvindoabiblia.ui.home.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween

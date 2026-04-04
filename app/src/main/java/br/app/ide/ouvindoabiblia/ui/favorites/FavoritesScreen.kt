@@ -1,7 +1,11 @@
 package br.app.ide.ouvindoabiblia.ui.favorites
 
 // Importando sua paleta de cores
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,21 +31,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,7 +63,6 @@ import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
-import kotlinx.coroutines.launch
 
 @Composable
 fun FavoritesScreen(
@@ -62,30 +71,17 @@ fun FavoritesScreen(
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    // 1. Criamos o estado do Pager para 2 páginas (Bíblia e Estudos)
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 2 })
-    // Corrotina necessária para animar o clique da aba
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     FavoritesScreenContent(
         uiState = uiState,
-        // O selectedTab agora vem do pagerState
-        selectedTab = pagerState.currentPage,
-        onTabSelected = { index ->
-            // Ao clicar, o pager desliza suavemente até a página
-            scope.launch { pagerState.animateScrollToPage(index) }
-        },
-        // Passamos o pagerState para o conteúdo
-        pagerState = pagerState,
+        selectedTab = selectedTab,
+        onTabSelected = { selectedTab = it },
         onPlayChapter = onPlayChapter,
         onPlayStudy = onPlayStudy,
         onRemoveChapter = { viewModel.removeFromFavorites(it) },
         onRemoveStudy = { studyId, lessonId ->
-            viewModel.removeStudyFromFavorites(
-                studyId,
-                lessonId
-            )
+            viewModel.removeStudyFromFavorites(studyId, lessonId)
         }
     )
 }
@@ -95,7 +91,6 @@ fun FavoritesScreenContent(
     uiState: FavoritesUiState,
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
-    pagerState: androidx.compose.foundation.pager.PagerState, // Recebe o pagerState
     onPlayChapter: (Int, String, String, Int) -> Unit,
     onPlayStudy: (Int, String, String, Int) -> Unit,
     onRemoveChapter: (Long) -> Unit,
@@ -105,118 +100,171 @@ fun FavoritesScreenContent(
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val resolvedBottomPadding = if (uiState.isLoading) 0.dp else navBarPadding + 80.dp
 
-    // O HorizontalPager agora é o dono do conteúdo horizontal
-    androidx.compose.foundation.pager.HorizontalPager(
-        state = pagerState,
+    val subtitle = if (selectedTab == 0) {
+        "Sua coleção de capítulos bíblicos"
+    } else {
+        "Suas lições de estudos favoritas"
+    }
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(CreamBackground),
-        verticalAlignment = Alignment.Top
-    ) { pageIndex ->
-
-        // --- ADIÇÃO DO LIMIAR DE SEGURANÇA (Threshold) ---
-        // 1. Calculamos a distância bruta como antes
-        val rawOffset = remember(pagerState) {
-            val distance =
-                (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
-            kotlin.math.abs(distance)
-        }
-
-        // 2. Aplicamos um limiar. Se a distância for muito pequena, forçamos o valor 0.
-        // Isso impede que float point inaccuracies deixem o alpha "grudado".
-        val pageOffsetForLerp = if (rawOffset < 0.05f) { // Pequeno limiar de segurança
-            0f
-        } else {
-            rawOffset.coerceIn(0f, 1f)
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    // --- EFEITO FADE (Opacidade) CORRIGIDO ---
-                    // Agora usamos pageOffsetForLerp, que garante ser 0f quando assentado.
-//                    alpha = androidx.compose.ui.util.lerp(
-//                        start = 1f,   // Opaque (100%) quando no centro
-//                        stop = 1f, // Faint (35%) quando sai da tela
-//                        fraction = pageOffsetForLerp
-//                    )
-
-//                    // Efeito Scale (permanece o mesmo, mas agora mais fluido)
-//                    val scale = androidx.compose.ui.util.lerp(
-//                        start = 1f,
-//                        stop = 0.90f,
-//                        fraction = pageOffsetForLerp
-//                    )
-//                    scaleX = scale
-//                    scaleY = scale
-                }
-        ) {
-            // O seu conteúdo LazyColumn antigo fica aqui dentro do Box com efeitos
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = 24.dp, bottom = resolvedBottomPadding
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 24.dp,
+            bottom = resolvedBottomPadding
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier.padding(
+                    top = statusBarPadding + 8.dp,
+                    bottom = 8.dp
+                )
             ) {
-                // ... Todo o conteúdo interno da LazyColumn (Título, Tabs, Listas) permanece igual
-                item {
-                    Column(
-                        modifier = Modifier.padding(
-                            top = statusBarPadding + 8.dp,
-                            bottom = 8.dp
-                        )
-                    ) {
-                        Text(
-                            text = "Meus Favoritos",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = DeepBlueDark,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (pageIndex == 0) "Sua coleção de capítulos bíblicos" else "Suas lições de estudos favoritas",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SlateBlue
-                        )
-                    }
+                Text(
+                    text = "Meus Favoritos",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = DeepBlueDark,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SlateBlue,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+
+        item {
+            FavoritesSegmentedSelector(
+                selectedTab = selectedTab,
+                onTabSelected = onTabSelected
+            )
+        }
+
+        if (uiState.isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillParentMaxHeight(0.6f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = DeepBlueDark)
                 }
-                item {
-                    FavoritesTabSelector(
-                        selectedTab = pageIndex,
-                        onTabSelected = onTabSelected
+            }
+        } else {
+            if (selectedTab == 0) {
+                if (uiState.bibleFavorites.isEmpty()) {
+                    item { EmptyFavorites("capítulos bíblicos") }
+                } else {
+                    renderBibleFavorites(
+                        favorites = uiState.bibleFavorites,
+                        onPlayChapter = onPlayChapter,
+                        onRemove = onRemoveChapter
                     )
                 }
-                if (uiState.isLoading) {
-                    item {
-                        Box(
-                            Modifier
-                                .fillParentMaxHeight(0.6f)
-                                .fillMaxWidth(),
-                            Alignment.Center
-                        ) { CircularProgressIndicator(color = DeepBlueDark) }
-                    }
+            } else {
+                if (uiState.studyFavorites.isEmpty()) {
+                    item { EmptyFavorites("lições de estudos") }
                 } else {
-                    if (pageIndex == 0) {
-                        if (uiState.bibleFavorites.isEmpty()) item { EmptyFavorites("capítulos bíblicos") }
-                        else renderBibleFavorites(
-                            uiState.bibleFavorites,
-                            onPlayChapter,
-                            onRemoveChapter
-                        )
-                    } else {
-                        if (uiState.studyFavorites.isEmpty()) item { EmptyFavorites("lições de estudos") }
-                        else renderStudyFavorites(
-                            uiState.studyFavorites,
-                            onPlayStudy,
-                            onRemoveStudy
-                        )
-                    }
+                    renderStudyFavorites(
+                        favorites = uiState.studyFavorites,
+                        onPlayStudy = onPlayStudy,
+                        onRemove = onRemoveStudy
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+fun FavoritesSegmentedSelector(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .border(
+                width = 1.dp,
+                color = SlateBlue.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(50)
+            )
+            .clip(RoundedCornerShape(50))
+            .background(Color.Transparent),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FavoriteFilterSegment(
+            text = "Livros",
+            isSelected = selectedTab == 0,
+            onClick = { onTabSelected(0) },
+            modifier = Modifier.weight(1f)
+        )
+
+        FavoriteVerticalDivider()
+
+        FavoriteFilterSegment(
+            text = "Estudos",
+            isSelected = selectedTab == 1,
+            onClick = { onTabSelected(1) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun FavoriteFilterSegment(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) DeepBlueDark else Color.Transparent,
+        animationSpec = tween(300),
+        label = "FavoriteFilterBg"
+    )
+
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) CreamBackground else SlateBlue,
+        animationSpec = tween(300),
+        label = "FavoriteFilterText"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .background(backgroundColor)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun FavoriteVerticalDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .fillMaxHeight(0.6f)
+            .background(SlateBlue.copy(alpha = 0.2f))
+    )
 }
 
 @Composable
@@ -255,34 +303,50 @@ fun ChapterListItem(number: Int, onClick: () -> Unit, onRemove: () -> Unit) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(RosyBeige.copy(alpha = 0.2f))
-            .padding(4.dp)
+fun FavoritesTabSelector(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    val tabs = listOf("Livros", "Estudos")
+
+    SecondaryTabRow(
+        selectedTabIndex = selectedTab,
+        containerColor = Color.Transparent,
+        contentColor = DeepBlueDark,
+        divider = {},
+        indicator = {
+            TabRowDefaults.SecondaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(
+                    selectedTabIndex = selectedTab,
+                    matchContentSize = true
+                ),
+                color = DeepBlueDark,
+                height = 3.dp
+            )
+        }
     ) {
-        val tabs = listOf("Bíblia", "Estudos")
         tabs.forEachIndexed { index, title ->
             val isSelected = selectedTab == index
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) DeepBlueDark else Color.Transparent)
-                    .clickable { onTabSelected(index) }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = title,
-                    color = if (isSelected) Color.White else DeepBlueDark,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+
+            Tab(
+                selected = isSelected,
+                onClick = { onTabSelected(index) },
+                selectedContentColor = DeepBlueDark,
+                unselectedContentColor = SlateBlue.copy(alpha = 0.72f),
+                text = {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (isSelected) {
+                            FontWeight.SemiBold
+                        } else {
+                            FontWeight.Normal
+                        }
+                    )
+                }
+            )
         }
     }
 }

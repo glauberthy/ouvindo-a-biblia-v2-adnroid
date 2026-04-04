@@ -27,7 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.ui.components.BookFilterBar
+import br.app.ide.ouvindoabiblia.ui.home.components.BookFilterBar
 import br.app.ide.ouvindoabiblia.ui.home.components.BookGridItem
 import br.app.ide.ouvindoabiblia.ui.home.components.ContinueListeningCard
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen

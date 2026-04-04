@@ -68,6 +68,7 @@ dependencies {
     // --- Hilt (Injeção de Dependência) ---
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.compose.runtime.saveable)
     ksp(libs.hilt.compiler) // OBRIGATÓRIO: Processador de anotações via KSP
 
     // --- Room (Banco de Dados) ---
