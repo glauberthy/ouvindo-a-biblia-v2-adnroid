@@ -33,5 +33,6 @@ data class StudyLessonEntity(
 
     val title: String,
     val url: String,
-    val duration: Long
+    val duration: Long,
+    val isFavorite: Boolean = false
 )

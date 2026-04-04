@@ -342,11 +342,11 @@ fun MainScreen(
                                 startIndex
                             )
                         },
-                        onPlayStudy = { studyTitle, studyCoverUrl, lessons, startIndex ->
-                            playerViewModel.playStudyPlaylist(
-                                studyTitle = studyTitle,
-                                studyCoverUrl = studyCoverUrl,
-                                lessons = lessons,
+                        onPlayStudy = { studyId, studyTitle, studyCoverUrl, startIndex ->
+                            playerViewModel.playStudyById(
+                                studyId = studyId,
+                                title = studyTitle,
+                                cover = studyCoverUrl,
                                 startIndex = startIndex
                             )
                         },

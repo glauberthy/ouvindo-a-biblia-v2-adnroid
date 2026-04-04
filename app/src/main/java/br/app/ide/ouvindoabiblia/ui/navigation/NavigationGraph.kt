@@ -16,7 +16,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
@@ -34,7 +33,7 @@ fun NavigationGraph(
     windowSizeClass: WindowSizeClass,
     onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
     onPlayTheme: (String, String, List<MomentWithAudio>, Int) -> Unit,
-    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit,
+    onPlayStudy: (Int, String, String, Int) -> Unit,
     bottomContentPadding: Dp = 0.dp,
 ) {
     NavHost(
@@ -57,8 +56,12 @@ fun NavigationGraph(
         // --- FAVORITOS ---
         composable<Screen.Favorites> {
             FavoritesScreen(
-                onPlayChapter = { numericId, name, cover, index -> // Recebe o index da tela
-                    onPlayBook(numericId, name, cover, index, 0L, 0L)     // Repassa para a Main
+                onPlayChapter = { numericId, name, cover, index ->
+                    onPlayBook(numericId, name, cover, index, 0L, 0L)
+                },
+                // Agora os tipos batem: (Int, String, String, Int)
+                onPlayStudy = { studyId, title, cover, index ->
+                    onPlayStudy(studyId, title, cover, index)
                 }
             )
         }
@@ -100,13 +103,14 @@ fun NavigationGraph(
         }
 
 
-        // --- DETALHES DO ESTUDO (Ajustado) ---
-        composable<Screen.StudyDetails> {
+        // --- DETALHES DO ESTUDO ---
+        composable<Screen.StudyDetails> { backStackEntry ->
+            val args = backStackEntry.toRoute<Screen.StudyDetails>()
             StudyDetailsScreen(
-                bottomContentPadding = bottomContentPadding,
                 onBackClick = { navController.popBackStack() },
-                onPlayStudy = { title, cover, lessons, index ->
-                    onPlayStudy(title, cover, lessons, index)
+                onPlayStudy = { title, cover, _, index ->
+                    // Usamos o args.id que veio da navegação!
+                    onPlayStudy(args.studyId, title, cover, index)
                 }
             )
         }

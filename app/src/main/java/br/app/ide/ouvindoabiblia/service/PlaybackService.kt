@@ -96,24 +96,6 @@ class PlaybackService : MediaLibraryService() {
         })
     }
 
-//    private fun saveCurrentState() {
-//        val currentMediaItem = player.currentMediaItem ?: return
-//        val position = player.currentPosition
-//        val duration = player.duration
-//        val meta = currentMediaItem.mediaMetadata
-//
-//        serviceScope.launch(Dispatchers.IO) {
-//            repository.savePlaybackState(
-//                chapterId = currentMediaItem.mediaId,
-//                positionMs = position,
-//                duration = if (duration > 0) duration else 0L,
-//                title = meta.title?.toString() ?: "",
-//                subtitle = meta.subtitle?.toString() ?: "",
-//                imageUrl = meta.artworkUri?.toString(),
-//                audioUrl = currentMediaItem.requestMetadata.mediaUri?.toString() ?: ""
-//            )
-//        }
-//    }
 
     private fun saveCurrentState() {
         val currentMediaItem = player.currentMediaItem ?: return

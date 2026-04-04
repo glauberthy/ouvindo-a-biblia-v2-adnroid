@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,6 +55,12 @@ class StudyDetailsViewModel @Inject constructor(
                         studyWithLessons = studyData
                     )
                 }
+        }
+    }
+
+    fun toggleFavorite(lesson: StudyLessonEntity) {
+        viewModelScope.launch {
+            repository.toggleStudyFavorite(lesson.studyId, lesson.remoteId, !lesson.isFavorite)
         }
     }
 }

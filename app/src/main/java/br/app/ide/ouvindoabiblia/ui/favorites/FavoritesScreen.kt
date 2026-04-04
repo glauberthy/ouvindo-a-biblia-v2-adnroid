@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -34,6 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent2
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
@@ -53,159 +58,102 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 @Composable
 fun FavoritesScreen(
     onPlayChapter: (Int, String, String, Int) -> Unit,
+    onPlayStudy: (Int, String, String, Int) -> Unit, // Novo callback para estudos
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    // Estado local para controlar qual aba está ativa (0 = Bíblia, 1 = Estudos)
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     FavoritesScreenContent(
         uiState = uiState,
+        selectedTab = selectedTab,
+        onTabSelected = { selectedTab = it },
         onPlayChapter = onPlayChapter,
-        onRemove = { viewModel.removeFromFavorites(it) }
+        onPlayStudy = onPlayStudy,
+        onRemoveChapter = { viewModel.removeFromFavorites(it) },
+        onRemoveStudy = { studyId, lessonId ->
+            viewModel.removeStudyFromFavorites(
+                studyId,
+                lessonId
+            )
+        }
     )
 }
 
 @Composable
 fun FavoritesScreenContent(
     uiState: FavoritesUiState,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
     onPlayChapter: (Int, String, String, Int) -> Unit,
-    onRemove: (Long) -> Unit
+    onPlayStudy: (Int, String, String, Int) -> Unit,
+    onRemoveChapter: (Long) -> Unit,
+    onRemoveStudy: (Int, Int) -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = statusBarPadding + 24.dp, // Substitui o 80.dp fixo
-            bottom = navBarPadding + 56.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(CreamBackground)
+            .padding(top = statusBarPadding + 24.dp)
     ) {
-        // 1. TÍTULO
-        item {
-            Column(modifier = Modifier.padding(bottom = 8.dp)) {
-                Text(
-                    text = "Meus Favoritos",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = DeepBlueDark,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Sua coleção particular de capítulos",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SlateBlue
-                )
-            }
+        // 1. CABEÇALHO FIXO
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = "Meus Favoritos",
+                style = MaterialTheme.typography.headlineLarge,
+                color = DeepBlueDark,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (selectedTab == 0) "Sua coleção de capítulos bíblicos" else "Suas lições de estudos favoritas",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SlateBlue
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 2. SELETOR DE ABAS (Customizado para seu design)
+            FavoritesTabSelector(
+                selectedTab = selectedTab,
+                onTabSelected = onTabSelected
+            )
         }
 
-        // 2. CONTROLE DE ESTADOS
-        when (uiState) {
-            is FavoritesUiState.Loading -> {
-                item {
-                    Box(Modifier.fillParentMaxSize(), Alignment.Center) {
-                        CircularProgressIndicator(color = DeepBlueDark)
-                    }
-                }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 3. CONTEÚDO DINÂMICO (LazyColumn)
+        if (uiState.isLoading) {
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                CircularProgressIndicator(color = DeepBlueDark)
             }
-
-            is FavoritesUiState.Empty -> {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillParentMaxHeight(0.7f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        EmptyFavorites()
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = navBarPadding + 80.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (selectedTab == 0) {
+                    // --- ABA BÍBLIA ---
+                    if (uiState.bibleFavorites.isEmpty()) {
+                        item { EmptyFavorites("capítulos bíblicos") }
+                    } else {
+                        renderBibleFavorites(uiState.bibleFavorites, onPlayChapter, onRemoveChapter)
                     }
-                }
-            }
-
-            is FavoritesUiState.Success -> {
-                val grouped = uiState.favorites.groupBy { it.bookName }
-
-                grouped.forEach { (_, chapters) ->
-                    item {
-                        val info = chapters.first()
-
-                        // CARD UNIFICADO POR LIVRO
-                        Surface(
-                            color = Color.White,
-                            shape = RoundedCornerShape(16.dp),
-                            shadowElevation = 2.dp,
-                            modifier = Modifier.fillMaxWidth()
-                            
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                // Cabeçalho do Livro
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    AppAsyncImage(
-                                        imageUrl = info.coverUrl,
-                                        contentDescription = "Capa do livro ${info.bookName}",
-                                        modifier = Modifier
-                                            .width(60.dp)
-                                            .height(90.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(RosyBeige) // Mantém a cor de fundo enquanto carrega
-                                    )
-
-                                    Column(modifier = Modifier.padding(start = 16.dp)) {
-                                        // Badge AT/NT curto e elegante
-                                        Surface(
-                                            color = if (info.testament == "at") RosyBeige else LavenderGray,
-                                            shape = RoundedCornerShape(4.dp)
-                                        ) {
-                                            Text(
-                                                text = if (info.testament == "at") "AT" else "NT",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White,
-                                                modifier = Modifier.padding(
-                                                    horizontal = 8.dp,
-                                                    vertical = 2.dp
-                                                )
-                                            )
-                                        }
-
-                                        Text(
-                                            text = info.bookName,
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = DeepBlueDark
-                                        )
-                                        Text(
-                                            text = "${info.totalChapters} capítulos no total",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = SlateBlue.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-                                HorizontalDivider(color = CreamBackground, thickness = 1.dp)
-
-                                // Lista de capítulos favoritados deste livro
-                                chapters.forEach { item ->
-                                    ChapterListItem(
-                                        number = item.chapter.number,
-                                        onClick = {
-                                            val index = (item.chapter.number - 1).coerceAtLeast(0)
-                                            onPlayChapter(
-                                                item.chapter.bookId,
-                                                item.bookName,
-                                                item.coverUrl ?: "",
-                                                index
-                                            )
-                                        },
-                                        onRemove = { onRemove(item.chapter.id) }
-                                    )
-                                }
-                            }
-                        }
+                } else {
+                    // --- ABA ESTUDOS ---
+                    if (uiState.studyFavorites.isEmpty()) {
+                        item { EmptyFavorites("lições de estudos") }
+                    } else {
+                        renderStudyFavorites(uiState.studyFavorites, onPlayStudy, onRemoveStudy)
                     }
                 }
             }
@@ -248,26 +196,245 @@ fun ChapterListItem(number: Int, onClick: () -> Unit, onRemove: () -> Unit) {
     }
 }
 
+
 @Composable
-fun EmptyFavorites() {
+fun FavoritesTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(RosyBeige.copy(alpha = 0.2f))
+            .padding(4.dp)
+    ) {
+        val tabs = listOf("Bíblia", "Estudos")
+        tabs.forEachIndexed { index, title ->
+            val isSelected = selectedTab == index
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) DeepBlueDark else Color.Transparent)
+                    .clickable { onTabSelected(index) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = title,
+                    color = if (isSelected) Color.White else DeepBlueDark,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+fun LazyListScope.renderBibleFavorites(
+    favorites: List<br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo>,
+    onPlayChapter: (Int, String, String, Int) -> Unit,
+    onRemove: (Long) -> Unit
+) {
+    val grouped = favorites.groupBy { it.bookName }
+
+    grouped.forEach { (_, chapters) ->
+        item {
+            val info = chapters.first()
+            Surface(
+                color = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppAsyncImage(
+                            imageUrl = info.coverUrl,
+                            contentDescription = info.bookName,
+                            modifier = Modifier
+                                .width(60.dp)
+                                .height(90.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(RosyBeige)
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Surface(
+                                color = if (info.testament == "at") RosyBeige else LavenderGray,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = if (info.testament == "at") "AT" else "NT",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                            Text(
+                                text = info.bookName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = DeepBlueDark
+                            )
+                            Text(
+                                text = "${info.totalChapters} capítulos",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SlateBlue.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = CreamBackground)
+
+                    chapters.forEach { item ->
+                        ChapterListItem(
+                            number = item.chapter.number,
+                            onClick = {
+                                val index = (item.chapter.number - 1).coerceAtLeast(0)
+                                onPlayChapter(
+                                    item.chapter.bookId,
+                                    item.bookName,
+                                    item.coverUrl ?: "",
+                                    index
+                                )
+                            },
+                            onRemove = { onRemove(item.chapter.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun LazyListScope.renderStudyFavorites(
+    favorites: List<FavoriteStudyLessonDto>,
+    onPlayStudy: (Int, String, String, Int) -> Unit,
+    onRemove: (Int, Int) -> Unit
+) {
+    val grouped = favorites.groupBy { it.studyTitle }
+
+    grouped.forEach { (studyTitle, lessons) ->
+        item {
+            val info = lessons.first()
+            Surface(
+                color = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppAsyncImage(
+                            imageUrl = info.studyCoverUrl,
+                            contentDescription = studyTitle,
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        Column(modifier = Modifier.padding(start = 12.dp)) {
+                            Text(
+                                text = studyTitle,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = DeepBlueDark,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = info.studyAuthor,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SlateBlue
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = CreamBackground)
+
+                    lessons.forEach { item ->
+                        StudyLessonFavoriteItem(
+                            title = item.lesson.title,
+                            onPlay = {
+                                // O player de estudos já está pronto para receber a lista toda!
+                                // Aqui podemos passar o startIndex correto da aula
+                                onPlayStudy(
+                                    item.lesson.studyId,
+                                    item.studyTitle,
+                                    item.studyCoverUrl,
+                                    0
+                                )
+                            },
+                            onRemove = { onRemove(item.lesson.studyId, item.lesson.remoteId) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun StudyLessonFavoriteItem(
+    title: String,
+    onPlay: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onPlay() }
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = SlateBlue
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = DeepBlueDark,
+                modifier = Modifier.padding(start = 12.dp),
+                maxLines = 1 // Evita que o texto quebre a linha e empurre o coração
+            )
+        }
+        IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.Favorite,
+                contentDescription = null,
+                tint = Accent2,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyFavorites(itemType: String) { // Agora aceita o tipo de item
     Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Rounded.Favorite,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = RosyBeige // Cor sutil para o estado vazio
+            tint = RosyBeige
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Sua lista está vazia",
+            text = "Sua lista de $itemType está vazia", // Texto dinâmico
             style = MaterialTheme.typography.titleMedium,
             color = SlateBlue,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
         Text(
-            text = "Marque capítulos como favoritos\npara ouvi-los novamente com facilidade.",
+            text = "Marque itens como favoritos para\nouvi-los novamente com facilidade.",
             color = LavenderGray,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium

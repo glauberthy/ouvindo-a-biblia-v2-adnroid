@@ -13,6 +13,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import kotlinx.coroutines.flow.Flow
@@ -193,26 +194,6 @@ interface BibleDao {
     @Query("DELETE FROM playback_state")
     suspend fun clearPlaybackState()
 
-    // 3. A Query Mestra: Busca o estado + dados do Capítulo + dados do Livro
-    // Se o capítulo ou livro não existirem mais, isso não retorna nada (evitando erro!)
-//    @Transaction
-//    @Query(
-//        """
-//    SELECT
-//        P.chapterId,
-//        P.positionMs,
-//        C.audio_url as audioUrl,
-//        C.chapter_number as chapterNumber,
-//        C.book_id as bookId,
-//        B.name as bookName,
-//        B.image_url as coverUrl
-//    FROM playback_state P
-//    INNER JOIN chapters C ON P.chapterId = C.id
-//    INNER JOIN books B ON C.book_id = B.numericId
-//    WHERE P.id = 1
-//"""
-//    )
-//    fun getLastPlaybackState(): Flow<PlaybackStateDto?>
 
     @Query("SELECT * FROM playback_state WHERE id = 1")
     fun getLastPlaybackState(): Flow<PlaybackStateEntity?>
@@ -333,4 +314,20 @@ interface BibleDao {
         insertStudies(studies)
         insertStudyLessons(lessons)
     }
+
+    // 1. Alterna o status de favorito de uma lição de estudo
+    @Query("UPDATE study_lessons SET isFavorite = :isFavorite WHERE remoteId = :lessonId AND studyId = :studyId")
+    suspend fun updateStudyFavoriteStatus(studyId: Int, lessonId: Int, isFavorite: Boolean)
+
+    // 2. Busca todas as lições favoritas, trazendo junto os dados do Estudo (para mostrar a capa e o título do autor)
+    @Transaction
+    @Query(
+        """
+    SELECT L.*, S.title as studyTitle, S.image_url as studyCoverUrl, S.author as studyAuthor
+    FROM study_lessons L
+    INNER JOIN studies S ON L.studyId = S.id
+    WHERE L.isFavorite = 1
+"""
+    )
+    fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
 }

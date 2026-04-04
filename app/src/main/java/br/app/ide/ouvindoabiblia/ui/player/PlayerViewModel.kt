@@ -373,36 +373,59 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
-        val currentIndex = _uiState.value.currentChapterIndex
-        val currentChapter = _uiState.value.chapters.getOrNull(currentIndex) ?: return
-        val newStatus = !currentChapter.chapter.isFavorite
         val controller = mediaController ?: return
+        val currentItem = controller.currentMediaItem ?: return
+        val extras = currentItem.mediaMetadata.extras ?: android.os.Bundle()
+
+        // Identifica se é estudo ou bíblia
+        val type = extras.getString("type") ?: "bible"
+        val isCurrentlyFavorite = extras.getBoolean("is_favorite", false)
+        val newStatus = !isCurrentlyFavorite
 
         viewModelScope.launch {
-            // 1. Atualiza no Banco (Persistência)
-            repository.toggleFavorite(currentChapter.chapter.id, newStatus)
+            if (type == "study") {
+                // --- LÓGICA PARA ESTUDOS ---
+                val studyId = extras.getInt("study_id")
+                val lessonId = extras.getInt("lesson_id")
 
-            // 2. Atualiza no Player (Memória / UI Imediata)
-            // Precisamos clonar o MediaItem atual e mudar o Bundle extra
-            val currentItem = controller.getMediaItemAt(currentIndex)
+                if (studyId != 0 && lessonId != 0) {
+                    repository.toggleStudyFavorite(studyId, lessonId, newStatus)
+                }
+            } else {
+                // --- LÓGICA PARA BÍBLIA (Sua lógica antiga adaptada) ---
+                val currentIndex = controller.currentMediaItemIndex
+                val currentChapter = _uiState.value.chapters.getOrNull(currentIndex)
+                if (currentChapter != null) {
+                    repository.toggleFavorite(currentChapter.chapter.id, newStatus)
+                }
+            }
 
-            val currentExtras = currentItem.mediaMetadata.extras ?: android.os.Bundle()
-            currentExtras.putBoolean("is_favorite", newStatus)
-
+            // --- ATUALIZAÇÃO VISUAL IMEDIATA NO PLAYER ---
+            val newExtras = extras.apply { putBoolean("is_favorite", newStatus) }
             val newMetadata = currentItem.mediaMetadata.buildUpon()
-                .setExtras(currentExtras)
+                .setExtras(newExtras)
                 .build()
-
             val newItem = currentItem.buildUpon()
                 .setMediaMetadata(newMetadata)
                 .build()
 
-            // Substitui o item na playlist do player sem parar o áudio
-            controller.replaceMediaItem(currentIndex, newItem)
-
-            // Força atualização visual imediata (opcional, pois o listener do player deve pegar a mudança acima)
-            // syncStateWithController()
+            controller.replaceMediaItem(controller.currentMediaItemIndex, newItem)
         }
+    }
+
+    // Função auxiliar para atualizar o ícone no player sem travar o áudio
+    private fun updatePlayerMetadata(
+        controller: androidx.media3.session.MediaController,
+        newStatus: Boolean
+    ) {
+        val index = controller.currentMediaItemIndex
+        val item = controller.getMediaItemAt(index)
+        val extras = item.mediaMetadata.extras ?: android.os.Bundle()
+        extras.putBoolean("is_favorite", newStatus)
+
+        val newMetadata = item.mediaMetadata.buildUpon().setExtras(extras).build()
+        val newItem = item.buildUpon().setMediaMetadata(newMetadata).build()
+        controller.replaceMediaItem(index, newItem)
     }
 
     // --- SINCRONIZAÇÃO DE ESTADO ---
@@ -669,6 +692,8 @@ class PlayerViewModel @Inject constructor(
                         .setExtras(android.os.Bundle().apply {
                             putString("type", "study") // Usado na proteção ali em cima
                             putInt("lesson_id", lesson.remoteId)
+                            putInt("study_id", lesson.studyId)
+                            putBoolean("is_favorite", lesson.isFavorite)
                         })
                         .build()
                 )
@@ -678,5 +703,21 @@ class PlayerViewModel @Inject constructor(
         controller.setMediaItems(studyMediaItems, startIndex, 0L)
         controller.prepare()
         controller.play()
+    }
+
+    // Adicione no seu PlayerViewModel.kt
+    fun playStudyById(studyId: Int, title: String, cover: String, startIndex: Int) {
+        viewModelScope.launch {
+            // Busca as lições no banco de dados usando o ID
+            repository.getStudyWithLessons(studyId).collect { studyWithLessons ->
+                // Agora que temos a lista (lessons), chamamos a função que você já criou
+                playStudyPlaylist(
+                    studyTitle = title,
+                    studyCoverUrl = cover,
+                    lessons = studyWithLessons.lessons,
+                    startIndex = startIndex
+                )
+            }
+        }
     }
 }

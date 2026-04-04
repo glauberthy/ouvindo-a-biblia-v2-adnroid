@@ -15,6 +15,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
@@ -315,5 +316,14 @@ class BibleRepositoryImpl @Inject constructor(
 
     override fun getThemeById(themeId: Int): Flow<ThemeEntity?> {
         return dao.getThemeById(themeId)
+    }
+
+    override suspend fun toggleStudyFavorite(studyId: Int, lessonId: Int, isFavorite: Boolean) {
+        dao.updateStudyFavoriteStatus(studyId, lessonId, isFavorite)
+    }
+
+    override fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>> {
+        return dao.getFavoriteStudyLessons()
+            .flowOn(Dispatchers.IO)
     }
 }

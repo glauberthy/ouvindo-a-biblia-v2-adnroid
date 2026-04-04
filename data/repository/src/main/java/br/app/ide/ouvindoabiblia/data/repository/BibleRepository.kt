@@ -6,6 +6,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +51,12 @@ interface BibleRepository {
     suspend fun syncStudies(): Result<Unit>
 
     fun getStudiesWithLessons(): Flow<List<StudyWithLessons>>
+
+    // Novo: Alternar favorito de um estudo
+    suspend fun toggleStudyFavorite(studyId: Int, lessonId: Int, isFavorite: Boolean)
+
+    // Novo: Fluxo de lições de estudos favoritas
+    fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
 }
 
 // Domain Model (Mantido para uso na UI/Service)
