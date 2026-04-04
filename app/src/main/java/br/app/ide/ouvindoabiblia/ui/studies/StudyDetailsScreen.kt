@@ -143,8 +143,13 @@ private fun LessonsList(
     onBackClick: () -> Unit,
     onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
 ) {
-    // Mesma lógica de respiro dinâmico perfeito que usamos nos Temas!
-    val resolvedBottomPadding = bottomContentPadding + 16.dp
+    val horizontalSpacing = 0.dp
+
+    val resolvedBottomPadding = if (bottomContentPadding == 0.dp) {
+        horizontalSpacing + 16.dp
+    } else {
+        bottomContentPadding + horizontalSpacing
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

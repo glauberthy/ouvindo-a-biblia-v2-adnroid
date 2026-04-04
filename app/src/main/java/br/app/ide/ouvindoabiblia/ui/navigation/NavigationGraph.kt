@@ -111,7 +111,8 @@ fun NavigationGraph(
                 onPlayStudy = { title, cover, _, index ->
                     // Usamos o args.id que veio da navegação!
                     onPlayStudy(args.studyId, title, cover, index)
-                }
+                },
+                bottomContentPadding = bottomContentPadding
             )
         }
 
