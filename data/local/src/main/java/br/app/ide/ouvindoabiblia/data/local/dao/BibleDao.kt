@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.MoreContentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
@@ -304,7 +305,7 @@ interface BibleDao {
     @Query("SELECT COUNT(*) FROM studies")
     suspend fun getStudiesCount(): Int
 
-    
+
     @Transaction
     suspend fun refreshStudiesData(
         studies: List<StudyEntity>,
@@ -405,4 +406,17 @@ interface BibleDao {
         url: String,
         duration: Long
     )
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun save(content: MoreContentEntity)
+
+    @Query("SELECT * FROM more_content WHERE id = 1 LIMIT 1")
+    fun observe(): Flow<MoreContentEntity?>
+
+    @Query("SELECT * FROM more_content WHERE id = 1 LIMIT 1")
+    suspend fun get(): MoreContentEntity?
+
+    @Query("DELETE FROM more_content")
+    suspend fun clear()
 }

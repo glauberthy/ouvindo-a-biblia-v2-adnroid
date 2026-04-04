@@ -10,6 +10,7 @@ import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
+import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
@@ -60,6 +61,10 @@ interface BibleRepository {
     fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
 
     fun getStudyLessonByIdsFlow(studyId: Int, lessonId: Int): Flow<StudyLessonEntity?>
+
+
+    suspend fun syncMoreContent(): Result<Unit>
+    fun getMoreContent(): Flow<MoreContentDto?>
 }
 
 // Domain Model (Mantido para uso na UI/Service)
@@ -72,3 +77,4 @@ data class PlaybackState(
     val imageUrl: String?,
     val audioUrl: Uri
 )
+

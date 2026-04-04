@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.data.repository
 
+
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
@@ -10,6 +11,7 @@ import br.app.ide.ouvindoabiblia.data.local.dao.BibleDao
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
+import br.app.ide.ouvindoabiblia.data.local.entity.MoreContentEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
@@ -20,12 +22,14 @@ import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
+import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 class BibleRepositoryImpl @Inject constructor(
@@ -51,6 +55,10 @@ class BibleRepositoryImpl @Inject constructor(
 
     override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
         dao.updateFavoriteStatus(chapterId, isFavorite)
+    }
+
+    private val json = Json {
+        ignoreUnknownKeys = true
     }
 
     override suspend fun savePlaybackState(
@@ -332,5 +340,32 @@ class BibleRepositoryImpl @Inject constructor(
         lessonId: Int
     ): Flow<StudyLessonEntity?> {
         return dao.getStudyLessonByIdsFlow(studyId, lessonId)
+    }
+
+    override suspend fun syncMoreContent(): Result<Unit> {
+        return runCatching {
+            val remote = api.getMoreContent()
+
+            val rawJson = json.encodeToString(MoreContentDto.serializer(), remote)
+
+            dao.save(
+                MoreContentEntity(
+                    id = 1,
+                    json = rawJson,
+                    lastUpdated = remote.lastUpdated,
+                    version = remote.version
+                )
+            )
+        }
+    }
+
+    override fun getMoreContent(): Flow<MoreContentDto?> {
+        return dao.observe().map { entity ->
+            val cachedJson = entity?.json ?: return@map null
+
+            runCatching {
+                json.decodeFromString(MoreContentDto.serializer(), cachedJson)
+            }.getOrNull()
+        }
     }
 }

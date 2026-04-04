@@ -45,4 +45,6 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.kotlinx.serialization.json)
 }

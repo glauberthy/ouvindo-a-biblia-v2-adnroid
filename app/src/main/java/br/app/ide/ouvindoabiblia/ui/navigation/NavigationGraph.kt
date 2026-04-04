@@ -16,6 +16,7 @@ import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
+import br.app.ide.ouvindoabiblia.ui.more.MoreSectionDetailsRoute
 import br.app.ide.ouvindoabiblia.ui.studies.StudiesScreen
 import br.app.ide.ouvindoabiblia.ui.studies.StudyDetailsScreen
 import br.app.ide.ouvindoabiblia.ui.themas.ThemeDetailsScreen
@@ -114,17 +115,16 @@ fun NavigationGraph(
         composable<Screen.More> {
             MoreScreen(
                 bottomContentPadding = bottomContentPadding,
-                onAboutClick = { /* navegar para Sobre */ },
-                onMissionClick = { /* navegar para Missão */ },
-                onAudioRightsClick = { /* navegar para Direitos dos áudios */ },
-                onCoverRightsClick = { /* navegar para Direitos das capas */ },
-                onCurationClick = { /* navegar para Curadoria */ },
-                onContactClick = { /* ação de contato */ },
-                onReportBugClick = { /* ação reportar problema */ },
-                onSuggestImprovementClick = { /* ação sugerir melhoria */ },
-                onShareClick = { /* compartilhar app */ },
-                onPrivacyClick = { /* navegar para privacidade */ },
-                onLicensesClick = { /* navegar para licenças */ }
+                onSectionClick = { sectionId ->
+                    navController.navigate(Screen.MoreSection(sectionId))
+                }
+            )
+        }
+
+        composable<Screen.MoreSection> {
+            MoreSectionDetailsRoute(
+                bottomContentPadding = bottomContentPadding,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -141,4 +141,6 @@ fun NavigationGraph(
 
     }
 }
+
+
 

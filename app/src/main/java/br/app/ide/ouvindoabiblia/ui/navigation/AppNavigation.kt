@@ -26,6 +26,11 @@ sealed interface Screen {
     @Serializable
     data object More : Screen
 
+    @Serializable
+    data class MoreSection(
+        val sectionId: String
+    ) : Screen
+
     // Telas de Detalhe
     @Serializable
     data class Player(
