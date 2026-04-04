@@ -655,7 +655,7 @@ class PlayerViewModel @Inject constructor(
 
         val studyMediaItems = lessons.map { lesson ->
             MediaItem.Builder()
-                .setMediaId("study_${lesson.remoteId}")
+                .setMediaId("study_${lesson.studyId}_${lesson.remoteId}")
                 .setUri(lesson.url)
                 .setMediaMetadata(
                     MediaMetadata.Builder()

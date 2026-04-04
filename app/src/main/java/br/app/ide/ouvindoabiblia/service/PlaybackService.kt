@@ -117,13 +117,19 @@ class PlaybackService : MediaLibraryService() {
 
     private fun saveCurrentState() {
         val currentMediaItem = player.currentMediaItem ?: return
+        val mediaId = currentMediaItem.mediaId
+        // Se o ID começar com "moment_", saímos da função sem salvar nada no banco.
+        if (mediaId.startsWith("moment_")) {
+            return
+        }
+        // Se for Bíblia (ID numérico) ou Estudo (study_X_Y), continuamos:
         val position = player.currentPosition
         val duration = player.duration
         val meta = currentMediaItem.mediaMetadata
 
         serviceScope.launch(Dispatchers.IO) {
             repository.savePlaybackState(
-                mediaId = currentMediaItem.mediaId, // Agora o Repo aceita a String "study_12" ou "15"
+                mediaId = mediaId,
                 positionMs = position,
                 duration = if (duration > 0) duration else 0L,
                 title = meta.title?.toString() ?: "",
@@ -179,16 +185,17 @@ class PlaybackService : MediaLibraryService() {
     private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? {
         val mediaId = state.mediaId
 
-        // 1. CENÁRIO: RESTORE DE ESTUDOS (mediaId começa com "study_")
+        // 1. RESTORE DE ESTUDOS
         if (mediaId.startsWith("study_")) {
-            val studyId = mediaId.removePrefix("study_").toIntOrNull() ?: return null
+            val parts = mediaId.split("_")
+            val studyId = parts.getOrNull(1)?.toIntOrNull() ?: return null
 
-            // Busca os dados do estudo e suas lições no banco
             val studyData = repository.getStudyWithLessons(studyId).first()
 
             val playlist = studyData.lessons.map { lesson ->
                 MediaItem.Builder()
-                    .setMediaId("study_${lesson.remoteId}")
+                    // AQUI ESTAVA O ERRO! O ID tem que ser reconstruído com o studyId também:
+                    .setMediaId("study_${studyId}_${lesson.remoteId}")
                     .setUri(lesson.url)
                     .setMediaMetadata(
                         MediaMetadata.Builder()
@@ -199,7 +206,9 @@ class PlaybackService : MediaLibraryService() {
                             .setArtworkUri(studyData.study.imageUrl.toUri())
                             .setIsBrowsable(false)
                             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                            .setExtras(Bundle().apply { putString("type", "study") })
+                            .setExtras(Bundle().apply {
+                                putString("type", "study")
+                            })
                             .build()
                     ).build()
             }
@@ -208,55 +217,17 @@ class PlaybackService : MediaLibraryService() {
             return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
         }
 
-        // 2. CENÁRIO: RESTORE DE BÍBLIA (mediaId é apenas um número)
-        val chapterIdInt =
-            mediaId.toIntOrNull() ?: return null // Converte String para Int com segurança
+        // 2. RESTORE DE BÍBLIA (O resto continua igual...)
+        val chapterIdInt = mediaId.toIntOrNull() ?: return null
         val bookNumericId = repository.getBookNumericIdFromChapter(chapterIdInt) ?: return null
-
         val chapters = repository.getChapters(bookNumericId).first()
         if (chapters.isEmpty()) return null
-
         val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
-
-        val startIndex = playlist.indexOfFirst {
-            it.mediaId == mediaId
-        }.coerceAtLeast(0)
+        val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
 
         return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
     }
 
-//    private fun createMediaItemsFromChapters(
-//        chapters: List<ChapterWithBookInfo>,
-//        bookId: String
-//    ): List<MediaItem> {
-//        return chapters.map { chapterInfo ->
-//            val metadata = MediaMetadata.Builder()
-//                // PARA A NOTIFICAÇÃO: [Livro] [Capítulo]
-//                .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
-//                // PARA O MINI/FULL PLAYER (Linha 1): [Livro]
-//                .setAlbumTitle(chapterInfo.bookName)
-//                // PARA O MINI/FULL PLAYER (Linha 2): [Capítulo]
-//                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
-//                //PARA A NOTIFICAÇÃO (Linha 2)
-//                .setArtist("Ouvindo a Bíblia")
-//
-//                .setArtworkUri(chapterInfo.coverUrl?.toUri())
-//                .setIsBrowsable(false)
-//                .setIsPlayable(true)
-//                .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
-//                .setExtras(Bundle().apply {
-//                    putString("book_id", bookId)
-//                    putBoolean("is_favorite", chapterInfo.chapter.isFavorite)
-//                })
-//                .build()
-//
-//            MediaItem.Builder()
-//                .setMediaId(chapterInfo.chapter.id.toString())
-//                .setUri(chapterInfo.chapter.audioUrl)
-//                .setMediaMetadata(metadata)
-//                .build()
-//        }
-//    }
 
     private fun createMediaItemsFromChapters(
         chapters: List<ChapterWithBookInfo>,
