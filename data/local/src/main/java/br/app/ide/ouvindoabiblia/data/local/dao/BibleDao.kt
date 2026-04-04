@@ -304,15 +304,37 @@ interface BibleDao {
     @Query("SELECT COUNT(*) FROM studies")
     suspend fun getStudiesCount(): Int
 
+    
     @Transaction
     suspend fun refreshStudiesData(
         studies: List<StudyEntity>,
         lessons: List<StudyLessonEntity>
     ) {
-        clearStudyLessons()
-        clearStudies()
-        insertStudies(studies)
-        insertStudyLessons(lessons)
+        studies.forEach { study ->
+            val rowId = insertStudyIgnore(study)
+            if (rowId == -1L) {
+                updateStudyMetadata(
+                    studyId = study.id,
+                    title = study.title,
+                    author = study.author,
+                    imageUrl = study.imageUrl,
+                    description = study.description
+                )
+            }
+        }
+
+        lessons.forEach { lesson ->
+            val rowId = insertStudyLessonIgnore(lesson)
+            if (rowId == -1L) {
+                updateStudyLessonMetadata(
+                    studyId = lesson.studyId,
+                    remoteId = lesson.remoteId,
+                    title = lesson.title,
+                    url = lesson.url,
+                    duration = lesson.duration
+                )
+            }
+        }
     }
 
     // 1. Alterna o status de favorito de uma lição de estudo
@@ -342,4 +364,45 @@ interface BibleDao {
         studyId: Int,
         lessonId: Int
     ): Flow<StudyLessonEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertStudyIgnore(study: StudyEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertStudyLessonIgnore(lesson: StudyLessonEntity): Long
+
+    @Query(
+        """
+    UPDATE studies
+    SET title = :title,
+        author = :author,
+        image_url = :imageUrl,
+        description = :description
+    WHERE id = :studyId
+"""
+    )
+    suspend fun updateStudyMetadata(
+        studyId: Int,
+        title: String,
+        author: String,
+        imageUrl: String,
+        description: String
+    )
+
+    @Query(
+        """
+    UPDATE study_lessons
+    SET title = :title,
+        url = :url,
+        duration = :duration
+    WHERE studyId = :studyId AND remoteId = :remoteId
+"""
+    )
+    suspend fun updateStudyLessonMetadata(
+        studyId: Int,
+        remoteId: Int,
+        title: String,
+        url: String,
+        duration: Long
+    )
 }
