@@ -95,7 +95,9 @@ fun SharedPlayerScreen(
     var showChapters by remember { mutableStateOf(false) }
     val isFavorite = uiState.currentIsFavorite
     val hasMedia = uiState.title.isNotEmpty()
-
+    val isBusy = uiState.isBuffering || uiState.isSwitchingSource
+    val controlsEnabled = !uiState.isSwitchingSource
+    val disabledAlpha = 0.30f
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val screenWidth = this.maxWidth
@@ -183,7 +185,8 @@ fun SharedPlayerScreen(
                     if (!uiState.isThemeMode) {
                         IconButton(
                             onClick = onToggleFavorite,
-                            modifier = Modifier.size(48.dp)
+                            enabled = controlsEnabled,
+                            modifier = Modifier.alpha(if (controlsEnabled) 1f else disabledAlpha)
                         ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
@@ -224,7 +227,13 @@ fun SharedPlayerScreen(
                         )
                     }
 
-                    IconButton(onClick = onRewind, modifier = Modifier.size(56.dp)) {
+                    IconButton(
+                        onClick = onRewind,
+                        enabled = controlsEnabled,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .alpha(if (controlsEnabled) 1f else disabledAlpha)
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Replay,
@@ -250,7 +259,7 @@ fun SharedPlayerScreen(
                         onClick = onPlayPause
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            if (uiState.isBuffering) {
+                            if (isBusy) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(40.dp),
                                     color = Color.Black,
@@ -267,7 +276,13 @@ fun SharedPlayerScreen(
                         }
                     }
 
-                    IconButton(onClick = onFastForward, modifier = Modifier.size(56.dp)) {
+                    IconButton(
+                        onClick = onFastForward,
+                        enabled = controlsEnabled,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .alpha(if (controlsEnabled) 1f else disabledAlpha)
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Replay,
@@ -439,7 +454,11 @@ fun SharedPlayerScreen(
                         }
                     }
 
-                    IconButton(onClick = onSkipToPreviousChapter) {
+                    IconButton(
+                        onClick = onSkipToPreviousChapter,
+                        enabled = !uiState.isSwitchingSource,
+                        modifier = Modifier.alpha(if (controlsEnabled) 1f else disabledAlpha)
+                    ) {
                         Icon(
                             Icons.Rounded.SkipPrevious,
                             "Prev",
@@ -448,7 +467,7 @@ fun SharedPlayerScreen(
                     }
 
                     IconButton(onClick = onPlayPause) {
-                        if (uiState.isBuffering) {
+                        if (isBusy) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = miniContentColor,
@@ -462,7 +481,11 @@ fun SharedPlayerScreen(
                             )
                         }
                     }
-                    IconButton(onClick = onSkipToNextChapter) {
+                    IconButton(
+                        onClick = onSkipToNextChapter,
+                        enabled = !uiState.isSwitchingSource,
+                        modifier = Modifier.alpha(if (controlsEnabled) 1f else disabledAlpha)
+                    ) {
                         Icon(
                             Icons.Rounded.SkipNext,
                             "Prox",

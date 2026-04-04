@@ -92,10 +92,11 @@ class PlayerViewModel @Inject constructor(
     private var isSourceSwitchInFlight = false
     private var sourceSwitchUnlockJob: Job? = null
 
-    private fun tryBeginSourceSwitch(timeoutMs: Long = 1500L): Boolean {
+    private fun tryBeginSourceSwitch(timeoutMs: Long = 4000L): Boolean {
         if (isSourceSwitchInFlight) return false
 
         isSourceSwitchInFlight = true
+        _uiState.update { it.copy(isSwitchingSource = true) }
         sourceSwitchUnlockJob?.cancel()
         sourceSwitchUnlockJob = viewModelScope.launch {
             delay(timeoutMs)
@@ -106,6 +107,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun finishSourceSwitch() {
         isSourceSwitchInFlight = false
+        _uiState.update { it.copy(isSwitchingSource = false) }
         sourceSwitchUnlockJob?.cancel()
         sourceSwitchUnlockJob = null
     }
@@ -229,7 +231,7 @@ class PlayerViewModel @Inject constructor(
     ) {
         val controller = mediaController ?: return
         if (!tryBeginSourceSwitch()) return
-        
+
         _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl) }
 
         val themeMediaItems = moments.map { item ->
@@ -507,12 +509,18 @@ class PlayerViewModel @Inject constructor(
     private fun setupPlayerListener() {
         mediaController?.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
-                if (
-                    events.contains(Player.EVENT_TIMELINE_CHANGED) ||
-                    events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
-                    events.contains(Player.EVENT_PLAYER_ERROR)
-                ) {
+                if (events.contains(Player.EVENT_PLAYER_ERROR)) {
                     finishSourceSwitch()
+                }
+
+                if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)) {
+                    when (player.playbackState) {
+                        Player.STATE_BUFFERING -> Unit
+
+                        Player.STATE_READY,
+                        Player.STATE_IDLE,
+                        Player.STATE_ENDED -> finishSourceSwitch()
+                    }
                 }
 
                 syncStateWithController()
