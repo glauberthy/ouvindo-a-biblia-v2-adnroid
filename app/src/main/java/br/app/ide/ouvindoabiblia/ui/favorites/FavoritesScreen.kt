@@ -35,13 +35,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,21 +53,31 @@ import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
+import kotlinx.coroutines.launch
 
 @Composable
 fun FavoritesScreen(
     onPlayChapter: (Int, String, String, Int) -> Unit,
-    onPlayStudy: (Int, String, String, Int) -> Unit, // Novo callback para estudos
+    onPlayStudy: (Int, String, String, Int) -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    // Estado local para controlar qual aba está ativa (0 = Bíblia, 1 = Estudos)
-    var selectedTab by remember { mutableIntStateOf(0) }
+
+    // 1. Criamos o estado do Pager para 2 páginas (Bíblia e Estudos)
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 2 })
+    // Corrotina necessária para animar o clique da aba
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     FavoritesScreenContent(
         uiState = uiState,
-        selectedTab = selectedTab,
-        onTabSelected = { selectedTab = it },
+        // O selectedTab agora vem do pagerState
+        selectedTab = pagerState.currentPage,
+        onTabSelected = { index ->
+            // Ao clicar, o pager desliza suavemente até a página
+            scope.launch { pagerState.animateScrollToPage(index) }
+        },
+        // Passamos o pagerState para o conteúdo
+        pagerState = pagerState,
         onPlayChapter = onPlayChapter,
         onPlayStudy = onPlayStudy,
         onRemoveChapter = { viewModel.removeFromFavorites(it) },
@@ -86,6 +95,7 @@ fun FavoritesScreenContent(
     uiState: FavoritesUiState,
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
+    pagerState: androidx.compose.foundation.pager.PagerState, // Recebe o pagerState
     onPlayChapter: (Int, String, String, Int) -> Unit,
     onPlayStudy: (Int, String, String, Int) -> Unit,
     onRemoveChapter: (Long) -> Unit,
@@ -93,67 +103,115 @@ fun FavoritesScreenContent(
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val resolvedBottomPadding = if (uiState.isLoading) 0.dp else navBarPadding + 80.dp
 
-    Column(
+    // O HorizontalPager agora é o dono do conteúdo horizontal
+    androidx.compose.foundation.pager.HorizontalPager(
+        state = pagerState,
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
-            .padding(top = statusBarPadding + 24.dp)
-    ) {
-        // 1. CABEÇALHO FIXO
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = "Meus Favoritos",
-                style = MaterialTheme.typography.headlineLarge,
-                color = DeepBlueDark,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = if (selectedTab == 0) "Sua coleção de capítulos bíblicos" else "Suas lições de estudos favoritas",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SlateBlue
-            )
+            .background(CreamBackground),
+        verticalAlignment = Alignment.Top
+    ) { pageIndex ->
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 2. SELETOR DE ABAS (Customizado para seu design)
-            FavoritesTabSelector(
-                selectedTab = selectedTab,
-                onTabSelected = onTabSelected
-            )
+        // --- ADIÇÃO DO LIMIAR DE SEGURANÇA (Threshold) ---
+        // 1. Calculamos a distância bruta como antes
+        val rawOffset = remember(pagerState) {
+            val distance =
+                (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
+            kotlin.math.abs(distance)
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 3. CONTEÚDO DINÂMICO (LazyColumn)
-        if (uiState.isLoading) {
-            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                CircularProgressIndicator(color = DeepBlueDark)
-            }
+        // 2. Aplicamos um limiar. Se a distância for muito pequena, forçamos o valor 0.
+        // Isso impede que float point inaccuracies deixem o alpha "grudado".
+        val pageOffsetForLerp = if (rawOffset < 0.05f) { // Pequeno limiar de segurança
+            0f
         } else {
+            rawOffset.coerceIn(0f, 1f)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    // --- EFEITO FADE (Opacidade) CORRIGIDO ---
+                    // Agora usamos pageOffsetForLerp, que garante ser 0f quando assentado.
+//                    alpha = androidx.compose.ui.util.lerp(
+//                        start = 1f,   // Opaque (100%) quando no centro
+//                        stop = 1f, // Faint (35%) quando sai da tela
+//                        fraction = pageOffsetForLerp
+//                    )
+
+//                    // Efeito Scale (permanece o mesmo, mas agora mais fluido)
+//                    val scale = androidx.compose.ui.util.lerp(
+//                        start = 1f,
+//                        stop = 0.90f,
+//                        fraction = pageOffsetForLerp
+//                    )
+//                    scaleX = scale
+//                    scaleY = scale
+                }
+        ) {
+            // O seu conteúdo LazyColumn antigo fica aqui dentro do Box com efeitos
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 16.dp,
-                    bottom = navBarPadding + 80.dp
+                    start = 16.dp, end = 16.dp,
+                    top = 24.dp, bottom = resolvedBottomPadding
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (selectedTab == 0) {
-                    // --- ABA BÍBLIA ---
-                    if (uiState.bibleFavorites.isEmpty()) {
-                        item { EmptyFavorites("capítulos bíblicos") }
-                    } else {
-                        renderBibleFavorites(uiState.bibleFavorites, onPlayChapter, onRemoveChapter)
+                // ... Todo o conteúdo interno da LazyColumn (Título, Tabs, Listas) permanece igual
+                item {
+                    Column(
+                        modifier = Modifier.padding(
+                            top = statusBarPadding + 8.dp,
+                            bottom = 8.dp
+                        )
+                    ) {
+                        Text(
+                            text = "Meus Favoritos",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = DeepBlueDark,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (pageIndex == 0) "Sua coleção de capítulos bíblicos" else "Suas lições de estudos favoritas",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SlateBlue
+                        )
+                    }
+                }
+                item {
+                    FavoritesTabSelector(
+                        selectedTab = pageIndex,
+                        onTabSelected = onTabSelected
+                    )
+                }
+                if (uiState.isLoading) {
+                    item {
+                        Box(
+                            Modifier
+                                .fillParentMaxHeight(0.6f)
+                                .fillMaxWidth(),
+                            Alignment.Center
+                        ) { CircularProgressIndicator(color = DeepBlueDark) }
                     }
                 } else {
-                    // --- ABA ESTUDOS ---
-                    if (uiState.studyFavorites.isEmpty()) {
-                        item { EmptyFavorites("lições de estudos") }
+                    if (pageIndex == 0) {
+                        if (uiState.bibleFavorites.isEmpty()) item { EmptyFavorites("capítulos bíblicos") }
+                        else renderBibleFavorites(
+                            uiState.bibleFavorites,
+                            onPlayChapter,
+                            onRemoveChapter
+                        )
                     } else {
-                        renderStudyFavorites(uiState.studyFavorites, onPlayStudy, onRemoveStudy)
+                        if (uiState.studyFavorites.isEmpty()) item { EmptyFavorites("lições de estudos") }
+                        else renderStudyFavorites(
+                            uiState.studyFavorites,
+                            onPlayStudy,
+                            onRemoveStudy
+                        )
                     }
                 }
             }
