@@ -50,6 +50,8 @@ class PlayerViewModel @Inject constructor(
     private var favoriteObservationJob: Job? = null
     private var studyFavoriteObservationJob: Job? = null
 
+    private var playBookJob: Job? = null
+
     // --- ESTADO DA UI ---
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -88,6 +90,102 @@ class PlayerViewModel @Inject constructor(
         return true
     }
 
+    private enum class PlaybackSourceType {
+        BIBLE,
+        STUDY,
+        THEME
+    }
+
+    private fun Player.currentSourceType(): PlaybackSourceType {
+        val mediaId = currentMediaItem?.mediaId.orEmpty()
+
+        return when {
+            mediaId.startsWith("study_") -> PlaybackSourceType.STUDY
+            mediaId.startsWith("moment_") -> PlaybackSourceType.THEME
+            else -> PlaybackSourceType.BIBLE
+        }
+    }
+
+    private fun forceHardSourceSwitchIfNeeded(
+        controller: MediaController,
+        targetType: PlaybackSourceType
+    ) {
+        if (controller.currentSourceType() != targetType) {
+            controller.stop()
+            controller.clearMediaItems()
+        }
+    }
+
+    private fun buildBibleMediaItems(
+        bookId: Int,
+        chapters: List<ChapterWithBookInfo>,
+        targetChapterIndex: Int,
+        startMs: Long,
+        endMs: Long
+    ): List<MediaItem> {
+        return chapters.mapIndexed { index, chapterInfo ->
+            val clippingConfigBuilder = MediaItem.ClippingConfiguration.Builder()
+
+            if (index == targetChapterIndex) {
+                if (startMs > 0) {
+                    clippingConfigBuilder.setStartPositionMs(startMs)
+                }
+                if (endMs > startMs) {
+                    clippingConfigBuilder.setEndPositionMs(endMs)
+                }
+            }
+
+            MediaItem.Builder()
+                .setMediaId(chapterInfo.chapter.id.toString())
+                .setUri(chapterInfo.chapter.audioUrl)
+                .setClippingConfiguration(
+                    if (index == targetChapterIndex) {
+                        clippingConfigBuilder.build()
+                    } else {
+                        MediaItem.ClippingConfiguration.UNSET
+                    }
+                )
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
+                        .setAlbumTitle(chapterInfo.bookName)
+                        .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
+                        .setArtist("Ouvindo a Bíblia")
+                        .setArtworkUri(chapterInfo.coverUrl?.toUri())
+                        .setIsBrowsable(false)
+                        .setIsPlayable(true)
+                        .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
+                        .setExtras(android.os.Bundle().apply {
+                            putString("book_id", bookId.toString())
+                            putBoolean("is_favorite", chapterInfo.chapter.isFavorite)
+                        })
+                        .build()
+                )
+                .build()
+        }
+    }
+
+    /**
+     * Guard contra replaceMediaItem() redundante.
+     *
+     * Importante:
+     * chamar updatePlayerMetadata() sem mudança real de "is_favorite"
+     * pode gerar transitions de playlist desnecessários no Media3
+     * e reintroduzir a oscilação entre mídia antiga e nova.
+     */
+    private fun syncFavoriteMetadataIfNeeded(
+        controller: MediaController,
+        isFavorite: Boolean
+    ) {
+        val currentFavorite = controller.currentMediaItem
+            ?.mediaMetadata
+            ?.extras
+            ?.getBoolean("is_favorite", false) == true
+
+        if (currentFavorite != isFavorite) {
+            updatePlayerMetadata(controller, isFavorite)
+        }
+    }
 
     private var isSourceSwitchInFlight = false
     private var sourceSwitchUnlockJob: Job? = null
@@ -283,62 +381,35 @@ class PlayerViewModel @Inject constructor(
         val controller = mediaController ?: return
         if (!tryBeginSourceSwitch()) return
 
-        // 2. Verifica se já está tocando O MESMO LIVRO no MESMO CAPÍTULO
-        val currentMediaId = controller.currentMediaItem?.mediaId ?: ""
-        val currentBookId = currentMediaId.split("|").firstOrNull()?.toIntOrNull()
+        forceHardSourceSwitchIfNeeded(
+            controller = controller,
+            targetType = PlaybackSourceType.BIBLE
+        )
 
-        if (currentBookId == bookId && controller.playbackState != Player.STATE_IDLE) {
-            // Se for o mesmo livro, mas mudou de capítulo (ou queremos forçar o seek do clipping)
-            if (controller.currentMediaItemIndex != initialIndex) {
-                controller.seekTo(
-                    initialIndex,
-                    0L
-                ) // O Clipping nativo trata o startMs como o tempo 0L da nova mídia
-            } else {
-                // Se já estiver na faixa certa, apenas volta pro começo do recorte
-                controller.seekTo(0L)
+        playBookJob?.cancel()
+        playBookJob = viewModelScope.launch {
+            val chapters = repository.getChapters(bookId).first()
+
+            if (chapters.isEmpty()) {
+
+                finishSourceSwitch()
+                return@launch
             }
-            if (!controller.isPlaying) controller.play()
-            return
-        }
 
-        _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
-
-        val mediaIdWithIndex = "$bookId|$initialIndex"
-
-//        Log.d("PLAYER_CLIPPING", "Iniciando faixa: $bookTitle, Capítulo Index: $initialIndex")
-//        Log.d("PLAYER_CLIPPING", "Tempo Original Recebido -> startMs: $startMs, endMs: $endMs")
-
-        // 3. SINALIZAÇÃO: A Mágica do Clipping Nativo do Media3
-        val clippingConfigBuilder = MediaItem.ClippingConfiguration.Builder()
-        if (startMs > 0) {
-            clippingConfigBuilder.setStartPositionMs(startMs)
-//            Log.d("PLAYER_CLIPPING", "Aplicado Start Position: $startMs ms")
-        }
-        if (endMs > startMs) { // Garante que o fim é maior que o início para não crashar
-            clippingConfigBuilder.setEndPositionMs(endMs)
-//            Log.d("PLAYER_CLIPPING", "Aplicado End Position: $endMs ms")
-        }
-
-        val bookFolderItem = MediaItem.Builder()
-            .setMediaId(mediaIdWithIndex)
-            .setClippingConfiguration(clippingConfigBuilder.build())
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(bookTitle)
-                    .setArtworkUri(coverUrl.toUri())
-                    .setIsBrowsable(true)
-                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
-                    .setExtras(android.os.Bundle().apply {
-                        putInt("start_index", initialIndex)
-                    })
-                    .build()
+            val playlist = buildBibleMediaItems(
+                bookId = bookId,
+                chapters = chapters,
+                targetChapterIndex = initialIndex,
+                startMs = startMs,
+                endMs = endMs
             )
-            .build()
 
-        controller.setMediaItems(listOf(bookFolderItem))
-        controller.prepare()
-        controller.play()
+            _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
+
+            controller.setMediaItems(playlist, initialIndex, 0L)
+            controller.prepare()
+            controller.play()
+        }
     }
 
     // --- CONTROLES DE MÍDIA ---
@@ -734,32 +805,6 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
-//    private fun observeCurrentFavorite(chapterId: String?) {
-//        favoriteObservationJob?.cancel() // Para de vigiar o capítulo anterior
-//        val idLong = chapterId?.toLongOrNull() ?: return
-//
-//        favoriteObservationJob = viewModelScope.launch {
-//            // O Room enviará um novo valor aqui SEMPRE que o favorito mudar no banco
-//            repository.getChapterByIdFlow(idLong).collect { chapterEntity ->
-//                _uiState.update { state ->
-//                    // Atualiza o coração na lista interna do Player
-//                    val updatedChapters = state.chapters.map { chapterWithInfo ->
-//                        if (chapterWithInfo.chapter.id == idLong) {
-//                            chapterWithInfo.copy(
-//                                chapter = chapterWithInfo.chapter.copy(
-//                                    isFavorite = chapterEntity?.isFavorite ?: false
-//                                )
-//                            )
-//                        } else {
-//                            chapterWithInfo
-//                        }
-//                    }
-//                    state.copy(chapters = updatedChapters)
-//                }
-//            }
-//        }
-//    }
-
     private fun observeCurrentFavorite(chapterId: String?) {
         favoriteObservationJob?.cancel()
 
@@ -801,7 +846,7 @@ class PlayerViewModel @Inject constructor(
                 val currentMediaId = controller?.currentMediaItem?.mediaId?.toLongOrNull()
 
                 if (controller != null && currentMediaId == idLong) {
-                    updatePlayerMetadata(controller, isFavorite)
+                    syncFavoriteMetadataIfNeeded(controller, isFavorite)
                 }
             }
         }
@@ -817,6 +862,11 @@ class PlayerViewModel @Inject constructor(
     ) {
         val controller = mediaController ?: return
 
+        forceHardSourceSwitchIfNeeded(
+            controller = controller,
+            targetType = PlaybackSourceType.STUDY
+        )
+
         // --- PROTEÇÃO CONTRA RESTART (Inspirada no seu playBook!) ---
         val currentExtras = controller.currentMediaItem?.mediaMetadata?.extras
         val isPlayingStudyType = currentExtras?.getString("type") == "study"
@@ -828,7 +878,8 @@ class PlayerViewModel @Inject constructor(
             if (controller.currentMediaItemIndex != startIndex) {
                 controller.seekToDefaultPosition(startIndex) // Pula pra aula certa
             }
-            if (!controller.isPlaying) controller.play() // Despausa
+            if (!controller.isPlaying) controller.play() // Despausa se estiver pausado
+
             return // Cancela o recarregamento da playlist!
         }
         // -------------------------------------------------------------
@@ -849,7 +900,7 @@ class PlayerViewModel @Inject constructor(
                         .setIsBrowsable(false)
                         .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                         .setExtras(android.os.Bundle().apply {
-                            putString("type", "study") // Usado na proteção ali em cima
+                            putString("type", "study")
                             putInt("lesson_id", lesson.remoteId)
                             putInt("study_id", lesson.studyId)
                             putBoolean("is_favorite", lesson.isFavorite)
@@ -858,7 +909,6 @@ class PlayerViewModel @Inject constructor(
                 )
                 .build()
         }
-
         controller.setMediaItems(studyMediaItems, startIndex, 0L)
         controller.prepare()
         controller.play()
@@ -867,18 +917,16 @@ class PlayerViewModel @Inject constructor(
     // Adicione no seu PlayerViewModel.kt
 
     fun playStudyById(studyId: Int, title: String, cover: String, startIndex: Int) {
-
         if (!tryBeginSourceSwitch()) return
 
         playStudyJob?.cancel()
         playStudyJob = viewModelScope.launch {
             val studyWithLessons = repository.getStudyWithLessons(studyId).first()
-
             playStudyPlaylist(
                 studyTitle = title,
                 studyCoverUrl = cover,
                 lessons = studyWithLessons.lessons,
-                startIndex = startIndex
+                startIndex = startIndex,
             )
         }
     }
@@ -902,7 +950,7 @@ class PlayerViewModel @Inject constructor(
                 val currentLessonId = currentExtras.getInt("lesson_id")
 
                 if (currentStudyId == studyId && currentLessonId == lessonId) {
-                    updatePlayerMetadata(controller, isFavorite)
+                    syncFavoriteMetadataIfNeeded(controller, isFavorite)
                 }
             }
         }

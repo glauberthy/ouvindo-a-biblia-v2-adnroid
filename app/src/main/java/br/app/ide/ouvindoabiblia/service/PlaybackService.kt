@@ -6,7 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.core.graphics.drawable.toBitmap
@@ -59,20 +59,42 @@ class PlaybackService : MediaLibraryService() {
 
     private var mediaSession: MediaLibrarySession? = null
 
+    @Volatile
+    private var lastExplicitPlaybackRequestAt = 0L
+
+    private fun markExplicitPlaybackRequest(item: MediaItem?) {
+        lastExplicitPlaybackRequestAt = SystemClock.elapsedRealtime()
+    }
+
+    /**
+     * Evita que o PlaybackService restaure estado salvo do banco
+     * logo após um comando explícito de reprodução vindo da UI/controller.
+     *
+     * Isso protege a troca de mídia contra "ressurreição" de sessão anterior
+     * durante uma janela curta de transição.
+     */
+    private fun shouldBlockDatabaseResumption(windowMs: Long = 5_000L): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        return (now - lastExplicitPlaybackRequestAt) < windowMs
+    }
+
+
     companion object {
         private const val ROOT_ID = "root_bible"
         private const val TAG = "PlaybackService"
     }
 
+
     @OptIn(UnstableApi::class)
     override fun onCreate() {
+
         super.onCreate()
+
 
         mediaSession = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
             .setSessionActivity(getSingleTopActivity())
             .setBitmapLoader(CoilBitmapLoader())
             .build()
-
 
         val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
             .setChannelId(DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID)
@@ -87,12 +109,14 @@ class PlaybackService : MediaLibraryService() {
     private fun setupAutoSaveListener() {
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+
                 saveCurrentState()
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 if (!playWhenReady) saveCurrentState()
             }
+
         })
     }
 
@@ -126,7 +150,6 @@ class PlaybackService : MediaLibraryService() {
 
     @OptIn(UnstableApi::class)
     private fun restoreLastSession() {
-        Log.d(TAG, "🔄 RestoreLastSession: INICIANDO...")
         serviceScope.launch(Dispatchers.IO) {
             // 1. Busca do banco. Se retornar algo, É VÁLIDO (garantido pelo SQL).
             val state = repository.getLatestPlaybackState().first()
@@ -138,7 +161,6 @@ class PlaybackService : MediaLibraryService() {
                 if (result != null) {
                     withContext(Dispatchers.Main) {
                         if (player.mediaItemCount == 0) {
-//                            Log.d(TAG, "✅ Restore: Sucesso! ${state.title}")
                             player.setMediaItems(
                                 result.mediaItems,
                                 result.startIndex,
@@ -217,8 +239,8 @@ class PlaybackService : MediaLibraryService() {
     private fun createMediaItemsFromChapters(
         chapters: List<ChapterWithBookInfo>,
         bookId: String,
-        targetChapterIndex: Int = -1, // NOVO: Qual capítulo recebe o recorte?
-        clippingConfig: MediaItem.ClippingConfiguration = MediaItem.ClippingConfiguration.UNSET // NOVO: A configuração em si
+        targetChapterIndex: Int = -1,
+        clippingConfig: MediaItem.ClippingConfiguration = MediaItem.ClippingConfiguration.UNSET,
     ): List<MediaItem> {
         return chapters.mapIndexed { index, chapterInfo ->
             val metadata = MediaMetadata.Builder()
@@ -287,6 +309,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+
         mediaSession?.run {
             player.release()
             release()
@@ -317,12 +340,25 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
             return CallbackToFutureAdapter.getFuture { completer ->
                 serviceScope.launch(Dispatchers.Main) {
-                    // Cenário 1: Player já vivo
+
+                    if (shouldBlockDatabaseResumption()) {
+                        completer.set(
+                            MediaSession.MediaItemsWithStartPosition(
+                                emptyList(),
+                                0,
+                                0L
+                            )
+                        )
+                        return@launch
+                    }
+
                     if (player.mediaItemCount > 0) {
                         val items = mutableListOf<MediaItem>()
                         for (i in 0 until player.mediaItemCount) {
                             items.add(player.getMediaItemAt(i))
                         }
+
+
                         completer.set(
                             MediaSession.MediaItemsWithStartPosition(
                                 items,
@@ -333,12 +369,11 @@ class PlaybackService : MediaLibraryService() {
                         return@launch
                     }
 
-                    // Cenário 2: Player morto, reviver do banco
                     withContext(Dispatchers.IO) {
                         try {
                             val state = repository.getLatestPlaybackState().first()
 
-                            // Usa a mesma função mágica do restore!
+
                             val result = if (state != null) buildPlaylistFromState(state) else null
 
                             if (result != null) {
@@ -382,6 +417,9 @@ class PlaybackService : MediaLibraryService() {
                 startIndex,
                 startPositionMs
             )
+
+            markExplicitPlaybackRequest(item)
+
             val isBookFolder = item.mediaMetadata.isBrowsable == true
 
             if (isBookFolder) {
@@ -394,9 +432,8 @@ class PlaybackService : MediaLibraryService() {
                     startPositionMs
                 )
                 val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
-
-                // SINALIZAÇÃO: Captura a configuração de recorte que enviamos do ViewModel
                 val incomingClippingConfig = item.clippingConfiguration
+
 
                 return CallbackToFutureAdapter.getFuture { completer ->
                     serviceScope.launch(Dispatchers.IO) {
@@ -404,32 +441,36 @@ class PlaybackService : MediaLibraryService() {
                             val chapters = repository.getChapters(bookIdInt).first()
 
                             if (chapters.isEmpty()) {
-                                completer.setException(IllegalStateException("Livro vazio no banco: $bookIdInt"))
+
+                                completer.setException(
+                                    IllegalStateException("Livro vazio no banco: $bookIdInt")
+                                )
                                 return@launch
                             }
 
-                            // SINALIZAÇÃO: Passa o índice e o recorte para a fábrica de itens
                             val playlist = createMediaItemsFromChapters(
                                 chapters = chapters,
                                 bookId = bookIdInt.toString(),
                                 targetChapterIndex = requestedIndex,
-                                clippingConfig = incomingClippingConfig
+                                clippingConfig = incomingClippingConfig,
                             )
 
                             completer.set(
                                 MediaSession.MediaItemsWithStartPosition(
                                     playlist,
                                     requestedIndex,
-                                    0L // Deixe 0L aqui, o ClippingConfig internamente lida com o start!
+                                    0L
                                 )
                             )
                         } catch (e: Exception) {
+
                             completer.setException(e)
                         }
                     }
                     "Play Book $bookIdInt"
                 }
             }
+
             return super.onSetMediaItems(
                 mediaSession,
                 controller,
