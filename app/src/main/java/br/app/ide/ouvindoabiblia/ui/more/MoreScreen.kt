@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -136,20 +137,47 @@ private fun MoreSectionSheetContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = DeepBlueDark
-            )
-        }
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 4.dp, bottom = 12.dp)
+                            .size(width = 42.dp, height = 4.dp)
+                            .background(
+                                color = RosyBeige.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(50)
+                            )
+                    )
+                }
 
-        item {
-            Text(
-                text = item.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = SlateBlue
-            )
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepBlueDark
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = item.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = SlateBlue,
+                    lineHeight = 24.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                HorizontalDivider(
+                    color = RosyBeige.copy(alpha = 0.45f),
+                    thickness = 1.dp
+                )
+            }
         }
 
         when (section?.type) {
@@ -170,7 +198,8 @@ private fun MoreSectionSheetContent(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = SlateBlue
+                            color = SlateBlue,
+                            lineHeight = 22.sp
                         )
                     }
                 }
