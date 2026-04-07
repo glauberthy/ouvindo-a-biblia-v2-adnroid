@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -80,9 +81,7 @@ fun MoreScreen(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
     var selectedMenuItem by remember { mutableStateOf<MoreMenuItemUi?>(null) }
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     when (uiState) {
         MoreUiState.Loading -> LoadingScreen()
@@ -126,50 +125,60 @@ private fun MoreSectionSheetContent(
     item: MoreMenuItemUi,
     section: MoreSectionDto?
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            end = 20.dp,
+            top = 8.dp,
+            bottom = 24.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = DeepBlueDark
-        )
+        item {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = DeepBlueDark
+            )
+        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = item.description,
-            style = MaterialTheme.typography.bodyLarge,
-            color = SlateBlue
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
+        item {
+            Text(
+                text = item.description,
+                style = MaterialTheme.typography.bodyLarge,
+                color = SlateBlue
+            )
+        }
 
         when (section?.type) {
             MoreSectionTypeDto.LONG_TEXT -> {
-                Text(
-                    text = section.content.text ?: "Sem conteúdo disponível.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = DeepBlueDark,
-                    lineHeight = 24.sp
-                )
+                item {
+                    Text(
+                        text = section.content.text ?: "Sem conteúdo disponível.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = DeepBlueDark,
+                        lineHeight = 24.sp
+                    )
+                }
             }
 
             MoreSectionTypeDto.RIGHTS_LIST -> {
                 section.content.description?.takeIf { it.isNotBlank() }?.let { description ->
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SlateBlue
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
+                    item {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SlateBlue
+                        )
+                    }
                 }
 
-                section.content.sources.forEachIndexed { index, source ->
+                itemsIndexed(
+                    items = section.content.sources,
+                    key = { index, source -> "${source.id}_$index" }
+                ) { _, source ->
                     MoreSheetInfoBlock(
                         title = source.name,
                         subtitle = source.role,
@@ -181,15 +190,14 @@ private fun MoreSectionSheetContent(
                             source.sourceUrl?.let { "Fonte: $it" }
                         )
                     )
-
-                    if (index != section.content.sources.lastIndex) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
                 }
             }
 
             MoreSectionTypeDto.ASSET_LIST -> {
-                section.content.assets.forEachIndexed { index, asset ->
+                itemsIndexed(
+                    items = section.content.assets,
+                    key = { index, asset -> "${asset.id}_$index" }
+                ) { _, asset ->
                     MoreSheetInfoBlock(
                         title = asset.title,
                         subtitle = asset.author,
@@ -199,14 +207,14 @@ private fun MoreSectionSheetContent(
                             asset.notes
                         )
                     )
-
-                    if (index != section.content.assets.lastIndex) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
                 }
             }
+
             MoreSectionTypeDto.PEOPLE_LIST -> {
-                section.content.people.forEachIndexed { index, person ->
+                itemsIndexed(
+                    items = section.content.people,
+                    key = { index, person -> "${person.id}_$index" }
+                ) { _, person ->
                     MoreSheetInfoBlock(
                         title = person.name,
                         subtitle = person.role,
@@ -216,15 +224,14 @@ private fun MoreSectionSheetContent(
                             person.website?.let { "Site: $it" }
                         )
                     )
-
-                    if (index != section.content.people.lastIndex) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
                 }
             }
 
             MoreSectionTypeDto.LIBRARY_LIST -> {
-                section.content.libraries.forEachIndexed { index, library ->
+                itemsIndexed(
+                    items = section.content.libraries,
+                    key = { index, library -> "${library.id}_$index" }
+                ) { _, library ->
                     MoreSheetInfoBlock(
                         title = library.name,
                         subtitle = "Versão ${library.version}",
@@ -233,30 +240,19 @@ private fun MoreSectionSheetContent(
                             "Site: ${library.website}"
                         )
                     )
-
-                    if (index != section.content.libraries.lastIndex) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
                 }
             }
-            null -> {
-                Text(
-                    text = "Conteúdo não disponível para esta seção.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderGray
-                )
-            }
 
-            else -> {
-                Text(
-                    text = "Conteúdo desta seção será renderizado no próximo passo.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderGray
-                )
+            null -> {
+                item {
+                    Text(
+                        text = "Conteúdo não disponível para esta seção.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LavenderGray
+                    )
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -591,7 +587,7 @@ private fun previewMoreContent(): MoreContentDto {
                 )
             ),
             MoreSectionDto(
-                id = "study_rights",
+                id = "study_audio_rights",
                 title = "Direitos dos estudos",
                 type = MoreSectionTypeDto.RIGHTS_LIST,
                 content = MoreSectionContentDto(
@@ -687,6 +683,20 @@ private fun previewMoreContent(): MoreContentDto {
                             version = "1.9.2",
                             license = "Apache-2.0",
                             website = "https://developer.android.com/media"
+                        ),
+                        MoreLibraryDto(
+                            id = "lib-hilt",
+                            name = "Hilt",
+                            version = "2.51.1",
+                            license = "Apache-2.0",
+                            website = "https://dagger.dev/hilt/"
+                        ),
+                        MoreLibraryDto(
+                            id = "lib-hilt",
+                            name = "Hilt Duplicate Demo",
+                            version = "2.51.1",
+                            license = "Apache-2.0",
+                            website = "https://dagger.dev/hilt/"
                         )
                     )
                 )
