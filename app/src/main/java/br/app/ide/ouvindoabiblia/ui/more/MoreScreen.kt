@@ -25,23 +25,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle.Companion.Italic
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,6 +70,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
     bottomContentPadding: Dp = 0.dp,
@@ -77,6 +78,11 @@ fun MoreScreen(
     viewModel: MoreViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+
+    var selectedMenuItem by remember { mutableStateOf<MoreMenuItemUi?>(null) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
 
     when (uiState) {
         MoreUiState.Loading -> LoadingScreen()
@@ -89,7 +95,203 @@ fun MoreScreen(
             MoreContent(
                 content = uiState.content,
                 bottomContentPadding = bottomContentPadding,
-                onSectionClick = onSectionClick
+                onSectionClick = { itemId ->
+                    val item = moreMenuItems.firstOrNull { it.id == itemId }
+                    if (item != null) {
+                        selectedMenuItem = item
+                    }
+                }
+            )
+
+            selectedMenuItem?.let { item ->
+                val selectedSection = uiState.content.sections.firstOrNull { it.id == item.id }
+
+                ModalBottomSheet(
+                    onDismissRequest = { selectedMenuItem = null },
+                    sheetState = sheetState,
+                    containerColor = CreamBackground
+                ) {
+                    MoreSectionSheetContent(
+                        item = item,
+                        section = selectedSection
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoreSectionSheetContent(
+    item: MoreMenuItemUi,
+    section: MoreSectionDto?
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = DeepBlueDark
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = item.description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = SlateBlue
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        when (section?.type) {
+            MoreSectionTypeDto.LONG_TEXT -> {
+                Text(
+                    text = section.content.text ?: "Sem conteúdo disponível.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = DeepBlueDark,
+                    lineHeight = 24.sp
+                )
+            }
+
+            MoreSectionTypeDto.RIGHTS_LIST -> {
+                section.content.description?.takeIf { it.isNotBlank() }?.let { description ->
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SlateBlue
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                section.content.sources.forEachIndexed { index, source ->
+                    MoreSheetInfoBlock(
+                        title = source.name,
+                        subtitle = source.role,
+                        lines = listOf(
+                            source.description,
+                            "Licença: ${source.license}",
+                            source.contact?.email?.let { "E-mail: $it" },
+                            source.contact?.website?.let { "Site: $it" },
+                            source.sourceUrl?.let { "Fonte: $it" }
+                        )
+                    )
+
+                    if (index != section.content.sources.lastIndex) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+
+            MoreSectionTypeDto.ASSET_LIST -> {
+                section.content.assets.forEachIndexed { index, asset ->
+                    MoreSheetInfoBlock(
+                        title = asset.title,
+                        subtitle = asset.author,
+                        lines = listOf(
+                            "Fonte: ${asset.source}",
+                            "Licença: ${asset.license}",
+                            asset.notes
+                        )
+                    )
+
+                    if (index != section.content.assets.lastIndex) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+            MoreSectionTypeDto.PEOPLE_LIST -> {
+                section.content.people.forEachIndexed { index, person ->
+                    MoreSheetInfoBlock(
+                        title = person.name,
+                        subtitle = person.role,
+                        lines = listOf(
+                            person.description,
+                            person.email?.let { "E-mail: $it" },
+                            person.website?.let { "Site: $it" }
+                        )
+                    )
+
+                    if (index != section.content.people.lastIndex) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+
+            MoreSectionTypeDto.LIBRARY_LIST -> {
+                section.content.libraries.forEachIndexed { index, library ->
+                    MoreSheetInfoBlock(
+                        title = library.name,
+                        subtitle = "Versão ${library.version}",
+                        lines = listOf(
+                            "Licença: ${library.license}",
+                            "Site: ${library.website}"
+                        )
+                    )
+
+                    if (index != section.content.libraries.lastIndex) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+            null -> {
+                Text(
+                    text = "Conteúdo não disponível para esta seção.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LavenderGray
+                )
+            }
+
+            else -> {
+                Text(
+                    text = "Conteúdo desta seção será renderizado no próximo passo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LavenderGray
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun MoreSheetInfoBlock(
+    title: String,
+    subtitle: String? = null,
+    lines: List<String?>
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = DeepBlueDark
+        )
+
+        subtitle?.takeIf { it.isNotBlank() }?.let {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = SlateBlue,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        lines.filterNotNull().filter { it.isNotBlank() }.forEach { line ->
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LavenderGray
             )
         }
     }
@@ -113,9 +315,6 @@ private fun MoreContent(
         bottomContentPadding
     }
 
-
-    val visibleSections = content.sections.filterNot { it.id == "about" }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -132,25 +331,24 @@ private fun MoreContent(
                     .fillMaxWidth()
                     .padding(top = statusBarPadding + 8.dp),
                 appName = "Ouvindo a Bíblia",
-                verseText = "\"Lâmpada para os meus pés é a tua palavra e, luz para o meu caminho.\"",
-                verseReference = "Salmos 119:105"
+                verseText = "\"Bem-aventurado aquele que lê, e os que ouvem as palavras da profecia e guardam as coisas nela escritas...\"",
+                verseReference = "Apocalipse 1:3"
             )
         }
 
         items(
-            items = visibleSections,
+            items = moreMenuItems,
             key = { it.id }
-        ) { section ->
+        ) { item ->
             Box(
                 modifier = Modifier.padding(horizontal = horizontalScreenPadding)
             ) {
                 MoreSectionCard(
-                    section = section,
-                    onClick = { onSectionClick(section.id) }
+                    item = item,
+                    onClick = { onSectionClick(item.id) }
                 )
             }
         }
-
 
         item {
             MoreFooterVersionSection(
@@ -159,10 +357,8 @@ private fun MoreContent(
                 bottomInset = resolvedBottomPadding
             )
         }
-
     }
 }
-
 
 @Composable
 private fun MoreHeroSection(
@@ -178,7 +374,6 @@ private fun MoreHeroSection(
             .padding(
                 start = 16.dp,
                 end = 16.dp,
-
                 bottom = 20.dp
             )
     ) {
@@ -187,7 +382,7 @@ private fun MoreHeroSection(
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = DeepBlueDark,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -211,57 +406,6 @@ private fun MoreHeroSection(
         )
     }
 }
-
-@Composable
-private fun MoreVersionCard(
-    version: String,
-    lastUpdated: String
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFCFA)
-        ),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.55f)
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp,
-            pressedElevation = 2.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Versão do app",
-                style = MaterialTheme.typography.titleSmall,
-                color = SlateBlue,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = version,
-                style = MaterialTheme.typography.titleLarge,
-                color = DeepBlueDark,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Conteúdo atualizado em $lastUpdated",
-                style = MaterialTheme.typography.bodySmall,
-                color = LavenderGray
-            )
-        }
-    }
-}
-
 
 @Composable
 private fun MoreFooterVersionSection(
@@ -311,7 +455,7 @@ private fun MoreFooterVersionSection(
 
 @Composable
 private fun MoreSectionCard(
-    section: MoreSectionDto,
+    item: MoreMenuItemUi,
     onClick: () -> Unit
 ) {
     Card(
@@ -335,21 +479,23 @@ private fun MoreSectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             Surface(
-                modifier = Modifier.size(42.dp),
+                modifier = Modifier
+                    .size(40.dp)
+                    .padding(top = 2.dp),
                 shape = CircleShape,
-                color = Accent,
+                color = Accent.copy(alpha = 0.18f),
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = section.icon(),
+                        imageVector = item.icon,
                         contentDescription = null,
                         tint = DeepBlueDark,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -360,16 +506,16 @@ private fun MoreSectionCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = section.title,
+                    text = item.title,
                     style = MaterialTheme.typography.titleSmall,
                     color = DeepBlueDark,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = section.previewText(),
+                    text = item.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = LavenderGray
                 )
@@ -381,63 +527,14 @@ private fun MoreSectionCard(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Abrir",
                 tint = RosyBeige.copy(alpha = 0.9f),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .size(20.dp)
+                    .padding(top = 2.dp)
             )
         }
     }
 }
-
-private fun MoreSectionDto.icon(): ImageVector {
-    return when (type) {
-        MoreSectionTypeDto.LONG_TEXT -> when (id) {
-            "privacy" -> Icons.Filled.PrivacyTip
-            "mission" -> Icons.AutoMirrored.Filled.MenuBook
-            else -> Icons.Filled.Info
-        }
-
-        MoreSectionTypeDto.RIGHTS_LIST -> Icons.Filled.GraphicEq
-        MoreSectionTypeDto.ASSET_LIST -> Icons.Filled.Image
-        MoreSectionTypeDto.PEOPLE_LIST -> Icons.AutoMirrored.Filled.MenuBook
-        MoreSectionTypeDto.LIBRARY_LIST -> Icons.Filled.Code
-    }
-}
-
-private fun MoreSectionDto.previewText(): String {
-    return when (type) {
-        MoreSectionTypeDto.LONG_TEXT -> {
-            content.text
-                ?.replace("\n", " ")
-                ?.trim()
-                ?.take(110)
-                ?.let { if (it.length >= 110) "$it..." else it }
-                ?: "Sem conteúdo disponível."
-        }
-
-        MoreSectionTypeDto.RIGHTS_LIST -> {
-            content.description
-                ?: "${content.sources.size} item(ns)"
-        }
-
-        MoreSectionTypeDto.ASSET_LIST -> {
-            val count = content.assets.size
-            if (count == 1) "1 capa ou imagem cadastrada"
-            else "$count capas ou imagens cadastradas"
-        }
-
-        MoreSectionTypeDto.PEOPLE_LIST -> {
-            val count = content.people.size
-            if (count == 1) "1 colaborador cadastrado"
-            else "$count colaboradores cadastrados"
-        }
-
-        MoreSectionTypeDto.LIBRARY_LIST -> {
-            val count = content.libraries.size
-            if (count == 1) "1 biblioteca listada"
-            else "$count bibliotecas listadas"
-        }
-    }
-}
-
 
 private fun previewMoreContent(): MoreContentDto {
     return MoreContentDto(
@@ -470,14 +567,14 @@ private fun previewMoreContent(): MoreContentDto {
                 )
             ),
             MoreSectionDto(
-                id = "audio_rights",
-                title = "Direitos dos áudios",
+                id = "bible_audio_rights",
+                title = "Direitos dos áudios bíblicos",
                 type = MoreSectionTypeDto.RIGHTS_LIST,
                 content = MoreSectionContentDto(
-                    description = "Narrações e conteúdos em áudio utilizados no aplicativo.",
+                    description = "Narrações bíblicas utilizadas no aplicativo.",
                     sources = listOf(
                         MoreRightsSourceDto(
-                            id = "audio_1",
+                            id = "audio_bible_1",
                             name = "João da Silva",
                             role = "Narrador",
                             contentType = MoreRightsContentTypeDto.BIBLE_AUDIO,
@@ -487,6 +584,30 @@ private fun previewMoreContent(): MoreContentDto {
                             contact = MoreContactDto(
                                 email = "contato@example.com",
                                 website = "https://example.com"
+                            ),
+                            imageUrl = null
+                        )
+                    )
+                )
+            ),
+            MoreSectionDto(
+                id = "study_rights",
+                title = "Direitos dos estudos",
+                type = MoreSectionTypeDto.RIGHTS_LIST,
+                content = MoreSectionContentDto(
+                    description = "Estudos e conteúdos em áudio utilizados no aplicativo.",
+                    sources = listOf(
+                        MoreRightsSourceDto(
+                            id = "audio_study_1",
+                            name = "Maria Oliveira",
+                            role = "Autora",
+                            contentType = MoreRightsContentTypeDto.STUDY_AUDIO,
+                            description = "Conteúdo de estudo adaptado para áudio.",
+                            license = "Uso autorizado",
+                            sourceUrl = "https://example.com/estudos",
+                            contact = MoreContactDto(
+                                email = "maria@example.com",
+                                website = "https://example.com/estudos"
                             ),
                             imageUrl = null
                         )
@@ -608,7 +729,7 @@ private fun PreviewMoreSectionCard() {
                 .padding(20.dp)
         ) {
             MoreSectionCard(
-                section = previewMoreContent().sections.first(),
+                item = moreMenuItems.first(),
                 onClick = {}
             )
         }
@@ -616,29 +737,23 @@ private fun PreviewMoreSectionCard() {
 }
 
 @Preview(
-    name = "More version card",
-    showBackground = true,
-    backgroundColor = 0xFFF2E9E4,
-    widthDp = 360
-)
-@Preview(
-    name = "More version card",
+    name = "More footer version",
     showBackground = true,
     backgroundColor = 0xFFF2E9E4,
     widthDp = 360
 )
 @Composable
-private fun PreviewMoreVersionCard() {
+private fun PreviewMoreFooterVersionSection() {
     OuvindoABibliaTheme {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(CreamBackground)
-                .padding(20.dp)
         ) {
-            MoreVersionCard(
+            MoreFooterVersionSection(
                 version = "1.0.0",
-                lastUpdated = "06/04/2026"
+                lastUpdated = "06/04/2026",
+                bottomInset = 0.dp
             )
         }
     }

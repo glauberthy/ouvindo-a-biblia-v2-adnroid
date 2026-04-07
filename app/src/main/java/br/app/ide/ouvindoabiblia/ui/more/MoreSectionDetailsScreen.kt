@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Image
@@ -570,13 +571,13 @@ private fun MoreSectionDto.icon(): ImageVector {
     return when (type) {
         MoreSectionTypeDto.LONG_TEXT -> when (id) {
             "privacy" -> Icons.Filled.PrivacyTip
-            "mission" -> Icons.Filled.MenuBook
+            "mission" -> Icons.AutoMirrored.Filled.MenuBook
             else -> Icons.Filled.Info
         }
 
         MoreSectionTypeDto.RIGHTS_LIST -> Icons.Filled.GraphicEq
         MoreSectionTypeDto.ASSET_LIST -> Icons.Filled.Image
-        MoreSectionTypeDto.PEOPLE_LIST -> Icons.Filled.MenuBook
+        MoreSectionTypeDto.PEOPLE_LIST -> Icons.AutoMirrored.Filled.MenuBook
         MoreSectionTypeDto.LIBRARY_LIST -> Icons.Filled.Code
     }
 }
