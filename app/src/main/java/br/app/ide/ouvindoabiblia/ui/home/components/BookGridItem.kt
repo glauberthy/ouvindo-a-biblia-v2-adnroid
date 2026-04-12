@@ -2,6 +2,7 @@ package br.app.ide.ouvindoabiblia.ui.home.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,34 +27,34 @@ fun BookGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Estrutura em Coluna para separar Imagem de Texto
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .clickable(onClick = onClick)
+            .padding(bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-
-        // SINALIZAÇÃO: Trocamos o bloco gigante do ImageRequest + Box + AsyncImage por isso!
-        // O AppAsyncImage já resolve o layout 2:3, o fundo, o loading e o erro nativamente.
         AppAsyncImage(
             imageUrl = book.imageUrl,
             contentDescription = "Capa do livro ${book.title}",
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         )
 
-        // TEXTO DO NOME DO LIVRO (Mantido Intacto)
         Text(
             text = book.title,
-            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 2.dp),
             style = MaterialTheme.typography.labelLarge,
             color = DeepBlueDark,
             textAlign = TextAlign.Center,
-            maxLines = 1,
+            minLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }

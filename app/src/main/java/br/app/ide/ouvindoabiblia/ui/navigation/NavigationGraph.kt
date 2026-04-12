@@ -42,10 +42,9 @@ fun NavigationGraph(
             HomeScreen(
                 windowSizeClass = windowSizeClass,
                 onNavigateToBook = { numericId, name, cover ->
-                    // Ao clicar num livro, não navegamos mais para uma nova tela.
-                    // Nós chamamos essa função para abrir o Player (Bottom Sheet) por cima.
                     onPlayBook(numericId, name, cover, 0, 0L, 0L)
-                }
+                },
+                bottomContentPadding = bottomContentPadding
             )
         }
 
