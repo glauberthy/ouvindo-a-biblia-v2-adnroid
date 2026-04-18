@@ -56,7 +56,6 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
-import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
@@ -218,7 +217,6 @@ private fun ThemeImage(theme: ThemeEntity) {
     Surface(
         modifier = Modifier.size(75.dp),
         shape = RoundedCornerShape(16.dp),
-        color = Accent,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
@@ -230,7 +228,7 @@ private fun ThemeImage(theme: ThemeEntity) {
                 .height(75.dp)
                 .fillMaxSize()
                 .padding(3.dp)
-                .clip(shape = RoundedCornerShape(16.dp)),
+                .clip(shape = RoundedCornerShape(12.dp)),
             contentScale = ContentScale.Crop
         )
     }
@@ -261,7 +259,7 @@ private fun ThemeTextContent(
             text = theme.description,
             style = MaterialTheme.typography.bodyMedium,
             color = LavenderGray,
-            maxLines = 2,
+            maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             lineHeight = 20.sp
         )

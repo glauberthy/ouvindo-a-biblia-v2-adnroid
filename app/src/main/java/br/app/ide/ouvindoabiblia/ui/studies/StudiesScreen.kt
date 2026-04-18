@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -209,7 +208,7 @@ private fun StudyListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -218,12 +217,10 @@ private fun StudyListItem(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
-//                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
                         modifier = Modifier.size(75.dp),
-                        shape = CircleShape,
-                        color = Accent.copy(alpha = 1f),
+                        shape = RoundedCornerShape(16.dp),
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp
                     ) {
@@ -231,9 +228,11 @@ private fun StudyListItem(
                             imageUrl = study.study.imageUrl,
                             contentDescription = "Autor ${study.study.author}",
                             modifier = Modifier
+                                .width(75.dp)
+                                .height(75.dp)
                                 .fillMaxSize()
                                 .padding(3.dp)
-                                .clip(CircleShape),
+                                .clip(shape = RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -267,9 +266,9 @@ private fun StudyListItem(
                             text = study.study.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = LavenderGray,
-                            maxLines = 2,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
-                            lineHeight = 18.sp
+                            lineHeight = 20.sp
                         )
                     }
                 }
