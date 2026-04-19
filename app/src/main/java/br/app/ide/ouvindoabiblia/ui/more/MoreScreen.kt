@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle.Companion.Italic
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +63,8 @@ import br.app.ide.ouvindoabiblia.data.remote.dto.MoreRightsSourceDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionContentDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionTypeDto
+import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
+import br.app.ide.ouvindoabiblia.ui.components.RichTextContent
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
@@ -71,6 +74,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
 import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,20 +144,20 @@ private fun MoreSectionSheetContent(
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 4.dp, bottom = 12.dp)
-                            .size(width = 42.dp, height = 4.dp)
-                            .background(
-                                color = RosyBeige.copy(alpha = 0.8f),
-                                shape = RoundedCornerShape(50)
-                            )
-                    )
-                }
+//                Box(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Box(
+//                        modifier = Modifier
+//                            .padding(top = 4.dp, bottom = 12.dp)
+//                            .size(width = 42.dp, height = 4.dp)
+//                            .background(
+//                                color = RosyBeige.copy(alpha = 0.8f),
+//                                shape = RoundedCornerShape(50)
+//                            )
+//                    )
+//                }
 
                 Text(
                     text = item.title,
@@ -182,14 +186,21 @@ private fun MoreSectionSheetContent(
 
         when (section?.type) {
             MoreSectionTypeDto.LONG_TEXT -> {
+
                 item {
-                    Text(
+                    RichTextContent(
                         text = section.content.text ?: "Sem conteúdo disponível.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = DeepBlueDark,
-                        lineHeight = 24.sp
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            lineHeight = 28.sp
+                        ),
+                        textColor = DeepBlueDark,
+                        paragraphSpacing = 16.dp,
+                        quoteBarColor = Accent.copy(alpha = 0.45f),
+                        quoteTextColor = DeepBlueDark,
+                        quoteBackgroundColor = Accent.copy(alpha = 0.16f)
                     )
                 }
+
             }
 
             MoreSectionTypeDto.RIGHTS_LIST -> {
@@ -217,7 +228,8 @@ private fun MoreSectionSheetContent(
                             source.contact?.email?.let { "E-mail: $it" },
                             source.contact?.website?.let { "Site: $it" },
                             source.sourceUrl?.let { "Fonte: $it" }
-                        )
+                        ),
+                        imageUrl = source.imageUrl
                     )
                 }
             }
@@ -234,7 +246,8 @@ private fun MoreSectionSheetContent(
                             "Fonte: ${asset.source}",
                             "Licença: ${asset.license}",
                             asset.notes
-                        )
+                        ),
+                        imageUrl = asset.imageUrl
                     )
                 }
             }
@@ -251,7 +264,8 @@ private fun MoreSectionSheetContent(
                             person.description,
                             person.email?.let { "E-mail: $it" },
                             person.website?.let { "Site: $it" }
-                        )
+                        ),
+                        imageUrl = person.imageUrl
                     )
                 }
             }
@@ -289,35 +303,60 @@ private fun MoreSectionSheetContent(
 private fun MoreSheetInfoBlock(
     title: String,
     subtitle: String? = null,
-    lines: List<String?>
+    lines: List<String?>,
+    imageUrl: String? = null
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = DeepBlueDark
-        )
+        if (!imageUrl.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        color = RosyBeige.copy(alpha = 0.18f)
+                    )
+            ) {
+                AppAsyncImage(
+                    imageUrl = imageUrl,
+                    contentDescription = title,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-        subtitle?.takeIf { it.isNotBlank() }?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SlateBlue,
-                fontWeight = FontWeight.Medium
-            )
+            Spacer(modifier = Modifier.width(14.dp))
         }
 
-        lines.filterNotNull().filter { it.isNotBlank() }.forEach { line ->
-            Spacer(modifier = Modifier.height(6.dp))
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
-                text = line,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LavenderGray
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = DeepBlueDark
             )
+
+            subtitle?.takeIf { it.isNotBlank() }?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SlateBlue,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            lines.filterNotNull().filter { it.isNotBlank() }.forEach { line ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LavenderGray
+                )
+            }
         }
     }
 }
@@ -511,7 +550,7 @@ private fun MoreSectionCard(
                     .size(40.dp)
                     .padding(top = 2.dp),
                 shape = CircleShape,
-                color = Accent.copy(alpha = 0.18f),
+                color = Accent,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp
             ) {
@@ -610,7 +649,7 @@ private fun previewMoreContent(): MoreContentDto {
                                 email = "contato@example.com",
                                 website = "https://example.com"
                             ),
-                            imageUrl = null
+                            imageUrl = "https://placehold.co/300x300/png"
                         )
                     )
                 )
@@ -795,5 +834,107 @@ private fun PreviewMoreFooterVersionSection() {
                 bottomInset = 0.dp
             )
         }
+    }
+}
+
+@Preview(
+    name = "More sheet - long text",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 800
+)
+@Composable
+private fun PreviewMoreSectionSheetLongText() {
+    OuvindoABibliaTheme {
+        MoreSectionSheetContent(
+            item = moreMenuItems.first { it.id == "about" },
+            section = previewMoreContent().sections.first { it.id == "about" }
+        )
+    }
+}
+
+@Preview(
+    name = "More sheet - rights list",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 800
+)
+@Composable
+private fun PreviewMoreSectionSheetRightsList() {
+    OuvindoABibliaTheme {
+        MoreSectionSheetContent(
+            item = moreMenuItems.first { it.id == "bible_audio_rights" },
+            section = previewMoreContent().sections.first { it.id == "bible_audio_rights" }
+        )
+    }
+}
+
+@Preview(
+    name = "More sheet - asset list",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 800
+)
+@Composable
+private fun PreviewMoreSectionSheetAssetList() {
+    OuvindoABibliaTheme {
+        MoreSectionSheetContent(
+            item = moreMenuItems.first { it.id == "cover_rights" },
+            section = previewMoreContent().sections.first { it.id == "cover_rights" }
+        )
+    }
+}
+
+@Preview(
+    name = "More sheet - people list",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 800
+)
+@Composable
+private fun PreviewMoreSectionSheetPeopleList() {
+    OuvindoABibliaTheme {
+        MoreSectionSheetContent(
+            item = moreMenuItems.first { it.id == "curation" },
+            section = previewMoreContent().sections.first { it.id == "curation" }
+        )
+    }
+}
+
+@Preview(
+    name = "More sheet - library list",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 800
+)
+@Composable
+private fun PreviewMoreSectionSheetLibraryList() {
+    OuvindoABibliaTheme {
+        MoreSectionSheetContent(
+            item = moreMenuItems.first { it.id == "licenses" },
+            section = previewMoreContent().sections.first { it.id == "licenses" }
+        )
+    }
+}
+
+@Preview(
+    name = "More sheet - no content",
+    showBackground = true,
+    backgroundColor = 0xFFF2E9E4,
+    widthDp = 412,
+    heightDp = 800
+)
+@Composable
+private fun PreviewMoreSectionSheetNoContent() {
+    OuvindoABibliaTheme {
+        MoreSectionSheetContent(
+            item = moreMenuItems.first(),
+            section = null
+        )
     }
 }
