@@ -15,10 +15,12 @@ reconfirmar a linha exata ao pegar cada issue.
 ## Status atual
 
 - ✅ **5.1** (player persistente) — resolvido e validado em device.
-- ✅ **0.2** (migração destrutiva → Migration 8→9 com teste de preservação de favoritos/retomada) —
-  resolvido e validado em device.
-- ⏳ **0.1** — confirmar (ver FASE 0).
+- ✅ **FASE 0 fechada** — `./gradlew test` e `connectedAndroidTest` passam:
+  - ✅ **0.1** — JUnit no classpath de teste do `:data:remote`; `./gradlew test` passa globalmente.
+  - ✅ **0.2** — migração destrutiva → Migration 8→9 com teste de preservação de favoritos/retomada.
+  - ✅ **0.3** — teste instrumentado do ciclo de vida do player (serviço sobrevive ao unbind).
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
+- ⏭️ **Próximo:** FASE 1 (1.A save periódico → 1.B barra no cold start).
 
 ---
 
@@ -26,23 +28,32 @@ reconfirmar a linha exata ao pegar cada issue.
 
 Objetivo: build e testes 100% saudáveis antes de tocar em feature.
 
-### ISSUE 0.1 — `:data:remote` sem JUnit no classpath de teste
+### ISSUE 0.1 — ✅ FEITA — `:data:remote` sem JUnit no classpath de teste
 
-- **Problema:** `data/remote/build.gradle.kts` não declara `testImplementation(libs.junit)`;
-  `./gradlew test` global falha no compile do source set de teste (§ Diag01 1a).
+- **Problema:** `data/remote/build.gradle.kts` não declarava `testImplementation(libs.junit)`;
+  `./gradlew test` global falhava no compile do source set de teste (§ Diag01 1a).
 - **Arquivos:** `data/remote/build.gradle.kts`.
 - **Critério de aceitação:** `./gradlew test` passa em todos os módulos.
-- **Validação:** sem device — só `./gradlew test`.
+- **Resultado:** adicionado `testImplementation(libs.junit)` (+ androidTest junit/espresso),
+  espelhando `:data:local`/`:data:repository`. `./gradlew test` → **BUILD SUCCESSFUL**. (commit `94a4c69`)
 - **Esforço:** P · **Depende de:** nada.
 
-### ISSUE 0.3 — Confirmar/cobrir teste do ciclo de vida do player
+### ISSUE 0.3 — ✅ FEITA — Confirmar/cobrir teste do ciclo de vida do player
 
 - **Problema:** cobertura ~zero; o 5.1 foi validado manualmente. Garantir um teste instrumentado que
   trave regressão do "serviço sobrevive ao unbind".
-- **Arquivos:** `app/src/androidTest/...` (novo), `service/PlaybackService.kt`.
+- **Arquivos:** `app/src/androidTest/.../PlaybackServiceLifecycleTest.kt` (novo),
+  `service/PlaybackService.kt` (contadores `@VisibleForTesting` create/destroy).
 - **Critério de aceitação:** teste instrumentado que, tocando → destruir Activity, verifica que o
   serviço NÃO é destruído e o player não é liberado.
-- **Validação:** device — `./gradlew connectedAndroidTest`.
+- **Resultado:** `PlaybackServiceLifecycleTest` valida que um serviço *started* sobrevive ao unbind
+  do `MediaController` (`destroyCount==0`) e que, ao reconectar, a playlist persiste com o mesmo
+  `mediaId` (player não liberado). `connectedAndroidTest` → **BUILD SUCCESSFUL** (moto g53). (commit `48d08c3`)
+- **⚠️ Limitação:** o teste inicia o serviço via `startService` (mesma garantia de sobrevivência de um
+  serviço *started*), evitando o contrato de 5s do `startForegroundService` e a necessidade de áudio
+  real (o player de produção usa data source só-HTTP, inviável de tocar de forma hermética). Valida a
+  **propriedade de sobrevivência ao unbind**, não o gatilho `ensureServiceStarted` dentro do
+  `PlayerViewModel` (isso exigiria stub pesado do repositório).
 - **Esforço:** M · **Depende de:** 0.1.
 
 ---
