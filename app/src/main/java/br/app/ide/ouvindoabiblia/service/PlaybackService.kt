@@ -6,7 +6,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.os.IBinder
 import android.os.SystemClock
+import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.annotation.OptIn
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.core.graphics.drawable.toBitmap
@@ -59,6 +62,9 @@ class PlaybackService : MediaLibraryService() {
 
     private var mediaSession: MediaLibrarySession? = null
 
+    // Mantemos a referência para encerrar o threadpool no onDestroy (DIAGNOSTICO_02 §5.4).
+    private var bitmapLoader: CoilBitmapLoader? = null
+
     @Volatile
     private var lastExplicitPlaybackRequestAt = 0L
 
@@ -82,6 +88,17 @@ class PlaybackService : MediaLibraryService() {
     companion object {
         private const val ROOT_ID = "root_bible"
         private const val TAG = "PlaybackService"
+        // TAG única de ciclo de vida para diagnóstico (filtrar por PLAYBACK_LC no Logcat).
+        private const val LC_TAG = "PLAYBACK_LC"
+
+        // Contadores observáveis de ciclo de vida — usados pelo teste instrumentado
+        // que trava a regressão do 5.1 (serviço sobrevive ao unbind; player só é
+        // liberado no onDestroy). Não têm uso em produção.
+        @VisibleForTesting
+        val createCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+        @VisibleForTesting
+        val destroyCount = java.util.concurrent.atomic.AtomicInteger(0)
     }
 
 
@@ -90,10 +107,15 @@ class PlaybackService : MediaLibraryService() {
 
         super.onCreate()
 
+        createCount.incrementAndGet()
+        Log.i(LC_TAG, "onCreate")
+
+        val loader = CoilBitmapLoader()
+        bitmapLoader = loader
 
         mediaSession = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
             .setSessionActivity(getSingleTopActivity())
-            .setBitmapLoader(CoilBitmapLoader())
+            .setBitmapLoader(loader)
             .build()
 
         val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
@@ -275,7 +297,34 @@ class PlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        Log.i(LC_TAG, "onStartCommand flags=$flags startId=$startId")
+        // START_STICKY agora é seguro: o player pertence ao serviço (instância nova
+        // por onCreate, ver MediaModule). Se o sistema matar e recriar o serviço,
+        // onCreate cria um player novo e restoreLastSession reconstrói a playlist
+        // SEM auto-play. Nunca mais se monta sessão sobre player liberado.
+        // É também o comportamento desejado no modelo persistente (Spotify-like):
+        // deixar o sistema retrazer o serviço de mídia.
         return START_STICKY
+    }
+
+    override fun onBind(intent: Intent?): IBinder? {
+        Log.i(LC_TAG, "onBind")
+        return super.onBind(intent)
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        // Importante: o desbind da Activity NÃO encerra o serviço, porque ele foi
+        // INICIADO (startForegroundService) ao começar a tocar. Sobrevive ao unbind.
+        Log.i(LC_TAG, "onUnbind")
+        return super.onUnbind(intent)
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        // Media3 decide aqui se o serviço deve ir/ficar em foreground. Logamos para
+        // ver a promoção a foreground (notificação de mídia) no diagnóstico.
+        Log.i(LC_TAG, "onUpdateNotification startInForegroundRequired=$startInForegroundRequired")
+        super.onUpdateNotification(session, startInForegroundRequired)
     }
 
     private fun getSingleTopActivity(): PendingIntent {
@@ -296,25 +345,33 @@ class PlaybackService : MediaLibraryService() {
         mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val currentMediaItem = player.currentMediaItem
-        if (currentMediaItem != null) {
-            saveCurrentState()
-        }
-        if (!player.playWhenReady || player.playbackState == Player.STATE_IDLE) {
-            player.stop()
-            player.release()
-            stopSelf()
-        }
+        // Modelo persistente (Opção A): ao remover dos recentes NÃO liberamos o
+        // player nem encerramos o serviço — nem tocando, nem pausado.
+        //  - Tocando: o áudio continua e a notificação permanece.
+        //  - Pausado: a notificação permanece e o usuário pode dar play pela
+        //    notificação/headset.
+        // Apenas persistimos o estado atual. O player é liberado exclusivamente
+        // no onDestroy real do serviço (DIAGNOSTICO_02 §5.1/§5.2/§5.3).
+        // saveCurrentState() já trata currentMediaItem nulo e ignora "moment_".
+        Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} -> DECISAO=manter")
+        saveCurrentState()
         super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
-
+        destroyCount.incrementAndGet()
+        val releasePlayer = mediaSession != null
+        Log.i(LC_TAG, "onDestroy releasePlayer=$releasePlayer")
+        // Único ponto de liberação do player (fim do double-release, §5.3).
         mediaSession?.run {
+            Log.i(LC_TAG, "player.release() chamado de onDestroy")
             player.release()
             release()
             mediaSession = null
         }
+        // Encerra o threadpool do BitmapLoader para não vazar (§5.4).
+        bitmapLoader?.shutdown()
+        bitmapLoader = null
         serviceJob.cancel()
         super.onDestroy()
     }
@@ -551,6 +608,10 @@ class PlaybackService : MediaLibraryService() {
     @UnstableApi
     private inner class CoilBitmapLoader : BitmapLoader {
         private val executor = Executors.newCachedThreadPool()
+
+        // Encerra o threadpool quando o serviço é destruído (§5.4).
+        fun shutdown() = executor.shutdown()
+
         override fun supportsMimeType(mimeType: String): Boolean = true
         override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
             return CallbackToFutureAdapter.getFuture { completer ->

@@ -16,7 +16,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,9 +28,21 @@ object MediaModule {
     private const val BUFFER_FOR_PLAYBACK_MS = 2_500
     private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000
 
+    /**
+     * O ExoPlayer NÃO é mais @Singleton (escopo de processo).
+     *
+     * Motivo: o player deve pertencer ao PlaybackService — seu ciclo de vida
+     * casa com o da MediaLibrarySession, que casa com o do serviço. Como o
+     * ExoPlayer só é injetado pelo PlaybackService, um binding sem escopo
+     * entrega uma instância nova a cada onCreate do serviço e é liberado uma
+     * única vez no onDestroy. Isso elimina o bug crítico em que uma sessão
+     * nova era montada sobre um player @Singleton já liberado (DIAGNOSTICO_02 §5.1).
+     *
+     * Audio focus já está coberto aqui: setAudioAttributes(..., handleAudioFocus = true)
+     * + setHandleAudioBecomingNoisy(true) abaixo.
+     */
     @OptIn(UnstableApi::class)
     @Provides
-    @Singleton
     fun provideExoPlayer(
         @ApplicationContext context: Context
     ): ExoPlayer {

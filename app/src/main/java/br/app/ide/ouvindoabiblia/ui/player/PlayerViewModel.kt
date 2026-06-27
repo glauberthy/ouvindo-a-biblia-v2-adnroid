@@ -2,6 +2,7 @@ package br.app.ide.ouvindoabiblia.ui.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -296,6 +297,22 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Promove o PlaybackService a started + foreground service.
+     *
+     * Sem isto o serviço fica apenas BOUND ao MediaController; quando a Activity
+     * morre e o controller é liberado (onCleared), o sistema destrói o serviço e
+     * o áudio para (DIAGNOSTICO_02 §5.1, regressão observada no moto g53). Como é
+     * disparado a partir de uma ação do usuário (app em foreground), o
+     * startForegroundService é permitido; o Media3 posta a notificação de mídia
+     * (startForeground) assim que a reprodução fica ativa.
+     */
+    private fun ensureServiceStarted() {
+        val intent = Intent(context, PlaybackService::class.java)
+        ContextCompat.startForegroundService(context, intent)
+        Log.i("PLAYBACK_LC", "startForegroundService chamado (ensureServiceStarted)")
+    }
+
     private fun initializeController() {
         val sessionToken =
             SessionToken(context, ComponentName(context, PlaybackService::class.java))
@@ -364,6 +381,7 @@ class PlayerViewModel @Inject constructor(
                 .build()
         }
 
+        ensureServiceStarted()
         controller.setMediaItems(themeMediaItems, startIndex, 0L)
         controller.prepare()
         controller.play()
@@ -406,6 +424,7 @@ class PlayerViewModel @Inject constructor(
 
             _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
 
+            ensureServiceStarted()
             controller.setMediaItems(playlist, initialIndex, 0L)
             controller.prepare()
             controller.play()
@@ -419,7 +438,13 @@ class PlayerViewModel @Inject constructor(
             castSession?.remoteMediaClient?.togglePlayback()
         } else {
             mediaController?.let {
-                if (it.isPlaying) it.pause() else it.play()
+                if (it.isPlaying) {
+                    it.pause()
+                } else {
+                    // Se o serviço foi morto enquanto pausado, religa-o antes de tocar.
+                    ensureServiceStarted()
+                    it.play()
+                }
             }
         }
     }
@@ -861,6 +886,9 @@ class PlayerViewModel @Inject constructor(
         startIndex: Int = 0
     ) {
         val controller = mediaController ?: return
+
+        // Cobre os dois ramos abaixo (retomar a mesma aula ou carregar nova playlist).
+        ensureServiceStarted()
 
         forceHardSourceSwitchIfNeeded(
             controller = controller,
