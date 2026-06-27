@@ -25,8 +25,12 @@ object DatabaseModule {
             BibleDatabase::class.java,
             "bible_db"
         )
-            // Permite recriar o banco se mudarmos a versão (útil em dev)
-            .fallbackToDestructiveMigration()
+            // Migrações explícitas preservam favoritos e a posição de retomada
+            // (dados só-locais). Substitui o fallbackToDestructiveMigration()
+            // que os apagava a cada bump de versão (DIAGNOSTICO_01 §4b).
+            .addMigrations(BibleDatabase.MIGRATION_8_9)
+            // Downgrade (apenas cenário de dev) ainda pode recriar o banco.
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
 

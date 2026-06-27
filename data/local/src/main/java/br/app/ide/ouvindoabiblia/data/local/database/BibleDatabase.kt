@@ -2,6 +2,8 @@ package br.app.ide.ouvindoabiblia.data.local.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import br.app.ide.ouvindoabiblia.data.local.dao.BibleDao
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
@@ -23,11 +25,30 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
         StudyLessonEntity::class,
         MoreContentEntity::class
     ],
-    version = 8,
-    exportSchema = false // Para desenvolvimento inicial, deixamos falso
+    version = 9,
+    exportSchema = true // Exporta schema p/ migrações testáveis (DIAGNOSTICO_01 §4b)
 )
 abstract class BibleDatabase : RoomDatabase() {
 
     // Expõe o DAO para ser usado
     abstract fun bibleDao(): BibleDao
+
+    companion object {
+        /**
+         * Migração 8 → 9.
+         *
+         * Não há mudança de schema entre 8 e 9: esta migração existe para
+         * SUBSTITUIR o fallbackToDestructiveMigration() (que apagava favoritos e a
+         * posição de "continuar ouvindo" a cada bump de versão — DIAGNOSTICO_01 §4b).
+         *
+         * A partir daqui, todo novo schema deve declarar sua própria migração
+         * (MIGRATION_9_10, ...). Sem migração, o Room passa a LANÇAR em vez de
+         * apagar os dados silenciosamente.
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Schema idêntico ao da v8 — nada a alterar; dados preservados.
+            }
+        }
+    }
 }

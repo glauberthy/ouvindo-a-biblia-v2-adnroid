@@ -15,6 +15,11 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
+    // Schemas exportados do Room — necessários para o MigrationTestHelper validar migrações.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -31,6 +36,11 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+}
+
+// Exporta os schemas do Room para $projectDir/schemas (usado nos testes de migração).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -53,6 +63,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing) // MigrationTestHelper
 
     implementation(libs.androidx.datastore.preferences)
 }
