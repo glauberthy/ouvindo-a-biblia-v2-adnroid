@@ -21,10 +21,4 @@ data class PlayerUiState(
     val isThemeMode: Boolean = false,
     val currentIsFavorite: Boolean = false,
     val isSwitchingSource: Boolean = false
-) {
-    val progress: Float
-        get() = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(
-            0f,
-            1f
-        ) else 0f
-}
+)

@@ -559,6 +559,18 @@ fun SharedPlayerScreen(
 }
 
 
+/**
+ * Valor a exibir no slider de progresso (ISSUE 1.B).
+ *
+ * Quando a duração é desconhecida (`durationMs <= 0`, ex.: estado salvo durante o
+ * buffering, antes de o ExoPlayer conhecer a duração), o Slider fica com range
+ * `0f..1f` e a posição real (ex.: 158204 ms) estouraria esse range, saturando o
+ * thumb em "cheio" no cold start. Retornando 0f nesse caso, a barra fica vazia
+ * até o MediaController conectar e reportar a duração real.
+ */
+internal fun sliderProgressValueMs(currentPositionMs: Long, durationMs: Long): Float =
+    if (durationMs > 0) currentPositionMs.toFloat() else 0f
+
 @Composable
 fun PlayerProgressBar(
     currentPosition: Long,
@@ -566,8 +578,9 @@ fun PlayerProgressBar(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Evita divisão por zero e garante range válido
-    val safeDuration = if (duration > 0) duration else 1L
+    // Duração desconhecida (<=0): usamos 1L só para o Slider ter um range válido.
+    val hasDuration = duration > 0
+    val safeDuration = if (hasDuration) duration else 1L
 
     // Estado local para controlar o arraste (Drag) do slider
     // Sem isso, o slider fica "pulando" enquanto você tenta arrastar
@@ -575,7 +588,11 @@ fun PlayerProgressBar(
     var sliderPosition by remember { mutableFloatStateOf(0f) }
 
     // Se estiver arrastando, mostra a posição do dedo. Se não, mostra a posição real do áudio.
-    val contentPosition = if (isDragging) sliderPosition else currentPosition.toFloat()
+    // Quando a duração é desconhecida, sliderProgressValueMs devolve 0f — senão a
+    // posição real (ex.: 2:38) estouraria o range 0f..1f e o thumb saturaria em
+    // "cheio" no cold start (ISSUE 1.B).
+    val contentPosition =
+        if (isDragging) sliderPosition else sliderProgressValueMs(currentPosition, duration)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Slider(

@@ -20,8 +20,10 @@ reconfirmar a linha exata ao pegar cada issue.
   - ✅ **0.2** — migração destrutiva → Migration 8→9 com teste de preservação de favoritos/retomada.
   - ✅ **0.3** — teste instrumentado do ciclo de vida do player (serviço sobrevive ao unbind).
 - ✅ **1.A** (save periódico de posição) — resolvido e validado em device.
+- ✅ **1.B** (barra cheia no cold start) — resolvido; travado por teste unitário.
+- ✅ **FASE 1 fechada.**
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 1 (1.B barra cheia no cold start).
+- ⏭️ **Próximo:** FASE 2 (2.A parser único de `mediaId`).
 
 ---
 
@@ -80,16 +82,28 @@ Objetivo: nunca perder onde o usuário parou.
   pid via `run-as` para simular morte abrupta com áudio ativo.
 - **Esforço:** M · **Depende de:** nada.
 
-### ISSUE 1.B — Duração 0 no buffering → barra cheia no cold start (§ Diag02 3c)
+### ISSUE 1.B — ✅ FEITA — Duração 0 no buffering → barra cheia no cold start (§ Diag02 3c)
 
 - **Problema:** se o save ocorre antes da duração ser conhecida, grava `duration=0`; no cold start a
-  barra aparece 100% até o controller conectar.
-- **Arquivos:** `PlayerViewModel.kt` (init/progress), `service/PlaybackService.kt` (
-  `saveCurrentState`).
-- **Critério de aceitação:** barra não exibe 100% falso no cold start; progresso correto após
-  conectar.
-- **Validação:** device — cold start com rede lenta. **Esforço:** P · **Depende de:** 1.A (mexem na
-  mesma área).
+  barra aparecia 100% (com posição real, ex.: "2:38") até o controller conectar.
+- **Causa raiz:** a barra é o `Slider` de `PlayerProgressBar` (`SharedPlayerScreen.kt`), com
+  `valueRange = 0f..safeDuration` e `value = currentPosition`. Quando `duration<=0`, `safeDuration`
+  vira `1L` (range `0f..1f`) e a posição real (ex.: 158204) estoura o range → thumb satura em cheio.
+- **⚠️ Falso positivo corrigido:** a 1ª tentativa mexeu só no getter `PlayerUiState.progress`, que
+  **não era usado por ninguém** (dead code). O teste passou testando código morto e a barra real
+  continuou cheia. Lição: rastrear quem consome o dado antes de declarar pronto.
+- **Arquivos:** `ui/player/SharedPlayerScreen.kt` (nova função pura `sliderProgressValueMs`, usada no
+  slider), `ui/player/PlayerViewModel.kt` (cold start propaga `0L`, necessário para o `duration>0`
+  do slider detectar "desconhecida"), `ui/player/PlayerUiState.kt` (getter `progress` morto removido).
+- **Critério de aceitação:** barra não exibe 100% falso no cold start; progresso correto após conectar.
+- **Resultado:** `sliderProgressValueMs(pos, dur)` devolve `0f` quando `dur<=0` (barra vazia), senão a
+  posição real. `PlayerUiStateProgressTest` cobre a função **realmente usada** pelo slider.
+- **Validação:** regressão do caso normal confirmada em device (barra e tempos corretos, "2:32/2:55",
+  ~87%; o ramo `duration>0` é byte-idêntico ao original, então o seek é preservado). O transiente
+  `duration=0` não foi reproduzível em device (o `START_STICKY` ressuscita o serviço e reescreve o DB
+  injetado; adb-via-WiFi instável; SELinux bloqueia a escrita) — daí o teste unitário sobre a função
+  viva como guarda primária.
+- **Esforço:** P · **Depende de:** 1.A.
 
 ---
 

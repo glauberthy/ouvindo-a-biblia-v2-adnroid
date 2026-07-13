@@ -271,7 +271,11 @@ class PlayerViewModel @Inject constructor(
                                 imageUrl = lastState.imageUrl ?: "",
                                 isPlaying = false, // Cold start é sempre pausado
                                 currentPosition = lastState.positionMs,
-                                duration = if (lastState.duration > 0) lastState.duration else 1L
+                                // ISSUE 1.B: se a duração salva for desconhecida (0), NÃO usar 1L.
+                                // O getter `progress` já trata `duration <= 0` como 0f (barra vazia);
+                                // o fallback antigo (1L, que é > 0) driblava essa guarda e estourava
+                                // a fração para 100% (barra cheia falsa) até o controller conectar.
+                                duration = if (lastState.duration > 0) lastState.duration else 0L
                             )
                         }
                     } else {
