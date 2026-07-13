@@ -23,8 +23,10 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **1.B** (barra cheia no cold start) — resolvido; travado por teste unitário.
 - ✅ **FASE 1 fechada.**
 - ✅ **2.A** (parser único de `mediaId`) — resolvido; testes unitários + smoke em device.
+- ✅ **2.B** (folha de capítulos por tipo) — resolvido; teste unitário + validado em device.
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 2 (2.B `extractChaptersFromPlayer` / 2.C log no restore / 2.D clipping).
+- ⏭️ **Próximo:** FASE 2 (2.C log no restore / 2.D clipping).
+- 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
 
 ---
 
@@ -129,15 +131,24 @@ Objetivo: matar a fragilidade de "tudo é Bíblia". Tratar como um pacote.
   device (Bíblia/Estudo/Tema tocam com metadados corretos, retomada ok, sem avisos de malformado).
 - **Esforço:** M · **Depende de:** nada (habilita 2.B, 2.C, 2.D).
 
-### ISSUE 2.B — `extractChaptersFromPlayer` assume Bíblia (§ Diag02 1c)
+### ISSUE 2.B — ✅ FEITA — `extractChaptersFromPlayer` assume Bíblia (§ Diag02 1c)
 
-- **Problema:** em Estudos, gera numeração sintética e `id=0`; a folha de capítulos mostra "1,2,3"
-  em vez dos títulos das aulas.
-- **Arquivos:** `ui/player/PlayerViewModel.kt`.
-- **Critério de aceitação:** folha de capítulos mostra títulos reais por tipo (Bíblia/Estudo); ids
-  corretos.
-- **Validação:** device — abrir folha de capítulos num Estudo. **Esforço:** M · **Depende de:**
-  2.A (ideal).
+- **Problema:** em Estudos, gerava numeração sintética; a folha de capítulos mostrava "1,2,3" em vez
+  dos títulos das aulas.
+- **Arquivos:** novo modelo `PlayerTimelineItem` + função pura `timelineItemFor` em
+  `ui/player/PlayerUiState.kt`; `ui/player/PlayerViewModel.kt` (`extractTimelineFromPlayer`,
+  `uiState.timeline`); `ui/player/components/ChaptersSheet.kt` (render por tipo);
+  `ui/player/SharedPlayerScreen.kt` (passa `timeline`).
+- **Critério de aceitação:** folha mostra títulos reais por tipo (Bíblia/Estudo).
+- **Resultado:** `timeline` é uma projeção de exibição separada de `chapters` (que segue como
+  `ChapterWithBookInfo` para Cast/favoritos — não foi tocado, Cast está estacionado/intestável).
+  `timelineItemFor` deriva, via `MediaContentId`: Bíblia → número (grid); Estudo → título da aula do
+  `subtitle` (lista). Folha adapta layout e cabeçalho ("Escolha o Capítulo" / "Escolha a Aula").
+- **Validação:** `TimelineItemForTest` (Bíblia número/fallback, Estudo título/fallbacks); device —
+  Estudo mostra nomes das aulas, Bíblia mantém grid de números.
+- **Esforço:** M · **Depende de:** 2.A.
+- **Descoberta:** o app inclui LeakCanary (debug), que cria um 2º ícone de launcher ("Leaks"); abrir
+  via `monkey LAUNCHER` pode cair nele. Abrir com `am start -n <pkg>/.MainActivity`.
 
 ### ISSUE 2.C — `restore` aborta sem log em `mediaId` malformado (§ Diag02 1e)
 

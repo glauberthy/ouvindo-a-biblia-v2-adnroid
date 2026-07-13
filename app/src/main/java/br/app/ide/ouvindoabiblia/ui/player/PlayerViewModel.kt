@@ -675,12 +675,38 @@ class PlayerViewModel @Inject constructor(
                 playbackSpeed = player.playbackParameters.speed,
                 isShuffleEnabled = player.shuffleModeEnabled,
                 chapters = extractChaptersFromPlayer(player),
+                timeline = extractTimelineFromPlayer(player),
                 isThemeMode = isTheme,
                 currentIsFavorite = currentIsFavorite
             )
         }
     }
 
+
+    /**
+     * Projeção de exibição da timeline para a folha de capítulos (ISSUE 2.B).
+     *
+     * Por tipo (via [MediaContentId]): Bíblia → número do capítulo (grid de números);
+     * Estudo → título da aula, que vive no `subtitle` do MediaItem (lista de títulos).
+     * Tema não chega aqui (a folha é escondida em `isThemeMode`), mas cai no ramo de
+     * título por segurança.
+     */
+    private fun extractTimelineFromPlayer(player: Player): List<PlayerTimelineItem> {
+        val list = mutableListOf<PlayerTimelineItem>()
+        for (i in 0 until player.mediaItemCount) {
+            val item = player.getMediaItemAt(i)
+            val meta = item.mediaMetadata
+            list.add(
+                timelineItemFor(
+                    mediaId = item.mediaId,
+                    title = meta.title?.toString(),
+                    subtitle = meta.subtitle?.toString(),
+                    index = i,
+                )
+            )
+        }
+        return list
+    }
 
     // Converte a Timeline do Media3 de volta para o modelo que sua UI usa (ChapterWithBookInfo)
     private fun extractChaptersFromPlayer(player: Player): List<ChapterWithBookInfo> {

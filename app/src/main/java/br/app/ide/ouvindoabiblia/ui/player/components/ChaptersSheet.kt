@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed as itemsIndexedColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -35,19 +37,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.ui.player.PlayerTimelineItem
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChaptersSheet(
-    chapters: List<ChapterWithBookInfo>,
+    items: List<PlayerTimelineItem>,
     currentIndex: Int,
     accentColor: Color, // <--- 1. NOVO PARÂMETRO: A cor da capa
     onChapterClick: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Bíblia -> grid de números; Estudo -> lista de títulos (ISSUE 2.B).
+    val numbered = items.firstOrNull()?.numbered != false
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val sheetColor = DeepBlueDark
@@ -89,7 +93,7 @@ fun ChaptersSheet(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "Escolha o Capítulo",
+                    text = if (numbered) "Escolha o Capítulo" else "Escolha a Aula",
                     style = MaterialTheme.typography.titleMedium,
                     color = contentColor,
                     fontWeight = FontWeight.Bold
@@ -101,58 +105,103 @@ fun ChaptersSheet(
                 thickness = DividerDefaults.Thickness, color = Color.White.copy(alpha = 0.08f)
             )
 
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 64.dp),
-                contentPadding = PaddingValues(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                itemsIndexed(chapters) { index, item ->
-                    val isSelected = index == currentIndex
+            if (numbered) {
+                // BÍBLIA: grid de números.
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 64.dp),
+                    contentPadding = PaddingValues(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    itemsIndexed(items) { index, item ->
+                        val isSelected = index == currentIndex
 
-                    // LÓGICA DE COR INTELIGENTE
-                    // Se selecionado -> Usa a cor da capa (accentColor)
-                    // Se não -> Transparente
-                    val cardContainerColor =
-                        if (isSelected) accentColor else Color.White.copy(alpha = 0.05f)
+                        // LÓGICA DE COR INTELIGENTE
+                        // Se selecionado -> Usa a cor da capa (accentColor)
+                        // Se não -> Transparente
+                        val cardContainerColor =
+                            if (isSelected) accentColor else Color.White.copy(alpha = 0.05f)
 
-                    // LÓGICA DE TEXTO INTELIGENTE
-                    val textColor = if (isSelected) {
-                        // Se a cor da capa for escura, texto branco. Se for clara, texto preto.
-                        if (accentColor.isDark()) Color.White else Color.Black
-                    } else {
-                        // Texto não selecionado
-                        Color.White.copy(alpha = 0.9f)
+                        // LÓGICA DE TEXTO INTELIGENTE
+                        val textColor = if (isSelected) {
+                            // Se a cor da capa for escura, texto branco. Se for clara, texto preto.
+                            if (accentColor.isDark()) Color.White else Color.Black
+                        } else {
+                            // Texto não selecionado
+                            Color.White.copy(alpha = 0.9f)
+                        }
+
+                        Card(
+                            onClick = {
+                                onChapterClick(index)
+                                onDismiss()
+                            },
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = cardContainerColor
+                            ),
+                            // Borda apenas nos não selecionados
+                            border = if (!isSelected)
+                                androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.1f)
+                                )
+                            else null,
+                            modifier = Modifier.aspectRatio(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = item.label,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textColor // <--- Cor calculada acima
+                                )
+                            }
+                        }
                     }
+                }
+            } else {
+                // ESTUDO: lista de títulos de aula (não cabem num quadradinho).
+                LazyColumn(
+                    contentPadding = PaddingValues(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    itemsIndexedColumn(items) { index, item ->
+                        val isSelected = index == currentIndex
+                        val cardContainerColor =
+                            if (isSelected) accentColor else Color.White.copy(alpha = 0.05f)
+                        val textColor = if (isSelected) {
+                            if (accentColor.isDark()) Color.White else Color.Black
+                        } else {
+                            Color.White.copy(alpha = 0.9f)
+                        }
 
-                    Card(
-                        onClick = {
-                            onChapterClick(index)
-                            onDismiss()
-                        },
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(
-                            containerColor = cardContainerColor
-                        ),
-                        // Borda apenas nos não selecionados
-                        border = if (!isSelected)
-                            androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                Color.White.copy(alpha = 0.1f)
-                            )
-                        else null,
-                        modifier = Modifier.aspectRatio(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        Card(
+                            onClick = {
+                                onChapterClick(index)
+                                onDismiss()
+                            },
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(containerColor = cardContainerColor),
+                            border = if (!isSelected)
+                                androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.1f)
+                                )
+                            else null,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "${item.chapter.number}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor // <--- Cor calculada acima
+                                text = item.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = textColor,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
                             )
                         }
                     }

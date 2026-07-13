@@ -531,7 +531,7 @@ fun SharedPlayerScreen(
     // SHEETS (Mantidos iguais)
     if (showChapters) {
         ChaptersSheet(
-            chapters = uiState.chapters,
+            items = uiState.timeline,
             currentIndex = uiState.currentChapterIndex,
             accentColor = Accent,
             onChapterClick = { index -> onChapterSelect(index) },
