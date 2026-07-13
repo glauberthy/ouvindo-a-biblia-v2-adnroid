@@ -22,8 +22,9 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **1.A** (save periódico de posição) — resolvido e validado em device.
 - ✅ **1.B** (barra cheia no cold start) — resolvido; travado por teste unitário.
 - ✅ **FASE 1 fechada.**
+- ✅ **2.A** (parser único de `mediaId`) — resolvido; testes unitários + smoke em device.
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 2 (2.A parser único de `mediaId`).
+- ⏭️ **Próximo:** FASE 2 (2.B `extractChaptersFromPlayer` / 2.C log no restore / 2.D clipping).
 
 ---
 
@@ -111,16 +112,22 @@ Objetivo: nunca perder onde o usuário parou.
 
 Objetivo: matar a fragilidade de "tudo é Bíblia". Tratar como um pacote.
 
-### ISSUE 2.A — Parser único de `mediaId` (sealed type) (§ Diag02 1, 2.5)
+### ISSUE 2.A — ✅ FEITA — Parser único de `mediaId` (sealed type) (§ Diag02 1, 2.5)
 
-- **Problema:** `mediaId` é formatado/parseado em ~10 lugares com convenções string (`study_`,
+- **Problema:** `mediaId` era formatado/parseado em ~10 lugares com convenções string (`study_`,
   `moment_`, `{bookId}|{idx}`, numérico). Frágil e duplicado.
-- **Arquivos:** `service/PlaybackService.kt`, `ui/player/PlayerViewModel.kt`,
-  `ui/chapters/ChaptersViewModel.kt`.
-- **Critério de aceitação:** um único ponto de parse/format (ex.: `sealed class MediaContentId`);
-  todos os call-sites usam ele; `mediaId` inválido tem caminho tratado com log.
-- **Validação:** device + testes unitários do parser. **Esforço:** M · **Depende de:** nada (mas
-  habilita 2.B e 2.C).
+- **Arquivos:** novo `playback/MediaContentId.kt` (sealed interface); migrados
+  `service/PlaybackService.kt`, `ui/player/PlayerViewModel.kt`, `ui/chapters/ChaptersViewModel.kt`.
+- **Critério de aceitação:** um único ponto de parse/format; todos os call-sites usam ele; `mediaId`
+  inválido tem caminho tratado com log.
+- **Resultado:** `sealed interface MediaContentId` com `Bible`/`Study`/`ThemeMoment`/`BookFolder`;
+  `.raw` formata, `parse()` interpreta (`null` = malformado, logado nos call-sites do serviço). Todas
+  as strings `.raw` são byte-idênticas às antigas → refactor puro (estados salvos/retomada intactos).
+  Nós navegáveis da árvore de browse (numericId puro em `onGetChildren`) ficam fora, por serem
+  namespace separado. Unificado o parse da Bíblia em `Long` (era `Int` no serviço).
+- **Validação:** `MediaContentIdTest` (round-trip das 4 formas + malformados → `null`); smoke em
+  device (Bíblia/Estudo/Tema tocam com metadados corretos, retomada ok, sem avisos de malformado).
+- **Esforço:** M · **Depende de:** nada (habilita 2.B, 2.C, 2.D).
 
 ### ISSUE 2.B — `extractChaptersFromPlayer` assume Bíblia (§ Diag02 1c)
 

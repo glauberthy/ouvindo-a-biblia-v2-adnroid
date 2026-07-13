@@ -13,6 +13,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.navigation.toRoute
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.playback.MediaContentId
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,7 +74,7 @@ class ChaptersViewModel @Inject constructor(
     fun playChapter(chapter: ChapterUiModel) {
         mediaController?.let { controller ->
 
-            val mediaIdWithIndex = "${args.bookId}|${chapter.number - 1}"
+            val mediaIdWithIndex = MediaContentId.BookFolder(args.bookId, chapter.number - 1).raw
 
             val metadata = MediaMetadata.Builder()
                 .setTitle(bookName)

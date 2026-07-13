@@ -30,6 +30,7 @@ import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.PlaybackState
+import br.app.ide.ouvindoabiblia.playback.MediaContentId
 import coil.ImageLoader
 import coil.request.ImageRequest
 import com.google.common.collect.ImmutableList
@@ -184,11 +185,16 @@ class PlaybackService : MediaLibraryService() {
     private fun saveCurrentState() {
         val currentMediaItem = player.currentMediaItem ?: return
         val mediaId = currentMediaItem.mediaId
-        // Se o ID começar com "moment_", saímos da função sem salvar nada no banco.
-        if (mediaId.startsWith("moment_")) {
-            return
+        // Só Bíblia e Estudo são persistidos como retomada. Tema (moment) é ignorado
+        // de propósito; id malformado é logado e ignorado (ISSUE 2.A/2.C).
+        when (MediaContentId.parse(mediaId)) {
+            is MediaContentId.Bible, is MediaContentId.Study -> Unit
+            is MediaContentId.ThemeMoment -> return
+            is MediaContentId.BookFolder, null -> {
+                Log.w(TAG, "saveCurrentState: mediaId não persistível/malformado, ignorando: $mediaId")
+                return
+            }
         }
-        // Se for Bíblia (ID numérico) ou Estudo (study_X_Y), continuamos:
         val position = player.currentPosition
         val duration = player.duration
         val meta = currentMediaItem.mediaMetadata
@@ -249,50 +255,56 @@ class PlaybackService : MediaLibraryService() {
     private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? {
         val mediaId = state.mediaId
 
-        // 1. RESTORE DE ESTUDOS
-        if (mediaId.startsWith("study_")) {
-            val parts = mediaId.split("_")
-            val studyId = parts.getOrNull(1)?.toIntOrNull() ?: return null
+        when (val content = MediaContentId.parse(mediaId)) {
+            // 1. RESTORE DE ESTUDOS
+            is MediaContentId.Study -> {
+                val studyId = content.studyId
+                val studyData = repository.getStudyWithLessons(studyId).first()
 
-            val studyData = repository.getStudyWithLessons(studyId).first()
+                val playlist = studyData.lessons.map { lesson ->
+                    MediaItem.Builder()
+                        .setMediaId(MediaContentId.Study(studyId, lesson.remoteId).raw)
+                        .setUri(lesson.url)
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setTitle(studyData.study.title)
+                                .setAlbumTitle(studyData.study.title)
+                                .setSubtitle(lesson.title)
+                                .setArtist("Ouvindo a Bíblia")
+                                .setArtworkUri(studyData.study.imageUrl.toUri())
+                                .setIsBrowsable(false)
+                                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                .setExtras(Bundle().apply {
+                                    putString("type", "study")
+                                    putInt("study_id", lesson.studyId)
+                                    putInt("lesson_id", lesson.remoteId)
+                                    putBoolean("is_favorite", lesson.isFavorite)
+                                })
+                                .build()
+                        ).build()
+                }
 
-            val playlist = studyData.lessons.map { lesson ->
-                MediaItem.Builder()
-                    // AQUI ESTAVA O ERRO! O ID tem que ser reconstruído com o studyId também:
-                    .setMediaId("study_${studyId}_${lesson.remoteId}")
-                    .setUri(lesson.url)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(studyData.study.title)
-                            .setAlbumTitle(studyData.study.title)
-                            .setSubtitle(lesson.title)
-                            .setArtist("Ouvindo a Bíblia")
-                            .setArtworkUri(studyData.study.imageUrl.toUri())
-                            .setIsBrowsable(false)
-                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                            .setExtras(Bundle().apply {
-                                putString("type", "study")
-                                putInt("study_id", lesson.studyId)
-                                putInt("lesson_id", lesson.remoteId)
-                                putBoolean("is_favorite", lesson.isFavorite)
-                            })
-                            .build()
-                    ).build()
+                val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
+                return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
             }
 
-            val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
-            return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
+            // 2. RESTORE DE BÍBLIA
+            is MediaContentId.Bible -> {
+                val bookNumericId =
+                    repository.getBookNumericIdFromChapter(content.chapterId.toInt()) ?: return null
+                val chapters = repository.getChapters(bookNumericId).first()
+                if (chapters.isEmpty()) return null
+                val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
+                val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
+                return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
+            }
+
+            // Tema/pasta/inválido: não há retomada a reconstruir.
+            else -> {
+                Log.w(TAG, "buildPlaylistFromState: mediaId sem restore (tema/inválido): $mediaId")
+                return null
+            }
         }
-
-        // 2. RESTORE DE BÍBLIA (O resto continua igual...)
-        val chapterIdInt = mediaId.toIntOrNull() ?: return null
-        val bookNumericId = repository.getBookNumericIdFromChapter(chapterIdInt) ?: return null
-        val chapters = repository.getChapters(bookNumericId).first()
-        if (chapters.isEmpty()) return null
-        val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
-        val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
-
-        return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
     }
 
 
@@ -319,7 +331,7 @@ class PlaybackService : MediaLibraryService() {
                 .build()
 
             val builder = MediaItem.Builder()
-                .setMediaId(chapterInfo.chapter.id.toString())
+                .setMediaId(MediaContentId.Bible(chapterInfo.chapter.id).raw)
                 .setUri(chapterInfo.chapter.audioUrl)
                 .setMediaMetadata(metadata)
 
@@ -390,7 +402,7 @@ class PlaybackService : MediaLibraryService() {
         //    notificação/headset.
         // Apenas persistimos o estado atual. O player é liberado exclusivamente
         // no onDestroy real do serviço (DIAGNOSTICO_02 §5.1/§5.2/§5.3).
-        // saveCurrentState() já trata currentMediaItem nulo e ignora "moment_".
+        // saveCurrentState() já trata currentMediaItem nulo e ignora Tema (moment).
         Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} -> DECISAO=manter")
         saveCurrentState()
         super.onTaskRemoved(rootIntent)
@@ -518,15 +530,16 @@ class PlaybackService : MediaLibraryService() {
             val isBookFolder = item.mediaMetadata.isBrowsable == true
 
             if (isBookFolder) {
-                val parts = item.mediaId.split("|")
-                val bookIdInt = parts[0].toIntOrNull() ?: return super.onSetMediaItems(
-                    mediaSession,
-                    controller,
-                    mediaItems,
-                    startIndex,
-                    startPositionMs
-                )
-                val requestedIndex = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                val bookFolder = MediaContentId.parse(item.mediaId) as? MediaContentId.BookFolder
+                    ?: return super.onSetMediaItems(
+                        mediaSession,
+                        controller,
+                        mediaItems,
+                        startIndex,
+                        startPositionMs
+                    )
+                val bookIdInt = bookFolder.bookId
+                val requestedIndex = bookFolder.chapterIndex
                 val incomingClippingConfig = item.clippingConfiguration
 
 

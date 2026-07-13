@@ -17,6 +17,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.playback.MediaContentId
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadOptions
@@ -98,11 +99,9 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun Player.currentSourceType(): PlaybackSourceType {
-        val mediaId = currentMediaItem?.mediaId.orEmpty()
-
-        return when {
-            mediaId.startsWith("study_") -> PlaybackSourceType.STUDY
-            mediaId.startsWith("moment_") -> PlaybackSourceType.THEME
+        return when (MediaContentId.parse(currentMediaItem?.mediaId.orEmpty())) {
+            is MediaContentId.Study -> PlaybackSourceType.STUDY
+            is MediaContentId.ThemeMoment -> PlaybackSourceType.THEME
             else -> PlaybackSourceType.BIBLE
         }
     }
@@ -137,7 +136,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             MediaItem.Builder()
-                .setMediaId(chapterInfo.chapter.id.toString())
+                .setMediaId(MediaContentId.Bible(chapterInfo.chapter.id).raw)
                 .setUri(chapterInfo.chapter.audioUrl)
                 .setClippingConfiguration(
                     if (index == targetChapterIndex) {
@@ -368,7 +367,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             MediaItem.Builder()
-                .setMediaId("moment_${moment.id}")
+                .setMediaId(MediaContentId.ThemeMoment(moment.id.toString()).raw)
                 .setUri(audioUrl)
                 .setClippingConfiguration(clippingConfigBuilder.build())
                 .setMediaMetadata(
@@ -653,7 +652,7 @@ class PlayerViewModel @Inject constructor(
         _uiState.update { state ->
             val currentItem = player.currentMediaItem
             val meta = player.mediaMetadata
-            val isTheme = currentItem?.mediaId?.startsWith("moment_") == true
+            val isTheme = MediaContentId.parse(currentItem?.mediaId.orEmpty()) is MediaContentId.ThemeMoment
 
             val currentIsFavorite = currentItem?.mediaMetadata
                 ?.extras
@@ -690,7 +689,7 @@ class PlayerViewModel @Inject constructor(
             val item = player.getMediaItemAt(i)
             val meta = item.mediaMetadata
 
-            val chapterId = item.mediaId.toLongOrNull() ?: 0L
+            val chapterId = (MediaContentId.parse(item.mediaId) as? MediaContentId.Bible)?.chapterId ?: 0L
             val titleStr = meta.title?.toString() ?: ""
 
             // Extração segura do número do capítulo
@@ -920,7 +919,7 @@ class PlayerViewModel @Inject constructor(
 
         val studyMediaItems = lessons.map { lesson ->
             MediaItem.Builder()
-                .setMediaId("study_${lesson.studyId}_${lesson.remoteId}")
+                .setMediaId(MediaContentId.Study(lesson.studyId, lesson.remoteId).raw)
                 .setUri(lesson.url)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
