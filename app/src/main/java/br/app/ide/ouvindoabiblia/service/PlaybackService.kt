@@ -284,16 +284,26 @@ class PlaybackService : MediaLibraryService() {
                         ).build()
                 }
 
+                if (playlist.isEmpty()) {
+                    Log.w(TAG, "restore abortado: estudo $studyId sem aulas no banco (mediaId=$mediaId)")
+                    return null
+                }
                 val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
                 return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
             }
 
             // 2. RESTORE DE BÍBLIA
             is MediaContentId.Bible -> {
-                val bookNumericId =
-                    repository.getBookNumericIdFromChapter(content.chapterId.toInt()) ?: return null
+                val bookNumericId = repository.getBookNumericIdFromChapter(content.chapterId.toInt())
+                if (bookNumericId == null) {
+                    Log.w(TAG, "restore abortado: livro não encontrado p/ capítulo ${content.chapterId} (mediaId=$mediaId)")
+                    return null
+                }
                 val chapters = repository.getChapters(bookNumericId).first()
-                if (chapters.isEmpty()) return null
+                if (chapters.isEmpty()) {
+                    Log.w(TAG, "restore abortado: livro $bookNumericId sem capítulos no banco (mediaId=$mediaId)")
+                    return null
+                }
                 val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
                 val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
                 return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)

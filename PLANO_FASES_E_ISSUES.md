@@ -24,8 +24,9 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **FASE 1 fechada.**
 - ✅ **2.A** (parser único de `mediaId`) — resolvido; testes unitários + smoke em device.
 - ✅ **2.B** (folha de capítulos por tipo) — resolvido; teste unitário + validado em device.
+- ✅ **2.C** (log no restore) — resolvido; todo abort de `buildPlaylistFromState` deixa rastro.
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 2 (2.C log no restore / 2.D clipping).
+- ⏭️ **Próximo:** FASE 2 (2.D clipping — decisão de produto).
 - 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
 
 ---
@@ -150,12 +151,15 @@ Objetivo: matar a fragilidade de "tudo é Bíblia". Tratar como um pacote.
 - **Descoberta:** o app inclui LeakCanary (debug), que cria um 2º ícone de launcher ("Leaks"); abrir
   via `monkey LAUNCHER` pode cair nele. Abrir com `am start -n <pkg>/.MainActivity`.
 
-### ISSUE 2.C — `restore` aborta sem log em `mediaId` malformado (§ Diag02 1e)
+### ISSUE 2.C — ✅ FEITA — `restore` aborta sem log em `mediaId` malformado (§ Diag02 1e)
 
-- **Problema:** `buildPlaylistFromState` retorna `null` sem log → "app não retoma" sem rastro.
+- **Problema:** `buildPlaylistFromState` retornava `null` sem log → "app não retoma" sem rastro.
 - **Arquivos:** `service/PlaybackService.kt`.
 - **Critério de aceitação:** log de aviso quando o restore aborta por id inválido.
-- **Validação:** sem device (inspeção) / device opcional. **Esforço:** P · **Depende de:** 2.A.
+- **Resultado:** todo caminho de abort loga `Log.w` com o `mediaId`: id malformado/tema/pasta (else),
+  estudo sem aulas, livro não encontrado p/ capítulo, e livro sem capítulos. (Parte iniciada junto
+  do 2.A.)
+- **Validação:** inspeção (sem device). **Esforço:** P · **Depende de:** 2.A.
 
 ### ISSUE 2.D — Clipping restaurado como absoluto (§ Diag02 3b, latente)
 
