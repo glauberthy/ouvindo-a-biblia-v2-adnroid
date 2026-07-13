@@ -19,8 +19,9 @@ reconfirmar a linha exata ao pegar cada issue.
   - ✅ **0.1** — JUnit no classpath de teste do `:data:remote`; `./gradlew test` passa globalmente.
   - ✅ **0.2** — migração destrutiva → Migration 8→9 com teste de preservação de favoritos/retomada.
   - ✅ **0.3** — teste instrumentado do ciclo de vida do player (serviço sobrevive ao unbind).
+- ✅ **1.A** (save periódico de posição) — resolvido e validado em device.
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 1 (1.A save periódico → 1.B barra no cold start).
+- ⏭️ **Próximo:** FASE 1 (1.B barra cheia no cold start).
 
 ---
 
@@ -62,16 +63,21 @@ Objetivo: build e testes 100% saudáveis antes de tocar em feature.
 
 Objetivo: nunca perder onde o usuário parou.
 
-### ISSUE 1.A — Save periódico de posição (§ Diag02 3d)
+### ISSUE 1.A — ✅ FEITA — Save periódico de posição (§ Diag02 3d)
 
-- **Problema:** só há save em pause/transição. Se o processo morre no meio da faixa, retoma do
+- **Problema:** só havia save em pause/transição. Se o processo morre no meio da faixa, retoma do
   início do capítulo (perde minutos).
-- **Arquivos:** `service/PlaybackService.kt` (auto-save), possivelmente `PlayerViewModel.kt` (
-  `startProgressLoop`).
+- **Arquivos:** `service/PlaybackService.kt` (auto-save).
 - **Critério de aceitação:** posição é persistida em intervalo regular (~10–15s) enquanto toca; após
-  `am kill` no meio da faixa, retoma do ponto (tolerância ≤ intervalo).
-- **Validação:** device — tocar, `adb shell am kill ...`, reabrir, conferir retomada. Ideal: cobrir
-  com teste.
+  kill no meio da faixa, retoma do ponto (tolerância ≤ intervalo).
+- **Resultado:** loop de save no serviço, ligado por `onIsPlayingChanged` (só roda com áudio de fato
+  saindo), gravando a cada `PERIODIC_SAVE_INTERVAL_MS` (15s) via `saveCurrentState()`. Fica no
+  serviço (não na ViewModel) porque ele sobrevive à morte da Activity e cobre reprodução em background.
+- **Validação (device, moto g53):** tocando sem pausar, a posição salva avançou fresca entre leituras
+  (29.7s → 74.7s); `kill -9` no meio da faixa (posição real ~128s, último save a 119.7s) → reabrir
+  retomou em 1:59 (perda ~8.7s, dentro da tolerância de 15s).
+- **Nota:** `am kill` não derruba o processo enquanto toca (serviço em foreground); usar `kill -9` no
+  pid via `run-as` para simular morte abrupta com áudio ativo.
 - **Esforço:** M · **Depende de:** nada.
 
 ### ISSUE 1.B — Duração 0 no buffering → barra cheia no cold start (§ Diag02 3c)

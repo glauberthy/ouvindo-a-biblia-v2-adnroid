@@ -38,8 +38,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
@@ -56,6 +59,12 @@ class PlaybackService : MediaLibraryService() {
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+
+    // Save periódico de posição enquanto toca (ISSUE 1.A). Sem isto, só salvamos
+    // em pause/transição — se o processo morre no meio da faixa, retomamos do
+    // início do capítulo. Roda no serviço (não na ViewModel) porque o serviço
+    // sobrevive à morte da Activity e cobre a reprodução em background.
+    private var periodicSaveJob: Job? = null
 
     @Inject
     lateinit var injectedImageLoader: ImageLoader
@@ -90,6 +99,10 @@ class PlaybackService : MediaLibraryService() {
         private const val TAG = "PlaybackService"
         // TAG única de ciclo de vida para diagnóstico (filtrar por PLAYBACK_LC no Logcat).
         private const val LC_TAG = "PLAYBACK_LC"
+
+        // Intervalo do save periódico de posição (ISSUE 1.A). A tolerância de perda
+        // em caso de kill do processo é ≤ este valor.
+        private const val PERIODIC_SAVE_INTERVAL_MS = 15_000L
 
         // Contadores observáveis de ciclo de vida — usados pelo teste instrumentado
         // que trava a regressão do 5.1 (serviço sobrevive ao unbind; player só é
@@ -139,7 +152,32 @@ class PlaybackService : MediaLibraryService() {
                 if (!playWhenReady) saveCurrentState()
             }
 
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                // Liga/desliga o save periódico conforme a reprodução real.
+                if (isPlaying) startPeriodicSave() else stopPeriodicSave()
+            }
+
         })
+    }
+
+    /**
+     * Salva a posição em intervalo regular enquanto toca (ISSUE 1.A). Isso garante
+     * que, se o processo for morto no meio da faixa, a retomada perca no máximo
+     * [PERIODIC_SAVE_INTERVAL_MS] em vez de voltar ao início do capítulo.
+     */
+    private fun startPeriodicSave() {
+        if (periodicSaveJob?.isActive == true) return
+        periodicSaveJob = serviceScope.launch {
+            while (isActive) {
+                delay(PERIODIC_SAVE_INTERVAL_MS)
+                saveCurrentState()
+            }
+        }
+    }
+
+    private fun stopPeriodicSave() {
+        periodicSaveJob?.cancel()
+        periodicSaveJob = null
     }
 
 
