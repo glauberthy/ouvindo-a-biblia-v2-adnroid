@@ -25,8 +25,10 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **2.A** (parser único de `mediaId`) — resolvido; testes unitários + smoke em device.
 - ✅ **2.B** (folha de capítulos por tipo) — resolvido; teste unitário + validado em device.
 - ✅ **2.C** (log no restore) — resolvido; todo abort de `buildPlaylistFromState` deixa rastro.
+- ✅ **2.D** (clipping) — guarda explícita: não persistir itens recortados (decisão do usuário).
+- ✅ **FASE 2 fechada.**
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 2 (2.D clipping — decisão de produto).
+- ⏭️ **Próximo:** FASE 3 (3.C/3.E baratos → 3.A/3.B grande) ou 4.C (higiene + vazamento do LeakCanary).
 - 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
 
 ---
@@ -161,15 +163,18 @@ Objetivo: matar a fragilidade de "tudo é Bíblia". Tratar como um pacote.
   do 2.A.)
 - **Validação:** inspeção (sem device). **Esforço:** P · **Depende de:** 2.A.
 
-### ISSUE 2.D — Clipping restaurado como absoluto (§ Diag02 3b, latente)
+### ISSUE 2.D — ✅ FEITA — Clipping restaurado como absoluto (§ Diag02 3b, latente)
 
-- **Problema:** posição relativa ao recorte é restaurada como absoluta. Hoje latente (recorte da
-  Bíblia não é usado pela UI), mas vira bug se religado.
-- **Arquivos:** `PlayerViewModel.kt` (`buildBibleMediaItems`), `service/PlaybackService.kt` (
-  `buildPlaylistFromState`).
-- **Critério de aceitação:** decisão documentada — corrigir agora junto do mediaId OU registrar
-  guarda explícita pra não ativar acidentalmente.
-- **Validação:** sem device (latente). **Esforço:** P–M · **Depende de:** 2.A.
+- **Problema:** posição relativa ao recorte seria restaurada como absoluta. Latente: confirmado que
+  `onPlayBook` sempre passa `startMs=0` (`NavigationGraph:45,55`), `ChaptersViewModel` não seta
+  recorte, e Tema (único que recorta) nunca é persistido — o bug não dispara hoje.
+- **Decisão (usuário):** guarda explícita, não corrigir agora.
+- **Arquivos:** `service/PlaybackService.kt` (`saveCurrentState`).
+- **Critério de aceitação:** decisão documentada / guarda para não ativar por acidente.
+- **Resultado:** `saveCurrentState` não persiste item com `clippingConfiguration != UNSET` (loga e
+  retorna). Se o recorte for religado, a retomada simplesmente não grava posição errada; a correção
+  clip-aware fica atrelada à 3.D.
+- **Validação:** inspeção + suíte unitária verde (no-op hoje). **Esforço:** P · **Depende de:** 2.A.
 
 ---
 

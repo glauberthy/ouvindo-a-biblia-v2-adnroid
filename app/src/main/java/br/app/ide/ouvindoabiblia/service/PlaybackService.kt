@@ -195,6 +195,16 @@ class PlaybackService : MediaLibraryService() {
                 return
             }
         }
+        // ISSUE 2.D (guarda explícita): num item recortado, player.currentPosition é
+        // RELATIVO ao início do recorte, mas buildPlaylistFromState reconstrói SEM
+        // recorte e aplicaria a posição como ABSOLUTA (retomada errada). Hoje o recorte
+        // da Bíblia é código morto (onPlayBook sempre passa startMs=0), então não
+        // persistir itens recortados é seguro. A correção clip-aware fica atrelada à
+        // 3.D (se/quando ChaptersScreen e o recorte forem religados).
+        if (currentMediaItem.clippingConfiguration != MediaItem.ClippingConfiguration.UNSET) {
+            Log.w(TAG, "saveCurrentState: posição de item recortado não persistida (2.D): $mediaId")
+            return
+        }
         val position = player.currentPosition
         val duration = player.duration
         val meta = currentMediaItem.mediaMetadata
