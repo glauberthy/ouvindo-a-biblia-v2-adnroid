@@ -1,6 +1,7 @@
 package br.app.ide.ouvindoabiblia.data.repository
 
 import android.net.Uri
+import br.app.ide.ouvindoabiblia.data.repository.domain.Resource
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Book
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
@@ -15,6 +16,12 @@ interface BibleRepository {
     suspend fun syncBibleData(): Result<Unit>
     suspend fun syncThemes(): Result<Unit>
     fun getBooks(): Flow<List<Book>>
+
+    /**
+     * Stream orquestrado (ISSUE 3.B): dispara o sync version-gated 1x por load e
+     * expõe Loading/Success/Error, tirando a duplicação das ViewModels.
+     */
+    fun getBooksResource(): Flow<Resource<List<Book>>>
     fun getChapters(bookId: Int): Flow<List<Chapter>>
     suspend fun getBook(bookId: Int): Book?
     suspend fun getBookNumericIdFromChapter(chapterId: Int): Int?
@@ -41,6 +48,7 @@ interface BibleRepository {
 
     //temas
     fun getThemes(): Flow<List<Theme>>
+    fun getThemesResource(): Flow<Resource<List<Theme>>>
     fun getThemeById(themeId: Int): Flow<Theme?>
     fun getMomentsForTheme(themeId: Int): Flow<List<Moment>>
 
@@ -50,6 +58,7 @@ interface BibleRepository {
     suspend fun syncStudies(): Result<Unit>
 
     fun getStudiesWithLessons(): Flow<List<Study>>
+    fun getStudiesResource(): Flow<Resource<List<Study>>>
 
     // Novo: Alternar favorito de um estudo
     suspend fun toggleStudyFavorite(studyId: Int, lessonId: Int, isFavorite: Boolean)
@@ -62,6 +71,7 @@ interface BibleRepository {
 
     suspend fun syncMoreContent(): Result<Unit>
     fun getMoreContent(): Flow<MoreContent?>
+    fun getMoreContentResource(): Flow<Resource<MoreContent>>
 }
 
 // Domain Model (Mantido para uso na UI/Service)

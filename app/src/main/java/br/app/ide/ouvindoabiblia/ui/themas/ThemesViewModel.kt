@@ -1,45 +1,35 @@
 package br.app.ide.ouvindoabiblia.ui.themas
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.data.repository.domain.Resource
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ThemesViewModel @Inject constructor(
     private val repository: BibleRepository
 ) : ViewModel() {
 
-    private val _isLoading = MutableStateFlow(false)
-    private val _error = MutableStateFlow<String?>(null)
+    // ISSUE 3.B: sync version-gated 1x por load orquestrado no repositório.
+    private val refreshTrigger = MutableStateFlow(0)
 
-    // Observa o banco de dados e o estado de carregamento/erro simultaneamente
-    val uiState: StateFlow<ThemesUiState> = combine(
-        _isLoading,
-        _error,
-        repository.getThemes()
-    ) { isLoading, error, themes ->
-        if (themes.isNotEmpty()) {
-            ThemesUiState.Success(themes = themes)
-        } else if (isLoading) {
-            ThemesUiState.Loading
-        } else if (error != null) {
-            ThemesUiState.Error(error)
-        } else {
-            ThemesUiState.Error("Nenhum tema encontrado. Verifique sua conexão e tente novamente.")
-        }
-    }
+    val uiState: StateFlow<ThemesUiState> = refreshTrigger
+        .flatMapLatest { repository.getThemesResource() }
+        .map { it.toUiState() }
         .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
@@ -47,36 +37,21 @@ class ThemesViewModel @Inject constructor(
             initialValue = ThemesUiState.Loading
         )
 
-    init {
-        syncData()
-    }
-
     fun handle(intent: ThemesIntent) {
         when (intent) {
-            is ThemesIntent.Retry -> syncData()
-            is ThemesIntent.SelectTheme -> { /* Navegação será tratada na Screen */
-            }
+            is ThemesIntent.Retry -> refreshTrigger.update { it + 1 }
+            is ThemesIntent.SelectTheme -> { /* Navegação tratada na Screen */ }
         }
     }
 
-    private fun syncData() {
-        viewModelScope.launch {
-            // Verifica se já temos dados cacheados para evitar loading desnecessário
-            val currentThemes = repository.getThemes().firstOrNull()
-            if (currentThemes.isNullOrEmpty()) {
-                _isLoading.value = true
+    private fun Resource<List<Theme>>.toUiState(): ThemesUiState = when (this) {
+        Resource.Loading -> ThemesUiState.Loading
+        is Resource.Error -> ThemesUiState.Error(message)
+        is Resource.Success ->
+            if (data.isEmpty()) {
+                ThemesUiState.Error("Nenhum tema encontrado. Verifique sua conexão e tente novamente.")
+            } else {
+                ThemesUiState.Success(themes = data)
             }
-
-            _error.value = null
-
-            repository.syncThemes().onFailure { exception ->
-                if (currentThemes.isNullOrEmpty()) {
-                    _error.value = "Erro ao carregar temas: ${exception.localizedMessage}"
-                } else {
-                    Log.w("ThemesViewModel", "Falha no sync silencioso: ${exception.message}")
-                }
-            }
-            _isLoading.value = false
-        }
     }
 }

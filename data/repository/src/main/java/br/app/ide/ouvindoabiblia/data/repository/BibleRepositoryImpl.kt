@@ -19,6 +19,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.Resource
 import br.app.ide.ouvindoabiblia.data.repository.domain.mapper.toDomain
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Book
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
@@ -30,7 +31,9 @@ import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -52,6 +55,44 @@ class BibleRepositoryImpl @Inject constructor(
 
     override fun getBooks(): Flow<List<Book>> =
         dao.getAllBooks().map { list -> list.map { it.toDomain() } }
+
+    override fun getBooksResource(): Flow<Resource<List<Book>>> =
+        syncedListResource(getBooks(), ::syncBibleData)
+
+    /**
+     * ISSUE 3.B — orquestração centralizada de loading.
+     *
+     * Encapsula o padrão antes duplicado em Home/Themes/Studies VMs:
+     * 1. lê o cache 1x; se vazio -> emite [Resource.Loading];
+     * 2. dispara [sync] **uma única vez** (dentro do flow{}, não em combine);
+     * 3. reflete o cache: cheio -> Success; vazio+falha -> Error; vazio+ok -> Success([]),
+     *    deixando a VM decidir como renderizar lista vazia (Empty/mensagem).
+     *
+     * O disparo 1x-por-load vem de o [sync] estar no corpo do flow{}: só roda na
+     * coleta inicial do upstream. Combinado com stateIn(WhileSubscribed(5s)) na VM,
+     * o stream é compartilhado e só reinicia após 5s sem coletores.
+     */
+    private fun <T> syncedListResource(
+        cache: Flow<List<T>>,
+        sync: suspend () -> Result<Unit>
+    ): Flow<Resource<List<T>>> = flow {
+        val current = cache.first()
+        if (current.isEmpty()) emit(Resource.Loading)
+
+        val result = sync()
+
+        emitAll(
+            cache.map { list ->
+                when {
+                    list.isNotEmpty() -> Resource.Success(list)
+                    result.isFailure -> Resource.Error(
+                        result.exceptionOrNull()?.localizedMessage ?: "Erro ao carregar"
+                    )
+                    else -> Resource.Success(list) // vazio legítimo: a VM decide (Empty/mensagem)
+                }
+            }
+        )
+    }
 
     // O bookId aqui continua sendo o SLUG ("genesis"), o DAO faz o JOIN internamente
     override fun getChapters(bookId: Int): Flow<List<Chapter>> =
@@ -262,6 +303,9 @@ class BibleRepositoryImpl @Inject constructor(
     override fun getThemes(): Flow<List<Theme>> =
         dao.getAllThemes().map { list -> list.map { it.toDomain() } }
 
+    override fun getThemesResource(): Flow<Resource<List<Theme>>> =
+        syncedListResource(getThemes(), ::syncThemes)
+
     override fun getMomentsForTheme(themeId: Int): Flow<List<Moment>> =
         dao.getMomentsForTheme(themeId).map { list -> list.map { it.toDomain() } }
 
@@ -328,6 +372,9 @@ class BibleRepositoryImpl @Inject constructor(
         return dao.getStudiesWithLessons().map { list -> list.map { it.toDomain() } }
     }
 
+    override fun getStudiesResource(): Flow<Resource<List<Study>>> =
+        syncedListResource(getStudiesWithLessons(), ::syncStudies)
+
     override fun getThemeById(themeId: Int): Flow<Theme?> {
         return dao.getThemeById(themeId).map { it?.toDomain() }
     }
@@ -374,5 +421,24 @@ class BibleRepositoryImpl @Inject constructor(
                 json.decodeFromString(MoreContentDto.serializer(), cachedJson).toDomain()
             }.getOrNull()
         }
+    }
+
+    // ISSUE 3.B — More é nullable-single (não lista): null == "sem cache".
+    override fun getMoreContentResource(): Flow<Resource<MoreContent>> = flow {
+        if (getMoreContent().first() == null) emit(Resource.Loading)
+
+        val result = syncMoreContent()
+
+        emitAll(
+            getMoreContent().map { content ->
+                when {
+                    content != null -> Resource.Success(content)
+                    result.isFailure -> Resource.Error(
+                        result.exceptionOrNull()?.localizedMessage ?: "Erro ao carregar conteúdo"
+                    )
+                    else -> Resource.Loading
+                }
+            }
+        )
     }
 }
