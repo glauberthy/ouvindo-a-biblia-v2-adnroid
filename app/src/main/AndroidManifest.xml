@@ -47,6 +47,11 @@
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="br.app.ide.ouvindoabiblia.cast.CastOptionsProvider" />
 
+        <!-- Android Auto (ISSUE 4.C): declara o app como app de mídia. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
     </application>
 
 </manifest>

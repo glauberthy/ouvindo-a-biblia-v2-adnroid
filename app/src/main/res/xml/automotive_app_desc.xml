@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Declaração de app de mídia para Android Auto (ISSUE 4.C). O PlaybackService
+     já é um MediaLibraryService (Media3), que o Auto navega via MediaBrowser. -->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>
