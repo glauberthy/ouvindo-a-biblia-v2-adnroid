@@ -44,9 +44,13 @@ reconfirmar a linha exata ao pegar cada issue.
   no repositório; Home/Themes/Studies/More VMs sem `_isLoading/_error/combine/syncData`
   (refreshTrigger+flatMapLatest+stateIn(WhileSubscribed(5s))). Validado por logcat no
   device: 1 GET por load; <5s não re-dispara; >5s re-dispara 1x; Retry 1 GET.
-- 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** 4.C (higiene + vazamento do LeakCanary).
-- 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
+- ✅ **4.C** (higiene) — 2 lint errors (Media3 OptIn) zerados; 21 UnusedResources
+  removidos; StrictMode em debug; Android Auto declarado; **Cast DESLIGADO** nesta
+  versão (kill-switch `CastConfig.ENABLED`). Vazamento do LeakCanary: **não reproduz**
+  no build atual (0 leaks após repro do zero + heap dump forçado).
+- ❌ **Cast** (§6.1–6.4) — **FORA DE ESCOPO desta versão** (desligado via kill-switch;
+  código dormente no repo).
+- ⏭️ **Próximo:** 4.A (notificação opção A) / 4.B (`onPlaybackResumption` deprecated).
 
 ---
 
@@ -282,16 +286,34 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
 - **Critério de aceitação:** alinhar com a API atual recomendada do Media3.
 - **Validação:** device. **Esforço:** M · **Depende de:** nada.
 
-### ISSUE 4.C — Android Auto (declarar) / StrictMode / higiene de lint (100 warnings)
+### ISSUE 4.C — ✅ FEITA — Android Auto (declarar) / StrictMode / higiene de lint
 
-- Itens menores de polimento; agrupar conforme conveniência. **Esforço:** P cada.
+- **Feito:**
+  - **Lint errors (2):** `@OptIn(UnstableApi::class)` no `bitmapLoader`/`onDestroy`
+    do `PlaybackService` → `:app:lintDebug` sem errors. Commit `72eb8d9`.
+  - **UnusedResources (21):** drawables órfãos, `colors.xml` enxuto, `backup_rules.xml`;
+    rastreado 0 refs cada (99→77 warnings). Commit `5b1d985`.
+  - **StrictMode:** ligado só em debug no `OuvindoBibliaApp` (thread detectAll + vm
+    activity/closable/sqlite leaks, penaltyLog). **Android Auto:** `automotive_app_desc.xml`
+    + meta-data `com.google.android.gms.car.application`. Commit `0bc8436`.
+  - **Cast DESLIGADO** (fora desta versão): kill-switch único `cast/CastConfig.ENABLED=false`
+    corta `initializeCast()`; some a I/O de disco na main do `CastContext.getSharedInstance`
+    (validado no device via StrictMode). Botão de Cast já oculto. Commit `a15c846`.
+- **Vazamento LeakCanary:** **não reproduz** no build atual — 0 APPLICATION/LIBRARY LEAKS
+  após 3 rotações + navegação + heap dump forçado. `PlayerViewModel` usa `@ApplicationContext`
+  e `onCleared()` remove listener do Cast/callback/controller. Fechado.
+- **Deixado para depois (não-hygiene):** 35 Typos (falso-positivo pt-BR — candidato a
+  baseline), 37 bumps de dependência (tarefa à parte, arriscado num pass de higiene).
 
 ---
 
-## 🅿️ ESTACIONADO — Cast (reativar quando houver Chromecast)
+## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
-- §6.1 posição não volta Cast→local · §6.2 sem fila (auto-avanço) · §6.3 metadados errados p/
-  Estudo-Tema · §6.4 alvo divergente na transição. Todos exigem device + Chromecast para validar.
+- Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
+  Reativar: flip do flag + descomentar `CastButton` em `SharedPlayerScreen`.
+- Backlog quando religar: §6.1 posição não volta Cast→local · §6.2 sem fila (auto-avanço) ·
+  §6.3 metadados errados p/ Estudo-Tema · §6.4 alvo divergente na transição. Exigem
+  device + Chromecast para validar.
 
 ---
 
