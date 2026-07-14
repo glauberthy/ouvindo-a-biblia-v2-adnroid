@@ -4,8 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,15 +50,15 @@ class StudyDetailsViewModel @Inject constructor(
                     )
                 }
                 .collect { studyData ->
-                    // studyData é o StudyWithLessons (StudyEntity + List<StudyLessonEntity>)
+                    // studyData é o Study de domínio (dados do estudo + List<Lesson>)
                     _uiState.value = StudyDetailsUiState.Success(
-                        studyWithLessons = studyData
+                        study = studyData
                     )
                 }
         }
     }
 
-    fun toggleFavorite(lesson: StudyLessonEntity) {
+    fun toggleFavorite(lesson: Lesson) {
         viewModelScope.launch {
             repository.toggleStudyFavorite(lesson.studyId, lesson.remoteId, !lesson.isFavorite)
         }

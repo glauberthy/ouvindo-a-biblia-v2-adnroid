@@ -3,14 +3,13 @@ package br.app.ide.ouvindoabiblia.data.repository
 import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
-import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
@@ -48,11 +47,10 @@ interface BibleRepository {
 
 
     //Estudo
-    fun getStudies(): Flow<List<StudyEntity>>
-    fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons>
+    fun getStudyWithLessons(studyId: Int): Flow<Study>
     suspend fun syncStudies(): Result<Unit>
 
-    fun getStudiesWithLessons(): Flow<List<StudyWithLessons>>
+    fun getStudiesWithLessons(): Flow<List<Study>>
 
     // Novo: Alternar favorito de um estudo
     suspend fun toggleStudyFavorite(studyId: Int, lessonId: Int, isFavorite: Boolean)
@@ -60,7 +58,7 @@ interface BibleRepository {
     // Novo: Fluxo de lições de estudos favoritas
     fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
 
-    fun getStudyLessonByIdsFlow(studyId: Int, lessonId: Int): Flow<StudyLessonEntity?>
+    fun getStudyLessonByIdsFlow(studyId: Int, lessonId: Int): Flow<Lesson?>
 
 
     suspend fun syncMoreContent(): Result<Unit>

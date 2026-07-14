@@ -276,11 +276,11 @@ class PlaybackService : MediaLibraryService() {
                         .setUri(lesson.url)
                         .setMediaMetadata(
                             MediaMetadata.Builder()
-                                .setTitle(studyData.study.title)
-                                .setAlbumTitle(studyData.study.title)
+                                .setTitle(studyData.title)
+                                .setAlbumTitle(studyData.title)
                                 .setSubtitle(lesson.title)
                                 .setArtist("Ouvindo a Bíblia")
-                                .setArtworkUri(studyData.study.imageUrl.toUri())
+                                .setArtworkUri(studyData.imageUrl.toUri())
                                 .setIsBrowsable(false)
                                 .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                                 .setExtras(Bundle().apply {

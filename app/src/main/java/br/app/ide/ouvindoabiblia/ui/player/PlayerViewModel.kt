@@ -17,6 +17,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
@@ -911,7 +912,7 @@ class PlayerViewModel @Inject constructor(
     fun playStudyPlaylist(
         studyTitle: String,
         studyCoverUrl: String,
-        lessons: List<br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity>,
+        lessons: List<Lesson>,
         startIndex: Int = 0
     ) {
         val controller = mediaController ?: return

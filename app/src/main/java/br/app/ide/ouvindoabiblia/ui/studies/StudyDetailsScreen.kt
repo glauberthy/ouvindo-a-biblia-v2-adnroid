@@ -50,9 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
-import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
@@ -71,7 +70,7 @@ fun StudyDetailsScreen(
     playerViewModel: PlayerViewModel = hiltViewModel(),
     bottomContentPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
-    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
+    onPlayStudy: (String, String, List<Lesson>, Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
@@ -99,7 +98,7 @@ fun StudyDetailsScreen(
 
             is StudyDetailsUiState.Success -> {
                 StudyDetailsContent(
-                    studyWithLessons = state.studyWithLessons,
+                    study = state.study,
                     playingIndex = playingIndex,
                     bottomContentPadding = bottomContentPadding,
                     onBackClick = onBackClick,
@@ -112,11 +111,11 @@ fun StudyDetailsScreen(
 
 @Composable
 private fun StudyDetailsContent(
-    studyWithLessons: StudyWithLessons,
+    study: Study,
     playingIndex: Int,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
-    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
+    onPlayStudy: (String, String, List<Lesson>, Int) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -124,8 +123,8 @@ private fun StudyDetailsContent(
             .background(CreamBackground)
     ) {
         LessonsList(
-            study = studyWithLessons.study,
-            lessons = studyWithLessons.lessons,
+            study = study,
+            lessons = study.lessons,
             playingIndex = playingIndex,
             bottomContentPadding = bottomContentPadding,
             onBackClick = onBackClick,
@@ -136,12 +135,12 @@ private fun StudyDetailsContent(
 
 @Composable
 private fun LessonsList(
-    study: StudyEntity,
-    lessons: List<StudyLessonEntity>,
+    study: Study,
+    lessons: List<Lesson>,
     playingIndex: Int,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
-    onPlayStudy: (String, String, List<StudyLessonEntity>, Int) -> Unit
+    onPlayStudy: (String, String, List<Lesson>, Int) -> Unit
 ) {
     val horizontalSpacing = 0.dp
 
@@ -184,7 +183,7 @@ private fun LessonsList(
 @Composable
 fun LessonListItem(
     index: Int,
-    lesson: StudyLessonEntity,
+    lesson: Lesson,
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
@@ -261,8 +260,8 @@ fun LessonListItem(
 
 @Composable
 private fun StudyDetailsHeader(
-    study: StudyEntity,
-    lessons: List<StudyLessonEntity>,
+    study: Study,
+    lessons: List<Lesson>,
     onBackClick: () -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -381,51 +380,50 @@ private fun StudyMetaChip(
 
 // --- PREVIEWS ---
 
-private fun previewStudyEntity(): StudyEntity {
-    return StudyEntity(
+private fun previewStudyEntity(): Study {
+    return Study(
         id = 1,
         title = "Estudos Expositivos em Apocalipse",
         author = "Rev. Leandro Lima",
         description = "Série de estudos bíblicos expositivos sobre o livro do Apocalipse, focando na esperança e soberania de Cristo.",
-        imageUrl = "https://images.unsplash.com/photo-1504052434569-70ad5836ab65"
+        imageUrl = "https://images.unsplash.com/photo-1504052434569-70ad5836ab65",
+        lessons = previewLessonsList()
     )
 }
 
-private fun previewLessonsList(): List<StudyLessonEntity> {
+private fun previewLessonsList(): List<Lesson> {
     return listOf(
-        StudyLessonEntity(
+        Lesson(
             localId = 1,
             remoteId = 1,
             studyId = 1,
             title = "A Revelação de Jesus Cristo",
             url = "https://example.com/audio1.mp3",
-            duration = 3450 // 57m 30s
+            duration = 3450, // 57m 30s
+            isFavorite = false
         ),
-        StudyLessonEntity(
+        Lesson(
             localId = 2,
             remoteId = 2,
             studyId = 1,
             title = "A Igreja em Éfeso",
             url = "https://example.com/audio2.mp3",
-            duration = 2805 // 46m 45s
+            duration = 2805, // 46m 45s
+            isFavorite = false
         ),
-        StudyLessonEntity(
+        Lesson(
             localId = 3,
             remoteId = 3,
             studyId = 1,
             title = "A Igreja em Esmirna",
             url = "https://example.com/audio3.mp3",
-            duration = 3120 // 52m 00s
+            duration = 3120, // 52m 00s
+            isFavorite = false
         )
     )
 }
 
-private fun previewStudyWithLessons(): StudyWithLessons {
-    return StudyWithLessons(
-        study = previewStudyEntity(),
-        lessons = previewLessonsList()
-    )
-}
+private fun previewStudyWithLessons(): Study = previewStudyEntity()
 
 @Preview(
     name = "Study details header",
@@ -480,7 +478,7 @@ private fun PreviewLessonListItem() {
 private fun PreviewStudyDetailsContent() {
     OuvindoABibliaTheme {
         StudyDetailsContent(
-            studyWithLessons = previewStudyWithLessons(),
+            study = previewStudyWithLessons(),
             playingIndex = 1,
             bottomContentPadding = 72.dp, // Simula o player aberto
             onBackClick = {},

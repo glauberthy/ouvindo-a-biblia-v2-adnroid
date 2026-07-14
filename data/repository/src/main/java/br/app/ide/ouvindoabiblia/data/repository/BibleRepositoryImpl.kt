@@ -23,6 +23,9 @@ import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.mapper.toDomain
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -257,12 +260,8 @@ class BibleRepositoryImpl @Inject constructor(
 
 
     //Estudo
-    override fun getStudies(): Flow<List<StudyEntity>> {
-        return dao.getStudies()
-    }
-
-    override fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons> {
-        return dao.getStudyWithLessons(studyId)
+    override fun getStudyWithLessons(studyId: Int): Flow<Study> {
+        return dao.getStudyWithLessons(studyId).map { it.toDomain() }
     }
 
     override suspend fun syncStudies(): Result<Unit> = withContext(Dispatchers.IO) {
@@ -318,8 +317,8 @@ class BibleRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getStudiesWithLessons(): Flow<List<StudyWithLessons>> {
-        return dao.getStudiesWithLessons()
+    override fun getStudiesWithLessons(): Flow<List<Study>> {
+        return dao.getStudiesWithLessons().map { list -> list.map { it.toDomain() } }
     }
 
     override fun getThemeById(themeId: Int): Flow<ThemeEntity?> {
@@ -338,8 +337,8 @@ class BibleRepositoryImpl @Inject constructor(
     override fun getStudyLessonByIdsFlow(
         studyId: Int,
         lessonId: Int
-    ): Flow<StudyLessonEntity?> {
-        return dao.getStudyLessonByIdsFlow(studyId, lessonId)
+    ): Flow<Lesson?> {
+        return dao.getStudyLessonByIdsFlow(studyId, lessonId).map { it?.toDomain() }
     }
 
     override suspend fun syncMoreContent(): Result<Unit> {

@@ -56,9 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
-import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
@@ -97,7 +96,7 @@ fun StudiesScreen(
 
 @Composable
 private fun StudiesContent(
-    studies: List<StudyWithLessons>,
+    studies: List<Study>,
     onStudyClick: (Int, String) -> Unit,
     bottomContentPadding: Dp
 ) {
@@ -153,12 +152,12 @@ private fun StudiesContent(
 
             items(
                 items = studies,
-                key = { it.study.id }
+                key = { it.id }
             ) { study ->
                 StudyListItem(
                     study = study,
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { onStudyClick(study.study.id, study.study.title) }
+                    onClick = { onStudyClick(study.id, study.title) }
                 )
             }
         }
@@ -168,7 +167,7 @@ private fun StudiesContent(
 
 @Composable
 private fun StudyListItem(
-    study: StudyWithLessons,
+    study: Study,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -225,8 +224,8 @@ private fun StudyListItem(
                         shadowElevation = 0.dp
                     ) {
                         AppAsyncImage(
-                            imageUrl = study.study.imageUrl,
-                            contentDescription = "Autor ${study.study.author}",
+                            imageUrl = study.imageUrl,
+                            contentDescription = "Autor ${study.author}",
                             modifier = Modifier
                                 .width(75.dp)
                                 .height(75.dp)
@@ -242,7 +241,7 @@ private fun StudyListItem(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = study.study.title,
+                            text = study.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = DeepBlueDark,
@@ -254,7 +253,7 @@ private fun StudyListItem(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = study.study.author,
+                            text = study.author,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.W400,
                             color = SlateBlue,
@@ -263,7 +262,7 @@ private fun StudyListItem(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = study.study.description,
+                            text = study.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = LavenderGray,
                             maxLines = 3,
@@ -402,37 +401,37 @@ private fun previewStudy(
     title: String,
     author: String,
     description: String
-): StudyWithLessons {
-    return StudyWithLessons(
-        study = StudyEntity(
-            id = id,
-            title = title,
-            author = author,
-            description = description,
-            imageUrl = "https://randomuser.me/api/portraits/men/11.jpg"
-        ),
+): Study {
+    return Study(
+        id = id,
+        title = title,
+        author = author,
+        description = description,
+        imageUrl = "https://randomuser.me/api/portraits/men/11.jpg",
         lessons = listOf(
-            StudyLessonEntity(
+            Lesson(
                 localId = 1,
                 remoteId = 1,
                 studyId = id,
                 title = "Capítulo 1",
                 url = "https://example.com/audio1.mp3",
-                duration = 5886
+                duration = 5886,
+                isFavorite = false
             ),
-            StudyLessonEntity(
+            Lesson(
                 localId = 2,
                 remoteId = 2,
                 studyId = id,
                 title = "Capítulo 2",
                 url = "https://example.com/audio2.mp3",
-                duration = 2400
+                duration = 2400,
+                isFavorite = false
             )
         )
     )
 }
 
-private fun previewStudies(): List<StudyWithLessons> = listOf(
+private fun previewStudies(): List<Study> = listOf(
     previewStudy(
         id = 1,
         title = "Estudos Expositivos em Apocalipse",
