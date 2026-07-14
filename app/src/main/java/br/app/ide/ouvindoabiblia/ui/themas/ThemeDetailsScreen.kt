@@ -51,9 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.data.local.entity.MomentEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
-import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
@@ -73,7 +72,7 @@ fun ThemeDetailsScreen(
     playerViewModel: PlayerViewModel = hiltViewModel(),
     bottomContentPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
-    onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
+    onPlayTheme: (List<Moment>, Int, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
@@ -111,12 +110,12 @@ fun ThemeDetailsScreen(
 
 @Composable
 private fun MomentsList(
-    theme: ThemeEntity,
-    moments: List<MomentWithAudio>,
+    theme: Theme,
+    moments: List<Moment>,
     playingIndex: Int,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
-    onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
+    onPlayTheme: (List<Moment>, Int, String) -> Unit
 ) {
     // Igual ao padding horizontal do seu MomentListItem
     val horizontalSpacing = 0.dp
@@ -144,7 +143,7 @@ private fun MomentsList(
             )
         }
 
-        itemsIndexed(moments, key = { _, item -> item.moment.id }) { index, momentAudio ->
+        itemsIndexed(moments, key = { _, item -> item.id }) { index, momentAudio ->
             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                 val isPlaying = index == playingIndex
 
@@ -162,7 +161,7 @@ private fun MomentsList(
 @Composable
 fun MomentListItem(
     index: Int,
-    item: MomentWithAudio,
+    item: Moment,
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
@@ -207,13 +206,13 @@ fun MomentListItem(
             Column(modifier = Modifier.weight(1f)) {
 
                 Text(
-                    text = item.moment.reference,
+                    text = item.reference,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = DeepBlueDark
                 )
                 Text(
-                    text = item.moment.title,
+                    text = item.title,
                     style = MaterialTheme.typography.bodyMedium,
                     color = DeepBlueDark.copy(alpha = 0.8f),
                     maxLines = 3,
@@ -249,14 +248,14 @@ fun MomentListItem(
 
 @Composable
 private fun ThemeDetailsHeader(
-    theme: ThemeEntity,
-    moments: List<MomentWithAudio>,
+    theme: Theme,
+    moments: List<Moment>,
     onBackClick: () -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     val totalDurationMs = moments.sumOf {
-        (it.moment.endMs - it.moment.startMs).coerceAtLeast(0L)
+        (it.endMs - it.startMs).coerceAtLeast(0L)
     }
 
     val totalMinutes = (totalDurationMs / 1000L / 60L).toInt()
@@ -363,12 +362,12 @@ private fun ThemeMetaChip(
 
 @Composable
 private fun ThemeDetailsContent(
-    theme: ThemeEntity,
-    moments: List<MomentWithAudio>,
+    theme: Theme,
+    moments: List<Moment>,
     playingIndex: Int,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
-    onPlayTheme: (List<MomentWithAudio>, Int, String) -> Unit
+    onPlayTheme: (List<Moment>, Int, String) -> Unit
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(
@@ -390,8 +389,8 @@ private fun ThemeDetailsContent(
     }
 }
 
-private fun previewTheme(): ThemeEntity {
-    return ThemeEntity(
+private fun previewTheme(): Theme {
+    return Theme(
         id = 1,
         title = "Ansiedade e confiança em Deus",
         description = "A ansiedade é combatida pela confiança na providência paternal de Deus, alimentada por Palavra e oração.",
@@ -463,8 +462,8 @@ private fun PreviewThemeDetailsContent() {
 }
 
 
-private fun previewThemeEntity(): ThemeEntity {
-    return ThemeEntity(
+private fun previewThemeEntity(): Theme {
+    return Theme(
         id = 1,
         title = "Ansiedade e confiança em Deus",
         description = "A ansiedade é combatida pela confiança na providência paternal de Deus, alimentada por Palavra e oração.",
@@ -484,25 +483,23 @@ private fun previewMomentWithAudio(
     audioUrl: String = "https://example.com/audio.mp3",
     bookName: String = "Mateus",
     coverUrl: String? = null
-): MomentWithAudio {
-    return MomentWithAudio(
-        moment = MomentEntity(
-            id = id,
-            themeId = themeId,
-            bookId = bookId,
-            chapterNumber = chapterNumber,
-            title = title,
-            startMs = startMs,
-            endMs = endMs,
-            reference = reference
-        ),
+): Moment {
+    return Moment(
+        id = id,
+        themeId = themeId,
+        bookId = bookId,
+        chapterNumber = chapterNumber,
+        title = title,
+        startMs = startMs,
+        endMs = endMs,
+        reference = reference,
         audioUrl = audioUrl,
         bookName = bookName,
         coverUrl = coverUrl
     )
 }
 
-private fun previewMomentsList(): List<MomentWithAudio> {
+private fun previewMomentsList(): List<Moment> {
     return listOf(
         previewMomentWithAudio(
             id = 1,

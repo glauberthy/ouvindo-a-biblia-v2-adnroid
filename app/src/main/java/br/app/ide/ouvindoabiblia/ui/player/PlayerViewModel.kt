@@ -15,9 +15,9 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
-import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
@@ -345,7 +345,7 @@ class PlayerViewModel @Inject constructor(
     fun playThemePlaylist(
         themeTitle: String,
         themeCoverUrl: String,
-        moments: List<MomentWithAudio>,
+        moments: List<Moment>,
         startIndex: Int = 0
     ) {
         val controller = mediaController ?: return
@@ -354,7 +354,7 @@ class PlayerViewModel @Inject constructor(
         _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl) }
 
         val themeMediaItems = moments.map { item ->
-            val moment = item.moment
+            val moment = item
             val audioUrl = item.audioUrl
             val bookName = item.bookName
             val coverUrl = item.coverUrl ?: themeCoverUrl

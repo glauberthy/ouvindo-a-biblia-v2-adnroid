@@ -10,7 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
@@ -26,7 +26,7 @@ fun NavigationGraph(
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
     onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
-    onPlayTheme: (String, String, List<MomentWithAudio>, Int) -> Unit,
+    onPlayTheme: (String, String, List<Moment>, Int) -> Unit,
     onPlayStudy: (Int, String, String, Int) -> Unit,
     bottomContentPadding: Dp = 0.dp,
 ) {

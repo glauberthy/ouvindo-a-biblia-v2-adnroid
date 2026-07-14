@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
@@ -86,7 +86,7 @@ fun ThemesScreen(
 
 @Composable
 private fun ThemesContent(
-    themes: List<ThemeEntity>,
+    themes: List<Theme>,
     bottomContentPadding: Dp, // Receive the padding
     onThemeClick: (Int, String) -> Unit
 ) {
@@ -148,7 +148,7 @@ private fun ThemesContent(
 
 @Composable
 fun ThemeListItem(
-    theme: ThemeEntity,
+    theme: Theme,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -213,7 +213,7 @@ fun ThemeListItem(
 
 
 @Composable
-private fun ThemeImage(theme: ThemeEntity) {
+private fun ThemeImage(theme: Theme) {
     Surface(
         modifier = Modifier.size(75.dp),
         shape = RoundedCornerShape(16.dp),
@@ -236,7 +236,7 @@ private fun ThemeImage(theme: ThemeEntity) {
 
 @Composable
 private fun ThemeTextContent(
-    theme: ThemeEntity,
+    theme: Theme,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -271,8 +271,8 @@ private fun previewTheme(
     title: String,
     description: String,
     imageUrl: String
-): ThemeEntity {
-    return ThemeEntity(
+): Theme {
+    return Theme(
         id = id,
         title = title,
         description = description,
@@ -280,7 +280,7 @@ private fun previewTheme(
     )
 }
 
-private fun previewThemes(): List<ThemeEntity> = listOf(
+private fun previewThemes(): List<Theme> = listOf(
     previewTheme(
         id = 1,
         title = "Ansiedade e confiança em Deus",

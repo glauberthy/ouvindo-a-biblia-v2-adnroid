@@ -25,7 +25,9 @@ import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.domain.mapper.toDomain
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -254,9 +256,11 @@ class BibleRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getThemes(): Flow<List<ThemeEntity>> = dao.getAllThemes()
-    override fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>> =
-        dao.getMomentsForTheme(themeId)
+    override fun getThemes(): Flow<List<Theme>> =
+        dao.getAllThemes().map { list -> list.map { it.toDomain() } }
+
+    override fun getMomentsForTheme(themeId: Int): Flow<List<Moment>> =
+        dao.getMomentsForTheme(themeId).map { list -> list.map { it.toDomain() } }
 
 
     //Estudo
@@ -321,8 +325,8 @@ class BibleRepositoryImpl @Inject constructor(
         return dao.getStudiesWithLessons().map { list -> list.map { it.toDomain() } }
     }
 
-    override fun getThemeById(themeId: Int): Flow<ThemeEntity?> {
-        return dao.getThemeById(themeId)
+    override fun getThemeById(themeId: Int): Flow<Theme?> {
+        return dao.getThemeById(themeId).map { it?.toDomain() }
     }
 
     override suspend fun toggleStudyFavorite(studyId: Int, lessonId: Int, isFavorite: Boolean) {

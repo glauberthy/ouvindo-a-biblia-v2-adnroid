@@ -3,13 +3,13 @@ package br.app.ide.ouvindoabiblia.data.repository
 import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
-import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import kotlinx.coroutines.flow.Flow
 
 interface BibleRepository {
@@ -41,9 +41,9 @@ interface BibleRepository {
     fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
 
     //temas
-    fun getThemes(): Flow<List<ThemeEntity>>
-    fun getThemeById(themeId: Int): Flow<ThemeEntity?>
-    fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
+    fun getThemes(): Flow<List<Theme>>
+    fun getThemeById(themeId: Int): Flow<Theme?>
+    fun getMomentsForTheme(themeId: Int): Flow<List<Moment>>
 
 
     //Estudo
