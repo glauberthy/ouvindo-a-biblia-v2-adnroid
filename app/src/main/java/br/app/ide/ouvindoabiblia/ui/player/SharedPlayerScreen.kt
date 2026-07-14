@@ -394,6 +394,8 @@ fun SharedPlayerScreen(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Cast fora desta versão (ISSUE 4.C) — reativar: CastConfig.ENABLED=true
+                // e descomentar este botão.
 //                CastButton(
 //                    color = headerContentColor,
 //                    modifier = Modifier.padding(end = 8.dp)

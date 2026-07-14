@@ -13,6 +13,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import br.app.ide.ouvindoabiblia.cast.CastConfig
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
@@ -249,7 +250,10 @@ class PlayerViewModel @Inject constructor(
     }
 
     init {
-        initializeCast()
+        // Cast fora desta versão — kill-switch único em CastConfig.ENABLED (ISSUE 4.C).
+        // Com Cast desligado, não chamamos CastContext.getSharedInstance (some a I/O
+        // de disco na main thread flagrada pelo StrictMode no startup/rotação).
+        if (CastConfig.ENABLED) initializeCast()
 
         // --- INICIALIZAÇÃO OTIMIZADA COM ROOM ---
         viewModelScope.launch {
