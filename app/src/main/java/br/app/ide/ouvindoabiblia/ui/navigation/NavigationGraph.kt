@@ -6,13 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
-import br.app.ide.ouvindoabiblia.ui.chapters.ChaptersScreen
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
@@ -126,17 +124,6 @@ fun NavigationGraph(
                 onBackClick = { navController.popBackStack() }
             )
         }
-
-        // --- CAPÍTULOS (Ainda é uma tela separada) ---
-        composable<Screen.Chapters> { backStackEntry ->
-            val args = backStackEntry.toRoute<Screen.Chapters>()
-            ChaptersScreen(
-                onBackClick = { navController.popBackStack() },
-                viewModel = hiltViewModel(),
-                onNavigateToPlayer = { _, _ -> /* Opcional */ }
-            )
-        }
-
 
     }
 }

@@ -266,10 +266,7 @@ fun MainScreen(
                                     is Screen.Home -> {
                                         currentRoute.contains(
                                             Screen.Home::class.simpleName ?: ""
-                                        ) ||
-                                                currentRoute.contains(
-                                                    Screen.Chapters::class.simpleName ?: ""
-                                                )
+                                        )
                                     }
 
                                     else -> {

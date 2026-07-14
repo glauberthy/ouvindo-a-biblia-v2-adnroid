@@ -40,12 +40,6 @@ sealed interface Screen {
     ) : Screen
 
     @Serializable
-    data class Chapters(
-        val bookId: Int,
-        val bookName: String
-    ) : Screen
-
-    @Serializable
     data class ThemeDetails(
         val themeId: Int,
         val themeTitle: String

@@ -34,25 +34,12 @@ class MediaContentIdTest {
         assertEquals(id, MediaContentId.parse(id.raw))
     }
 
-    @Test
-    fun `pasta de livro round-trip`() {
-        val id = MediaContentId.BookFolder(bookId = 6, chapterIndex = 3)
-        assertEquals("6|3", id.raw)
-        assertEquals(id, MediaContentId.parse(id.raw))
-    }
-
     // --- Discriminação de tipo ---
 
     @Test
     fun `numerico puro e biblia`() {
         assertTrue(MediaContentId.parse("42") is MediaContentId.Bible)
         assertEquals(42L, (MediaContentId.parse("42") as MediaContentId.Bible).chapterId)
-    }
-
-    @Test
-    fun `indice ausente na pasta de livro cai em zero`() {
-        // Comportamento herdado do onSetMediaItems: "6|" -> índice 0.
-        assertEquals(MediaContentId.BookFolder(6, 0), MediaContentId.parse("6|"))
     }
 
     // --- Malformados: null ---
@@ -70,7 +57,9 @@ class MediaContentIdTest {
     }
 
     @Test
-    fun `pasta com book id invalido e nulo`() {
+    fun `id com pipe nao e mais reconhecido (pasta de livro removida na 3-D)`() {
+        // "|" deixou de ser um separador especial; ids com pipe não são numéricos → null.
+        assertNull(MediaContentId.parse("6|3"))
         assertNull(MediaContentId.parse("abc|2"))
     }
 

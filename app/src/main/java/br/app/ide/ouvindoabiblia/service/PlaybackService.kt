@@ -190,7 +190,7 @@ class PlaybackService : MediaLibraryService() {
         when (MediaContentId.parse(mediaId)) {
             is MediaContentId.Bible, is MediaContentId.Study -> Unit
             is MediaContentId.ThemeMoment -> return
-            is MediaContentId.BookFolder, null -> {
+            null -> {
                 Log.w(TAG, "saveCurrentState: mediaId não persistível/malformado, ignorando: $mediaId")
                 return
             }
@@ -198,9 +198,8 @@ class PlaybackService : MediaLibraryService() {
         // ISSUE 2.D (guarda explícita): num item recortado, player.currentPosition é
         // RELATIVO ao início do recorte, mas buildPlaylistFromState reconstrói SEM
         // recorte e aplicaria a posição como ABSOLUTA (retomada errada). Hoje o recorte
-        // da Bíblia é código morto (onPlayBook sempre passa startMs=0), então não
-        // persistir itens recortados é seguro. A correção clip-aware fica atrelada à
-        // 3.D (se/quando ChaptersScreen e o recorte forem religados).
+        // da Bíblia é inalcançável (playBook só recebe startMs=0 dos call-sites vivos),
+        // mas a guarda permanece como defesa caso um caminho de recorte seja religado.
         if (currentMediaItem.clippingConfiguration != MediaItem.ClippingConfiguration.UNSET) {
             Log.w(TAG, "saveCurrentState: posição de item recortado não persistida (2.D): $mediaId")
             return
@@ -331,10 +330,8 @@ class PlaybackService : MediaLibraryService() {
     private fun createMediaItemsFromChapters(
         chapters: List<ChapterWithBookInfo>,
         bookId: String,
-        targetChapterIndex: Int = -1,
-        clippingConfig: MediaItem.ClippingConfiguration = MediaItem.ClippingConfiguration.UNSET,
     ): List<MediaItem> {
-        return chapters.mapIndexed { index, chapterInfo ->
+        return chapters.map { chapterInfo ->
             val metadata = MediaMetadata.Builder()
                 .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
                 .setAlbumTitle(chapterInfo.bookName)
@@ -350,17 +347,11 @@ class PlaybackService : MediaLibraryService() {
                 })
                 .build()
 
-            val builder = MediaItem.Builder()
+            MediaItem.Builder()
                 .setMediaId(MediaContentId.Bible(chapterInfo.chapter.id).raw)
                 .setUri(chapterInfo.chapter.audioUrl)
                 .setMediaMetadata(metadata)
-
-            // SINALIZAÇÃO: Aplica o recorte APENAS se for o capítulo que o usuário clicou
-            if (index == targetChapterIndex) {
-                builder.setClippingConfiguration(clippingConfig)
-            }
-
-            builder.build()
+                .build()
         }
     }
 
@@ -547,58 +538,9 @@ class PlaybackService : MediaLibraryService() {
 
             markExplicitPlaybackRequest(item)
 
-            val isBookFolder = item.mediaMetadata.isBrowsable == true
-
-            if (isBookFolder) {
-                val bookFolder = MediaContentId.parse(item.mediaId) as? MediaContentId.BookFolder
-                    ?: return super.onSetMediaItems(
-                        mediaSession,
-                        controller,
-                        mediaItems,
-                        startIndex,
-                        startPositionMs
-                    )
-                val bookIdInt = bookFolder.bookId
-                val requestedIndex = bookFolder.chapterIndex
-                val incomingClippingConfig = item.clippingConfiguration
-
-
-                return CallbackToFutureAdapter.getFuture { completer ->
-                    serviceScope.launch(Dispatchers.IO) {
-                        try {
-                            val chapters = repository.getChapters(bookIdInt).first()
-
-                            if (chapters.isEmpty()) {
-
-                                completer.setException(
-                                    IllegalStateException("Livro vazio no banco: $bookIdInt")
-                                )
-                                return@launch
-                            }
-
-                            val playlist = createMediaItemsFromChapters(
-                                chapters = chapters,
-                                bookId = bookIdInt.toString(),
-                                targetChapterIndex = requestedIndex,
-                                clippingConfig = incomingClippingConfig,
-                            )
-
-                            completer.set(
-                                MediaSession.MediaItemsWithStartPosition(
-                                    playlist,
-                                    requestedIndex,
-                                    0L
-                                )
-                            )
-                        } catch (e: Exception) {
-
-                            completer.setException(e)
-                        }
-                    }
-                    "Play Book $bookIdInt"
-                }
-            }
-
+            // A expansão de "pasta de livro" (id `{bookId}|{idx}`) foi removida na 3.D
+            // junto com o ChaptersScreen morto — nada mais produz esse mediaId. Playlists
+            // completas de Bíblia hoje chegam prontas de PlayerViewModel.playBook.
             return super.onSetMediaItems(
                 mediaSession,
                 controller,

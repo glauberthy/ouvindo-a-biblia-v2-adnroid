@@ -27,8 +27,13 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **2.C** (log no restore) — resolvido; todo abort de `buildPlaylistFromState` deixa rastro.
 - ✅ **2.D** (clipping) — guarda explícita: não persistir itens recortados (decisão do usuário).
 - ✅ **FASE 2 fechada.**
+- ✅ **3.E** (SDKs) — compileSdk/targetSdk unificados em 36; build limpo.
+- ✅ **3.D** (`ChaptersScreen` morto) — **removido** (decisão do usuário): apagados
+  `ui/chapters/*`, rota/composable `Screen.Chapters`, tipo `MediaContentId.BookFolder`
+  (parser `"|"`), ramo `isBookFolder` do `onSetMediaItems` e o clipping órfão de
+  `createMediaItemsFromChapters`. Guarda 2.D mantida como defesa. Build + testes verdes.
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 3 (3.C/3.E baratos → 3.A/3.B grande) ou 4.C (higiene + vazamento do LeakCanary).
+- ⏭️ **Próximo:** FASE 3 (3.C barato → 3.A/3.B grande) ou 4.C (higiene + vazamento do LeakCanary).
 - 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
 
 ---
@@ -210,22 +215,23 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
   arquivo renomeado.
 - **Validação:** build. **Esforço:** M · **Depende de:** nada.
 
-### ISSUE 3.D — Decidir destino do `ChaptersScreen` morto (§ Diag02 0.2)
+### ISSUE 3.D — ✅ FEITA — Destino do `ChaptersScreen` morto (§ Diag02 0.2)
 
-- **Problema:** `ChaptersScreen`/`ChaptersViewModel` nunca são navegados; parser `"|"` órfão.
-  Religar acorda os bugs 1d/2.D.
-- **Arquivos:** `ui/chapters/*`, `NavigationGraph.kt`, `MainScreen.kt`.
-- **Critério de aceitação:** decisão de produto — remover o código morto OU religar a tela (e então
-  corrigir 1d/2.D junto).
-- **Validação:** sem device (decisão) + build. **Esforço:** P (remover) / M (religar) · **Depende
-  de:** 2.A se religar.
+- **Decisão do usuário:** **remover** o código morto.
+- **Feito:** apagados `ui/chapters/ChaptersScreen.kt` e `ChaptersViewModel.kt`; removidos
+  a rota/`composable<Screen.Chapters>` (`AppNavigation.kt`/`NavigationGraph.kt`), o `contains`
+  cosmético no `MainScreen.kt`, o tipo `MediaContentId.BookFolder` + separador `"|"` + ramo do
+  `parse`, o ramo `isBookFolder` do `onSetMediaItems` e os params de clipping órfãos de
+  `createMediaItemsFromChapters`. Testes do `MediaContentIdTest` ajustados (pipe agora → `null`).
+- **Nota:** a guarda 2.D em `saveCurrentState` foi mantida como defesa (o clipping de Bíblia em
+  `PlayerViewModel.buildBibleMediaItems` segue existindo, mas inalcançável — `playBook` só recebe
+  `startMs=0` dos call-sites vivos Home/Favoritos). Limpá-lo é candidato futuro (fora do escopo 3.D).
+- **Validação:** `:app:assembleDebug` + `:app:testDebugUnitTest` verdes.
 
-### ISSUE 3.E — Unificar compileSdk/targetSdk (§ Diag01 4a)
+### ISSUE 3.E — ✅ FEITA — Unificar compileSdk/targetSdk (§ Diag01 4a)
 
-- **Problema:** `:app` em 35, libs em 36; lint sinaliza `targetSdk=35`.
-- **Arquivos:** `build.gradle.kts` de todos os módulos.
-- **Critério de aceitação:** versões coerentes; build limpo.
-- **Validação:** build. **Esforço:** P · **Depende de:** nada.
+- **Feito:** `:app` movido de 35 → 36 (compileSdk e targetSdk), alinhado às libs. Build debug limpo.
+- **Validação:** `:app:assembleDebug` verde.
 
 ---
 

@@ -4,17 +4,15 @@ package br.app.ide.ouvindoabiblia.playback
  * Identidade de conteúdo codificada no `mediaId` do Media3 (ISSUE 2.A).
  *
  * Antes, o `mediaId` era formatado e parseado em ~10 lugares (PlaybackService,
- * PlayerViewModel, ChaptersViewModel) com convenções string soltas (`study_`,
- * `moment_`, `{bookId}|{idx}`, numérico). Este é o ÚNICO ponto de format/parse:
- * construa via os `data class` (e use [raw] no `setMediaId`), interprete via
- * [parse]. `mediaId` malformado → [parse] devolve `null` (o call-site loga/ignora).
+ * PlayerViewModel) com convenções string soltas (`study_`, `moment_`, numérico).
+ * Este é o ÚNICO ponto de format/parse: construa via os `data class` (e use [raw]
+ * no `setMediaId`), interprete via [parse]. `mediaId` malformado → [parse] devolve
+ * `null` (o call-site loga/ignora).
  *
  * Convenções:
  *  - Bíblia  → id numérico do capítulo (ex.: `"1234"`).
  *  - Estudo  → `"study_{studyId}_{lessonId}"`.
  *  - Tema    → `"moment_{momentId}"` (deliberadamente NÃO persistido como retomada).
- *  - Pasta de livro (pedido de play "browsable") → `"{bookId}|{chapterIndex}"`,
- *    expandido no `onSetMediaItems` para a playlist completa do livro.
  */
 sealed interface MediaContentId {
 
@@ -34,14 +32,9 @@ sealed interface MediaContentId {
         override val raw: String get() = "$PREFIX_MOMENT$momentId"
     }
 
-    data class BookFolder(val bookId: Int, val chapterIndex: Int) : MediaContentId {
-        override val raw: String get() = "$bookId$SEP_BOOK_FOLDER$chapterIndex"
-    }
-
     companion object {
         private const val PREFIX_STUDY = "study_"
         private const val PREFIX_MOMENT = "moment_"
-        private const val SEP_BOOK_FOLDER = "|"
 
         /**
          * Interpreta um `mediaId` cru. Retorna `null` quando o id é malformado
@@ -62,14 +55,6 @@ sealed interface MediaContentId {
             raw.startsWith(PREFIX_MOMENT) -> {
                 val momentId = raw.removePrefix(PREFIX_MOMENT)
                 if (momentId.isNotEmpty()) ThemeMoment(momentId) else null
-            }
-
-            raw.contains(SEP_BOOK_FOLDER) -> {
-                val parts = raw.split(SEP_BOOK_FOLDER)
-                val bookId = parts.getOrNull(0)?.toIntOrNull()
-                // Índice ausente/ inválido cai em 0 (comportamento herdado do onSetMediaItems).
-                val index = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                if (bookId != null) BookFolder(bookId, index) else null
             }
 
             else -> raw.toLongOrNull()?.let { Bible(it) }
