@@ -35,9 +35,17 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **3.C** (LCE/MVI + rename) — Favorites virou LCE selado; Favorites/More/
   MoreSectionDetails/ThemeDetails ganharam `*Contract.kt`; `handle(Intent)` onde há
   ação; `MoreSectionDetailsRoute.k.kt` renomeado. Build + testes verdes (device pendente).
+- ✅ **3.A** (camada de domínio) — `:app` consome só modelos de domínio de
+  `:data:repository` (Book/Chapter/Study/Lesson/Theme/Moment/FavoriteLesson/árvore
+  MoreContent) + mappers internal; deps `:data:local`/`:data:remote` removidas do
+  `:app`. `grep 'data.local.entity|data.remote.dto|data.local.model' app/src` → 0.
+  Fatiado em 7 commits, cada um verde. Smoke test no device OK.
+- ✅ **3.B** (loading nas VMs) — `Resource<T>` + `syncedListResource`/`getXResource`
+  no repositório; Home/Themes/Studies/More VMs sem `_isLoading/_error/combine/syncData`
+  (refreshTrigger+flatMapLatest+stateIn(WhileSubscribed(5s))). Validado por logcat no
+  device: 1 GET por load; <5s não re-dispara; >5s re-dispara 1x; Retry 1 GET.
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 3 grande — **3.A** (camada de domínio) + **3.B** (loading nas VMs)
-  — ou 4.C (higiene + vazamento do LeakCanary).
+- ⏭️ **Próximo:** 4.C (higiene + vazamento do LeakCanary).
 - 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
 
 ---
@@ -191,24 +199,34 @@ Objetivo: matar a fragilidade de "tudo é Bíblia". Tratar como um pacote.
 
 Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
 
-### ISSUE 3.A — Camada de domínio / parar de vazar DTO e Entity pra UI (§ Diag01 2)
+### ISSUE 3.A — ✅ FEITA — Camada de domínio / parar de vazar DTO e Entity pra UI (§ Diag01 2)
 
-- **Problema:** `:app` depende direto de `:data:local` e `:data:remote`; UI consome `*Entity` e
-  `*Dto` sem mapeamento. Mudança no JSON/schema quebra a UI direto.
-- **Arquivos:** `BibleRepository.kt`, ViewModels de `more/themas/studies/favorites/player`,
-  `build.gradle.kts` do `:app`.
-- **Critério de aceitação:** repositório expõe modelos de domínio; `:app` deixa de importar
-  `data.remote.dto` e `data.local.entity`.
-- **Validação:** build + grep dos imports. **Esforço:** G · **Depende de:** nada (grande; pode ser
-  fatiado por feature).
+- **Problema:** `:app` dependia direto de `:data:local`/`:data:remote`; UI consumia `*Entity`,
+  `*Dto` e relation-models do Room (`data.local.model`) sem mapeamento.
+- **Feito:** pacote `domain/` em `:data:repository` — `model/` (nomes limpos: Book, Chapter,
+  Study+Lesson, Theme, Moment, FavoriteLesson, árvore MoreContent/MoreSection/…) + `mapper/`
+  (extensões `internal` `toDomain()`). Interface e Impl passam a expor domínio; `:app` migrado
+  fatia a fatia (Estudos, Temas, Mais, Favoritos, Bíblia/Home + Player/Service). Removidas as
+  deps `:data:local`/`:data:remote` do `app/build.gradle.kts` (Hilt segue agregando os módulos
+  DI via classpath transitivo do `:data:repository` — clean build valida).
+- **Decisão:** escopo amplo (incluiu `data.local.model`); nomes limpos; entrega fatiada.
+- **Validação:** `grep -rE 'data.local.entity|data.remote.dto|data.local.model' app/src` → 0;
+  `assembleDebug test` (clean) verde; smoke test no device OK. **Esforço:** G. Commits
+  `d7bf413`→`7aa587f`.
 
-### ISSUE 3.B — Orquestração de loading duplicada nas ViewModels (§ Diag01 3b)
+### ISSUE 3.B — ✅ FEITA — Orquestração de loading duplicada nas ViewModels (§ Diag01 3b)
 
-- **Problema:** a lógica "tem cache? falha de sync é silenciosa" está copiada em 4 VMs.
-- **Arquivos:** `Home/Themes/Studies/More ViewModel`, `BibleRepositoryImpl.kt`.
-- **Critério de aceitação:** repositório expõe `Flow<Resource<T>>` (Loading/Success/Error); VMs
-  param de reimplementar.
-- **Validação:** build + telas funcionando. **Esforço:** M · **Depende de:** 3.A (ideal junto).
+- **Problema:** "tem cache? falha de sync silenciosa?" copiada em Home/Themes/Studies VMs.
+- **Feito:** `Resource<T>` (Loading/Success/Error) em `domain/`; `syncedListResource(cache, sync)`
+  no Impl dispara o sync version-gated 1x dentro do `flow{}` (não em combine) e reflete o cache;
+  `getMoreContentResource` é a variante nullable-single. VMs viram
+  `refreshTrigger.flatMapLatest { getXResource() }.map { toUiState() }.stateIn(WhileSubscribed(5s))`;
+  Retry = `refreshTrigger.update { it+1 }`. MoreSectionDetails ficou intacta (não sincroniza).
+- **Comportamento (validado por logcat no device):** 1 GET por load; revisita <5s NÃO re-dispara
+  (stream compartilhado); revisita >5s re-dispara 1x (cold-restart do WhileSubscribed — **muda**
+  vs. o antigo `init{}` que sincronizava 1x por vida da VM; ainda version-gated); Retry = 1 GET.
+- **Validação:** build + testes verdes; logcat + `dumpsys media_session` no device. **Esforço:** M.
+  Commit `d9a271d`.
 
 ### ISSUE 3.C — ✅ FEITA — Telas fora do padrão LCE/MVI + rename (§ Diag01 5)
 
