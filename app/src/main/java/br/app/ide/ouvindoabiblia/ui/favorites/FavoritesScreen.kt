@@ -88,9 +88,9 @@ fun FavoritesScreen(
         onTabSelected = { selectedTab = it },
         onPlayChapter = onPlayChapter,
         onPlayStudy = onPlayStudy,
-        onRemoveChapter = { viewModel.removeFromFavorites(it) },
+        onRemoveChapter = { viewModel.handle(FavoritesIntent.RemoveChapter(it)) },
         onRemoveStudy = { studyId, lessonId ->
-            viewModel.removeStudyFromFavorites(studyId, lessonId)
+            viewModel.handle(FavoritesIntent.RemoveStudy(studyId, lessonId))
         }
     )
 }
@@ -107,7 +107,9 @@ fun FavoritesScreenContent(
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val resolvedBottomPadding = if (uiState.isLoading) 0.dp else navBarPadding + 80.dp
+    // Só reserva o espaço da mini-player/nav quando há conteúdo carregado.
+    val resolvedBottomPadding =
+        if (uiState is FavoritesUiState.Success) navBarPadding + 80.dp else 0.dp
 
     val subtitle = if (selectedTab == 0) {
         "Sua coleção de capítulos bíblicos"
@@ -157,8 +159,9 @@ fun FavoritesScreenContent(
             )
         }
 
-        if (uiState.isLoading) {
-            item {
+        // Header + seletor ficam sempre visíveis; só a região de conteúdo troca (LCE).
+        when (uiState) {
+            is FavoritesUiState.Loading -> item {
                 Box(
                     modifier = Modifier
                         .fillParentMaxHeight(0.6f)
@@ -168,26 +171,45 @@ fun FavoritesScreenContent(
                     CircularProgressIndicator(color = DeepBlueDark)
                 }
             }
-        } else {
-            if (selectedTab == 0) {
-                if (uiState.bibleFavorites.isEmpty()) {
-                    item { EmptyFavorites("capítulos bíblicos") }
-                } else {
-                    renderBibleFavorites(
-                        favorites = uiState.bibleFavorites,
-                        onPlayChapter = onPlayChapter,
-                        onRemove = onRemoveChapter
+
+            is FavoritesUiState.Error -> item {
+                Box(
+                    modifier = Modifier
+                        .fillParentMaxHeight(0.6f)
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = uiState.message,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SlateBlue,
+                        textAlign = TextAlign.Center
                     )
                 }
-            } else {
-                if (uiState.studyFavorites.isEmpty()) {
-                    item { EmptyFavorites("lições de estudos") }
+            }
+
+            is FavoritesUiState.Success -> {
+                if (selectedTab == 0) {
+                    if (uiState.bibleFavorites.isEmpty()) {
+                        item { EmptyFavorites("capítulos bíblicos") }
+                    } else {
+                        renderBibleFavorites(
+                            favorites = uiState.bibleFavorites,
+                            onPlayChapter = onPlayChapter,
+                            onRemove = onRemoveChapter
+                        )
+                    }
                 } else {
-                    renderStudyFavorites(
-                        favorites = uiState.studyFavorites,
-                        onPlayStudy = onPlayStudy,
-                        onRemove = onRemoveStudy
-                    )
+                    if (uiState.studyFavorites.isEmpty()) {
+                        item { EmptyFavorites("lições de estudos") }
+                    } else {
+                        renderStudyFavorites(
+                            favorites = uiState.studyFavorites,
+                            onPlayStudy = onPlayStudy,
+                            onRemove = onRemoveStudy
+                        )
+                    }
                 }
             }
         }

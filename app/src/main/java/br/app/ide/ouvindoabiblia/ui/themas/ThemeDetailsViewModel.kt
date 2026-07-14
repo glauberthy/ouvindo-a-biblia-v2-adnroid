@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,16 +14,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-sealed interface ThemeDetailsUiState {
-    data object Loading : ThemeDetailsUiState
-    data class Success(
-        val theme: br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity,
-        val moments: List<MomentWithAudio>
-    ) : ThemeDetailsUiState
-
-    data class Error(val message: String) : ThemeDetailsUiState
-}
 
 @HiltViewModel
 class ThemeDetailsViewModel @Inject constructor(
@@ -44,7 +33,13 @@ class ThemeDetailsViewModel @Inject constructor(
         loadMoments()
     }
 
-    fun loadMoments() {
+    fun handle(intent: ThemeDetailsIntent) {
+        when (intent) {
+            is ThemeDetailsIntent.Retry -> loadMoments()
+        }
+    }
+
+    private fun loadMoments() {
         viewModelScope.launch {
             _uiState.value = ThemeDetailsUiState.Loading
 

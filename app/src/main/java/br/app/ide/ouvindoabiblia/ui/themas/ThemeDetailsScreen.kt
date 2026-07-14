@@ -92,7 +92,9 @@ fun ThemeDetailsScreen(
     ) {
         when (val state = uiState) {
             is ThemeDetailsUiState.Loading -> LoadingScreen()
-            is ThemeDetailsUiState.Error -> ErrorScreen(state.message) { viewModel.loadMoments() }
+            is ThemeDetailsUiState.Error -> ErrorScreen(state.message) {
+                viewModel.handle(ThemeDetailsIntent.Retry)
+            }
             is ThemeDetailsUiState.Success -> {
                 ThemeDetailsContent(
                     theme = state.theme,

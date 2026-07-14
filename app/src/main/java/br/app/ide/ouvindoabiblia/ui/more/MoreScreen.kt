@@ -92,7 +92,7 @@ fun MoreScreen(
         MoreUiState.Loading -> LoadingScreen()
 
         is MoreUiState.Error -> ErrorScreen(uiState.message) {
-            viewModel.sync()
+            viewModel.handle(MoreIntent.Retry)
         }
 
         is MoreUiState.Success -> {

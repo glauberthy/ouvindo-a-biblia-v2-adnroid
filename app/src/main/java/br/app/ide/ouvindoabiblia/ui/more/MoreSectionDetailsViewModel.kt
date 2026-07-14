@@ -3,7 +3,6 @@ package br.app.ide.ouvindoabiblia.ui.more
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionDto
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -12,12 +11,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
-
-sealed interface MoreSectionDetailsUiState {
-    data object Loading : MoreSectionDetailsUiState
-    data class Success(val section: MoreSectionDto) : MoreSectionDetailsUiState
-    data class Error(val message: String) : MoreSectionDetailsUiState
-}
 
 @HiltViewModel
 class MoreSectionDetailsViewModel @Inject constructor(

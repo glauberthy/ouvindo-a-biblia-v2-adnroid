@@ -13,12 +13,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-sealed interface MoreUiState {
-    data object Loading : MoreUiState
-    data class Success(val content: MoreContentDto) : MoreUiState
-    data class Error(val message: String) : MoreUiState
-}
-
 @HiltViewModel
 class MoreViewModel @Inject constructor(
     private val repository: BibleRepository
@@ -50,7 +44,13 @@ class MoreViewModel @Inject constructor(
         sync()
     }
 
-    fun sync() {
+    fun handle(intent: MoreIntent) {
+        when (intent) {
+            is MoreIntent.Retry -> sync()
+        }
+    }
+
+    private fun sync() {
         viewModelScope.launch {
             repository.syncMoreContent()
         }

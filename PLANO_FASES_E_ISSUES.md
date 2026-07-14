@@ -32,8 +32,12 @@ reconfirmar a linha exata ao pegar cada issue.
   `ui/chapters/*`, rota/composable `Screen.Chapters`, tipo `MediaContentId.BookFolder`
   (parser `"|"`), ramo `isBookFolder` do `onSetMediaItems` e o clipping órfão de
   `createMediaItemsFromChapters`. Guarda 2.D mantida como defesa. Build + testes verdes.
+- ✅ **3.C** (LCE/MVI + rename) — Favorites virou LCE selado; Favorites/More/
+  MoreSectionDetails/ThemeDetails ganharam `*Contract.kt`; `handle(Intent)` onde há
+  ação; `MoreSectionDetailsRoute.k.kt` renomeado. Build + testes verdes (device pendente).
 - 🅿️ **Cast** (§6.1–6.4) — **estacionado** por decisão (sem Chromecast pra validar).
-- ⏭️ **Próximo:** FASE 3 (3.C barato → 3.A/3.B grande) ou 4.C (higiene + vazamento do LeakCanary).
+- ⏭️ **Próximo:** FASE 3 grande — **3.A** (camada de domínio) + **3.B** (loading nas VMs)
+  — ou 4.C (higiene + vazamento do LeakCanary).
 - 📝 **Nota:** LeakCanary (debug) acusou um vazamento — investigar na 4.C (higiene).
 
 ---
@@ -206,14 +210,22 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
   param de reimplementar.
 - **Validação:** build + telas funcionando. **Esforço:** M · **Depende de:** 3.A (ideal junto).
 
-### ISSUE 3.C — Telas fora do padrão LCE/MVI + rename de arquivo (§ Diag01 5)
+### ISSUE 3.C — ✅ FEITA — Telas fora do padrão LCE/MVI + rename (§ Diag01 5)
 
-- **Problema:** Favorites/Chapters/Player sem UiState selado; More/MoreSectionDetails sem
-  Intent/Contract; arquivo `MoreSectionDetailsRoute.k.kt` (nome quebrado).
-- **Arquivos:** telas citadas + renomear `MoreSectionDetailsRoute.k.kt` → `.kt`.
-- **Critério de aceitação:** padrão consistente nas telas (ou exceção documentada para o Player);
-  arquivo renomeado.
-- **Validação:** build. **Esforço:** M · **Depende de:** nada.
+- **Escopo escolhido:** completo/consistente.
+- **Feito:**
+  - `FavoritesViewModel`: `FavoritesUiState` virou LCE selado (Loading/Success/Error) num
+    `FavoritesContract.kt` novo (antes era `data class` com flag `isLoading`); removido o
+    `Log.d("DEBUG_FAV", …)`; adicionado `FavoritesIntent` (RemoveChapter/RemoveStudy) +
+    `handle()`. Tela mantém header+seletor sempre visíveis e troca só a região de conteúdo.
+  - `MoreViewModel`/`MoreSectionDetailsViewModel`/`ThemeDetailsViewModel`: `UiState` inline
+    extraído para `MoreContract.kt`/`MoreSectionDetailsContract.kt`/`ThemeDetailsContract.kt`.
+  - `Intent` + `handle()` adicionados em More (Retry→sync) e ThemeDetails (Retry→loadMoments).
+    MoreSectionDetails ficou **sem Intent** (só leitura; retry do erro = voltar) — documentado
+    no Contract.
+  - `MoreSectionDetailsRoute.k.kt` → `MoreSectionDetailsRoute.kt`.
+  - Player permanece como **exceção documentada** (não migrado).
+- **Validação:** `:app:assembleDebug` + `:app:testDebugUnitTest` verdes; device pendente.
 
 ### ISSUE 3.D — ✅ FEITA — Destino do `ChaptersScreen` morto (§ Diag02 0.2)
 
