@@ -5,9 +5,9 @@ import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import kotlinx.coroutines.flow.Flow
@@ -62,7 +62,7 @@ interface BibleRepository {
 
 
     suspend fun syncMoreContent(): Result<Unit>
-    fun getMoreContent(): Flow<MoreContentDto?>
+    fun getMoreContent(): Flow<MoreContent?>
 }
 
 // Domain Model (Mantido para uso na UI/Service)

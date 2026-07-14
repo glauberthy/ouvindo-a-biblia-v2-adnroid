@@ -53,16 +53,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreAssetDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContactDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreLibraryDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MorePersonDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreRightsContentTypeDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreRightsSourceDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionContentDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionTypeDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Asset
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Contact
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Library
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreSection
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreSectionContent
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreSectionType
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Person
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.RightsContentType
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.RightsSource
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.components.RichTextContent
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
@@ -96,7 +96,7 @@ fun MoreScreen(
         }
 
         is MoreUiState.Success -> {
-            MoreContent(
+            MoreContentBody(
                 content = uiState.content,
                 bottomContentPadding = bottomContentPadding,
                 onSectionClick = { itemId ->
@@ -128,7 +128,7 @@ fun MoreScreen(
 @Composable
 private fun MoreSectionSheetContent(
     item: MoreMenuItemUi,
-    section: MoreSectionDto?
+    section: MoreSection?
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -185,7 +185,7 @@ private fun MoreSectionSheetContent(
         }
 
         when (section?.type) {
-            MoreSectionTypeDto.LONG_TEXT -> {
+            MoreSectionType.LONG_TEXT -> {
 
                 item {
                     RichTextContent(
@@ -203,7 +203,7 @@ private fun MoreSectionSheetContent(
 
             }
 
-            MoreSectionTypeDto.RIGHTS_LIST -> {
+            MoreSectionType.RIGHTS_LIST -> {
                 section.content.description?.takeIf { it.isNotBlank() }?.let { description ->
                     item {
                         Text(
@@ -234,7 +234,7 @@ private fun MoreSectionSheetContent(
                 }
             }
 
-            MoreSectionTypeDto.ASSET_LIST -> {
+            MoreSectionType.ASSET_LIST -> {
                 itemsIndexed(
                     items = section.content.assets,
                     key = { index, asset -> "${asset.id}_$index" }
@@ -252,7 +252,7 @@ private fun MoreSectionSheetContent(
                 }
             }
 
-            MoreSectionTypeDto.PEOPLE_LIST -> {
+            MoreSectionType.PEOPLE_LIST -> {
                 itemsIndexed(
                     items = section.content.people,
                     key = { index, person -> "${person.id}_$index" }
@@ -270,7 +270,7 @@ private fun MoreSectionSheetContent(
                 }
             }
 
-            MoreSectionTypeDto.LIBRARY_LIST -> {
+            MoreSectionType.LIBRARY_LIST -> {
                 itemsIndexed(
                     items = section.content.libraries,
                     key = { index, library -> "${library.id}_$index" }
@@ -362,8 +362,8 @@ private fun MoreSheetInfoBlock(
 }
 
 @Composable
-private fun MoreContent(
-    content: MoreContentDto,
+private fun MoreContentBody(
+    content: MoreContent,
     bottomContentPadding: Dp,
     onSectionClick: (String) -> Unit
 ) {
@@ -600,52 +600,52 @@ private fun MoreSectionCard(
     }
 }
 
-private fun previewMoreContent(): MoreContentDto {
-    return MoreContentDto(
+private fun previewMoreContent(): MoreContent {
+    return MoreContent(
         screen = "more",
         lastUpdated = "06/04/2026",
         version = "1.0.0",
         sections = listOf(
-            MoreSectionDto(
+            MoreSection(
                 id = "about",
                 title = "Sobre o app",
-                type = MoreSectionTypeDto.LONG_TEXT,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.LONG_TEXT,
+                content = MoreSectionContent(
                     text = "O Ouvindo a Bíblia foi criado para oferecer uma experiência reverente, fluida e acessível de escuta bíblica e conteúdos cristãos em áudio."
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "mission",
                 title = "Missão",
-                type = MoreSectionTypeDto.LONG_TEXT,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.LONG_TEXT,
+                content = MoreSectionContent(
                     text = "Nossa missão é aproximar pessoas da Palavra de Deus por meio de uma experiência de escuta simples, bela e contínua."
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "privacy",
                 title = "Privacidade",
-                type = MoreSectionTypeDto.LONG_TEXT,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.LONG_TEXT,
+                content = MoreSectionContent(
                     text = "Respeitamos a privacidade do usuário e buscamos coletar apenas o mínimo necessário para o funcionamento e melhoria do app."
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "bible_audio_rights",
                 title = "Direitos dos áudios bíblicos",
-                type = MoreSectionTypeDto.RIGHTS_LIST,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.RIGHTS_LIST,
+                content = MoreSectionContent(
                     description = "Narrações bíblicas utilizadas no aplicativo.",
                     sources = listOf(
-                        MoreRightsSourceDto(
+                        RightsSource(
                             id = "audio_bible_1",
                             name = "João da Silva",
                             role = "Narrador",
-                            contentType = MoreRightsContentTypeDto.BIBLE_AUDIO,
+                            contentType = RightsContentType.BIBLE_AUDIO,
                             description = "Narração da Bíblia em áudio.",
                             license = "Uso autorizado",
                             sourceUrl = "https://example.com",
-                            contact = MoreContactDto(
+                            contact = Contact(
                                 email = "contato@example.com",
                                 website = "https://example.com"
                             ),
@@ -654,22 +654,22 @@ private fun previewMoreContent(): MoreContentDto {
                     )
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "study_audio_rights",
                 title = "Direitos dos estudos",
-                type = MoreSectionTypeDto.RIGHTS_LIST,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.RIGHTS_LIST,
+                content = MoreSectionContent(
                     description = "Estudos e conteúdos em áudio utilizados no aplicativo.",
                     sources = listOf(
-                        MoreRightsSourceDto(
+                        RightsSource(
                             id = "audio_study_1",
                             name = "Maria Oliveira",
                             role = "Autora",
-                            contentType = MoreRightsContentTypeDto.STUDY_AUDIO,
+                            contentType = RightsContentType.STUDY_AUDIO,
                             description = "Conteúdo de estudo adaptado para áudio.",
                             license = "Uso autorizado",
                             sourceUrl = "https://example.com/estudos",
-                            contact = MoreContactDto(
+                            contact = Contact(
                                 email = "maria@example.com",
                                 website = "https://example.com/estudos"
                             ),
@@ -678,13 +678,13 @@ private fun previewMoreContent(): MoreContentDto {
                     )
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "cover_rights",
                 title = "Capas e imagens",
-                type = MoreSectionTypeDto.ASSET_LIST,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.ASSET_LIST,
+                content = MoreSectionContent(
                     assets = listOf(
-                        MoreAssetDto(
+                        Asset(
                             id = "asset_1",
                             title = "Capa de Romanos",
                             author = "Equipe Editorial",
@@ -693,7 +693,7 @@ private fun previewMoreContent(): MoreContentDto {
                             notes = "Imagem usada como referência visual.",
                             imageUrl = null
                         ),
-                        MoreAssetDto(
+                        Asset(
                             id = "asset_2",
                             title = "Capa de Colossenses",
                             author = "Equipe Editorial",
@@ -705,13 +705,13 @@ private fun previewMoreContent(): MoreContentDto {
                     )
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "curation",
                 title = "Curadoria",
-                type = MoreSectionTypeDto.PEOPLE_LIST,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.PEOPLE_LIST,
+                content = MoreSectionContent(
                     people = listOf(
-                        MorePersonDto(
+                        Person(
                             id = "person_1",
                             name = "Maria Oliveira",
                             role = "Curadoria de conteúdo",
@@ -720,7 +720,7 @@ private fun previewMoreContent(): MoreContentDto {
                             email = "maria@example.com",
                             imageUrl = null
                         ),
-                        MorePersonDto(
+                        Person(
                             id = "person_2",
                             name = "Pedro Santos",
                             role = "Revisão teológica",
@@ -732,34 +732,34 @@ private fun previewMoreContent(): MoreContentDto {
                     )
                 )
             ),
-            MoreSectionDto(
+            MoreSection(
                 id = "licenses",
                 title = "Licenças",
-                type = MoreSectionTypeDto.LIBRARY_LIST,
-                content = MoreSectionContentDto(
+                type = MoreSectionType.LIBRARY_LIST,
+                content = MoreSectionContent(
                     libraries = listOf(
-                        MoreLibraryDto(
+                        Library(
                             id = "lib_1",
                             name = "Jetpack Compose",
                             version = "2024.12.01",
                             license = "Apache-2.0",
                             website = "https://developer.android.com/jetpack/compose"
                         ),
-                        MoreLibraryDto(
+                        Library(
                             id = "lib_2",
                             name = "Media3",
                             version = "1.9.2",
                             license = "Apache-2.0",
                             website = "https://developer.android.com/media"
                         ),
-                        MoreLibraryDto(
+                        Library(
                             id = "lib-hilt",
                             name = "Hilt",
                             version = "2.51.1",
                             license = "Apache-2.0",
                             website = "https://dagger.dev/hilt/"
                         ),
-                        MoreLibraryDto(
+                        Library(
                             id = "lib-hilt",
                             name = "Hilt Duplicate Demo",
                             version = "2.51.1",
@@ -783,7 +783,7 @@ private fun previewMoreContent(): MoreContentDto {
 @Composable
 private fun PreviewMoreContent() {
     OuvindoABibliaTheme {
-        MoreContent(
+        MoreContentBody(
             content = previewMoreContent(),
             bottomContentPadding = 72.dp,
             onSectionClick = {}

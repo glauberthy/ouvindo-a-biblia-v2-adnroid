@@ -1,11 +1,11 @@
 package br.app.ide.ouvindoabiblia.ui.more
 
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
 
 // Estado da UI seguindo o padrão LCE (Loading, Content, Error).
 sealed interface MoreUiState {
     data object Loading : MoreUiState
-    data class Success(val content: MoreContentDto) : MoreUiState
+    data class Success(val content: MoreContent) : MoreUiState
     data class Error(val message: String) : MoreUiState
 }
 

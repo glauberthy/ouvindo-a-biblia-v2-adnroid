@@ -26,6 +26,7 @@ import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.domain.mapper.toDomain
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import kotlinx.coroutines.Dispatchers
@@ -362,12 +363,12 @@ class BibleRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getMoreContent(): Flow<MoreContentDto?> {
+    override fun getMoreContent(): Flow<MoreContent?> {
         return dao.observe().map { entity ->
             val cachedJson = entity?.json ?: return@map null
 
             runCatching {
-                json.decodeFromString(MoreContentDto.serializer(), cachedJson)
+                json.decodeFromString(MoreContentDto.serializer(), cachedJson).toDomain()
             }.getOrNull()
         }
     }

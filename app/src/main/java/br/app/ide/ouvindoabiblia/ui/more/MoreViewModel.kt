@@ -2,8 +2,8 @@ package br.app.ide.ouvindoabiblia.ui.more
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ class MoreViewModel @Inject constructor(
 
     val uiState: StateFlow<MoreUiState> =
         repository.getMoreContent()
-            .map<MoreContentDto?, MoreUiState> { content ->
+            .map<MoreContent?, MoreUiState> { content ->
                 if (content != null) {
                     MoreUiState.Success(content)
                 } else {

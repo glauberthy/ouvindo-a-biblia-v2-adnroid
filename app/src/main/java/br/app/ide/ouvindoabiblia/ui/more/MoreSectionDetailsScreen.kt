@@ -51,12 +51,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreAssetDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreLibraryDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MorePersonDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreRightsSourceDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionDto
-import br.app.ide.ouvindoabiblia.data.remote.dto.MoreSectionTypeDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Asset
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Library
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreSection
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreSectionType
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Person
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.RightsSource
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
@@ -67,7 +67,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun MoreSectionDetailsScreen(
-    section: MoreSectionDto,
+    section: MoreSection,
     bottomContentPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
     onUrlClick: (String) -> Unit = {}
@@ -101,7 +101,7 @@ fun MoreSectionDetailsScreen(
         }
 
         when (section.type) {
-            MoreSectionTypeDto.LONG_TEXT -> {
+            MoreSectionType.LONG_TEXT -> {
                 item {
                     InfoCard {
                         Text(
@@ -114,7 +114,7 @@ fun MoreSectionDetailsScreen(
                 }
             }
 
-            MoreSectionTypeDto.RIGHTS_LIST -> {
+            MoreSectionType.RIGHTS_LIST -> {
                 section.content.description?.takeIf { it.isNotBlank() }?.let { description ->
                     item {
                         InfoCard {
@@ -138,7 +138,7 @@ fun MoreSectionDetailsScreen(
                 }
             }
 
-            MoreSectionTypeDto.ASSET_LIST -> {
+            MoreSectionType.ASSET_LIST -> {
                 items(
                     items = section.content.assets,
                     key = { it.id }
@@ -150,7 +150,7 @@ fun MoreSectionDetailsScreen(
                 }
             }
 
-            MoreSectionTypeDto.PEOPLE_LIST -> {
+            MoreSectionType.PEOPLE_LIST -> {
                 items(
                     items = section.content.people,
                     key = { it.id }
@@ -162,7 +162,7 @@ fun MoreSectionDetailsScreen(
                 }
             }
 
-            MoreSectionTypeDto.LIBRARY_LIST -> {
+            MoreSectionType.LIBRARY_LIST -> {
                 items(
                     items = section.content.libraries,
                     key = { it.id }
@@ -265,7 +265,7 @@ private fun InfoCard(
 
 @Composable
 private fun RightsSourceCard(
-    source: MoreRightsSourceDto,
+    source: RightsSource,
     onUrlClick: (String) -> Unit
 ) {
     InfoCard {
@@ -307,7 +307,7 @@ private fun RightsSourceCard(
 
 @Composable
 private fun AssetCard(
-    asset: MoreAssetDto,
+    asset: Asset,
     onUrlClick: (String) -> Unit
 ) {
     InfoCard {
@@ -353,7 +353,7 @@ private fun AssetCard(
 
 @Composable
 private fun PersonCard(
-    person: MorePersonDto,
+    person: Person,
     onUrlClick: (String) -> Unit
 ) {
     InfoCard {
@@ -386,7 +386,7 @@ private fun PersonCard(
 
 @Composable
 private fun LibraryCard(
-    library: MoreLibraryDto,
+    library: Library,
     onUrlClick: (String) -> Unit
 ) {
     InfoCard {
@@ -567,17 +567,17 @@ private fun LinkLine(
     }
 }
 
-private fun MoreSectionDto.icon(): ImageVector {
+private fun MoreSection.icon(): ImageVector {
     return when (type) {
-        MoreSectionTypeDto.LONG_TEXT -> when (id) {
+        MoreSectionType.LONG_TEXT -> when (id) {
             "privacy" -> Icons.Filled.PrivacyTip
             "mission" -> Icons.AutoMirrored.Filled.MenuBook
             else -> Icons.Filled.Info
         }
 
-        MoreSectionTypeDto.RIGHTS_LIST -> Icons.Filled.GraphicEq
-        MoreSectionTypeDto.ASSET_LIST -> Icons.Filled.Image
-        MoreSectionTypeDto.PEOPLE_LIST -> Icons.AutoMirrored.Filled.MenuBook
-        MoreSectionTypeDto.LIBRARY_LIST -> Icons.Filled.Code
+        MoreSectionType.RIGHTS_LIST -> Icons.Filled.GraphicEq
+        MoreSectionType.ASSET_LIST -> Icons.Filled.Image
+        MoreSectionType.PEOPLE_LIST -> Icons.AutoMirrored.Filled.MenuBook
+        MoreSectionType.LIBRARY_LIST -> Icons.Filled.Code
     }
 }
