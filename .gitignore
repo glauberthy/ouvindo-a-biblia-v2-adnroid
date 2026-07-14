@@ -13,3 +13,35 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Kotlin 2.x — diretório de trabalho / logs do daemon do compilador
+.kotlin/
+
+# Saída de build / artefatos (release é gerado no CI/CD, não versionado)
+/app/release/
+release/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Assinatura / segredos (NUNCA versionar)
+*.jks
+*.keystore
+keystore.properties
+
+# Ferramentas
+.codex
+
+# IDE (IntelliJ/Android Studio) — arquivos específicos de máquina/usuário.
+# codeStyles/ e inspectionProfiles/ continuam versionados (config de projeto).
+.idea/workspace.xml
+.idea/shelf/
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/appInsightsSettings.xml
+.idea/studiobot.xml
+.idea/copilot.data.migration.ask2agent.xml
