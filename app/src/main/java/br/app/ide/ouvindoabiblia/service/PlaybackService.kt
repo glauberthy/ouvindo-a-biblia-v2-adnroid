@@ -73,6 +73,7 @@ class PlaybackService : MediaLibraryService() {
     private var mediaSession: MediaLibrarySession? = null
 
     // Mantemos a referência para encerrar o threadpool no onDestroy (DIAGNOSTICO_02 §5.4).
+    @OptIn(UnstableApi::class)
     private var bitmapLoader: CoilBitmapLoader? = null
 
     @Volatile
@@ -419,6 +420,7 @@ class PlaybackService : MediaLibraryService() {
         super.onTaskRemoved(rootIntent)
     }
 
+    @OptIn(UnstableApi::class)
     override fun onDestroy() {
         destroyCount.incrementAndGet()
         val releasePlayer = mediaSession != null
