@@ -1,13 +1,13 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
 
 /**
  * Item da timeline do player para exibição na folha de capítulos (ISSUE 2.B).
  *
  * Projeção de exibição derivada do player, separada de [PlayerUiState.chapters]
- * (que continua no formato `ChapterWithBookInfo`, usado por Cast e favoritos).
+ * (que agora usa o modelo de domínio `Chapter`, usado por Cast e favoritos).
  * Antes, a folha forçava tudo em número de capítulo — em Estudos gerava
  * numeração sintética ("1,2,3") no lugar dos títulos das aulas.
  *
@@ -62,7 +62,7 @@ data class PlayerUiState(
     val activeSleepTimerMinutes: Int = 0, // 0 significa Desativado
     // Lista e índice
     val currentChapterIndex: Int = 0,
-    val chapters: List<ChapterWithBookInfo> = emptyList(),
+    val chapters: List<Chapter> = emptyList(),
     // Projeção de exibição para a folha de capítulos (Bíblia: números; Estudo: títulos).
     val timeline: List<PlayerTimelineItem> = emptyList(),
     val isThemeMode: Boolean = false,

@@ -13,9 +13,8 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
@@ -119,7 +118,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun buildBibleMediaItems(
         bookId: Int,
-        chapters: List<ChapterWithBookInfo>,
+        chapters: List<Chapter>,
         targetChapterIndex: Int,
         startMs: Long,
         endMs: Long
@@ -137,8 +136,8 @@ class PlayerViewModel @Inject constructor(
             }
 
             MediaItem.Builder()
-                .setMediaId(MediaContentId.Bible(chapterInfo.chapter.id).raw)
-                .setUri(chapterInfo.chapter.audioUrl)
+                .setMediaId(MediaContentId.Bible(chapterInfo.id).raw)
+                .setUri(chapterInfo.audioUrl)
                 .setClippingConfiguration(
                     if (index == targetChapterIndex) {
                         clippingConfigBuilder.build()
@@ -148,9 +147,9 @@ class PlayerViewModel @Inject constructor(
                 )
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
+                        .setTitle("${chapterInfo.bookName} ${chapterInfo.number}")
                         .setAlbumTitle(chapterInfo.bookName)
-                        .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
+                        .setSubtitle("Capítulo ${chapterInfo.number}")
                         .setArtist("Ouvindo a Bíblia")
                         .setArtworkUri(chapterInfo.coverUrl?.toUri())
                         .setIsBrowsable(false)
@@ -158,7 +157,7 @@ class PlayerViewModel @Inject constructor(
                         .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
                         .setExtras(android.os.Bundle().apply {
                             putString("book_id", bookId.toString())
-                            putBoolean("is_favorite", chapterInfo.chapter.isFavorite)
+                            putBoolean("is_favorite", chapterInfo.isFavorite)
                         })
                         .build()
                 )
@@ -568,7 +567,7 @@ class PlayerViewModel @Inject constructor(
                         ?: error("Capítulo atual não encontrado")
 
                     repository.toggleFavorite(
-                        chapterId = currentChapter.chapter.id,
+                        chapterId = currentChapter.id,
                         isFavorite = newStatus
                     )
                 }
@@ -709,9 +708,9 @@ class PlayerViewModel @Inject constructor(
         return list
     }
 
-    // Converte a Timeline do Media3 de volta para o modelo que sua UI usa (ChapterWithBookInfo)
-    private fun extractChaptersFromPlayer(player: Player): List<ChapterWithBookInfo> {
-        val list = mutableListOf<ChapterWithBookInfo>()
+    // Converte a Timeline do Media3 de volta para o modelo de domínio que a UI usa (Chapter)
+    private fun extractChaptersFromPlayer(player: Player): List<Chapter> {
+        val list = mutableListOf<Chapter>()
         for (i in 0 until player.mediaItemCount) {
             val item = player.getMediaItemAt(i)
             val meta = item.mediaMetadata
@@ -731,15 +730,12 @@ class PlayerViewModel @Inject constructor(
             val coverUrl = meta.artworkUri?.toString()
             val isFav = meta.extras?.getBoolean("is_favorite") ?: false
             list.add(
-                ChapterWithBookInfo(
-                    chapter = ChapterEntity(
-                        id = chapterId,
-                        bookId = 0,
-                        number = chapterNum,
-                        audioUrl = audioUrl,
-                        filename = "",
-                        isFavorite = isFav
-                    ),
+                Chapter(
+                    id = chapterId,
+                    bookId = 0,
+                    number = chapterNum,
+                    audioUrl = audioUrl,
+                    isFavorite = isFav,
                     bookName = bookName,
                     coverUrl = coverUrl
                 )
@@ -797,7 +793,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun loadMediaOnCast(
-        chapter: ChapterWithBookInfo,
+        chapter: Chapter,
         positionMs: Long,
         autoPlay: Boolean = true
     ) {
@@ -807,14 +803,14 @@ class PlayerViewModel @Inject constructor(
 
         val metadata = CastMediaMetadata(CastMediaMetadata.MEDIA_TYPE_MUSIC_TRACK)
         metadata.putString(CastMediaMetadata.KEY_TITLE, currentState.title)
-        metadata.putString(CastMediaMetadata.KEY_SUBTITLE, "Capítulo ${chapter.chapter.number}")
+        metadata.putString(CastMediaMetadata.KEY_SUBTITLE, "Capítulo ${chapter.number}")
 
         val coverUrl = chapter.coverUrl ?: currentState.imageUrl
         if (coverUrl.isNotEmpty()) {
             metadata.addImage(WebImage(coverUrl.toUri()))
         }
 
-        val mediaInfo = MediaInfo.Builder(chapter.chapter.audioUrl)
+        val mediaInfo = MediaInfo.Builder(chapter.audioUrl)
             .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
             .setContentType("audio/ogg")
             .setMetadata(metadata)
@@ -866,19 +862,15 @@ class PlayerViewModel @Inject constructor(
         val idLong = chapterId?.toLongOrNull() ?: return
 
         favoriteObservationJob = viewModelScope.launch {
-            repository.getChapterByIdFlow(idLong).collect { chapterEntity ->
-                val isFavorite = chapterEntity?.isFavorite ?: false
+            repository.getChapterByIdFlow(idLong).collect { chapter ->
+                val isFavorite = chapter?.isFavorite ?: false
 
                 _uiState.update { state ->
-                    val updatedChapters = state.chapters.map { chapterWithInfo ->
-                        if (chapterWithInfo.chapter.id == idLong) {
-                            chapterWithInfo.copy(
-                                chapter = chapterWithInfo.chapter.copy(
-                                    isFavorite = isFavorite
-                                )
-                            )
+                    val updatedChapters = state.chapters.map { chapterInfo ->
+                        if (chapterInfo.id == idLong) {
+                            chapterInfo.copy(isFavorite = isFavorite)
                         } else {
-                            chapterWithInfo
+                            chapterInfo
                         }
                     }
 

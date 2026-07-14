@@ -1,9 +1,7 @@
 package br.app.ide.ouvindoabiblia.data.repository
 
 import android.net.Uri
-import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
-import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Book
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
@@ -16,9 +14,9 @@ import kotlinx.coroutines.flow.Flow
 interface BibleRepository {
     suspend fun syncBibleData(): Result<Unit>
     suspend fun syncThemes(): Result<Unit>
-    fun getBooks(): Flow<List<BookEntity>>
-    fun getChapters(bookId: Int): Flow<List<ChapterWithBookInfo>>
-    suspend fun getBook(bookId: Int): BookEntity?
+    fun getBooks(): Flow<List<Book>>
+    fun getChapters(bookId: Int): Flow<List<Chapter>>
+    suspend fun getBook(bookId: Int): Book?
     suspend fun getBookNumericIdFromChapter(chapterId: Int): Int?
     suspend fun getBookIdFromChapter(chapterId: Int): Int?
 
@@ -39,7 +37,7 @@ interface BibleRepository {
     suspend fun clearPlaybackState()
     fun getLatestPlaybackState(): Flow<PlaybackState?>
     fun getFavorites(): Flow<List<Chapter>>
-    fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
+    fun getChapterByIdFlow(chapterId: Long): Flow<Chapter?>
 
     //temas
     fun getThemes(): Flow<List<Theme>>

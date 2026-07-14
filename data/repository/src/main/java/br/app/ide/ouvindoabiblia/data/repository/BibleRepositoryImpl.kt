@@ -16,11 +16,11 @@ import br.app.ide.ouvindoabiblia.data.local.entity.PlaybackStateEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.domain.mapper.toDomain
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Book
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
@@ -50,13 +50,15 @@ class BibleRepositoryImpl @Inject constructor(
         private val KEY_STUDIES_VERSION = stringPreferencesKey("studies_data_version")
     }
 
-    override fun getBooks(): Flow<List<BookEntity>> = dao.getAllBooks()
+    override fun getBooks(): Flow<List<Book>> =
+        dao.getAllBooks().map { list -> list.map { it.toDomain() } }
 
     // O bookId aqui continua sendo o SLUG ("genesis"), o DAO faz o JOIN internamente
-    override fun getChapters(bookId: Int): Flow<List<ChapterWithBookInfo>> =
-        dao.getChaptersWithBookInfo(bookId)
+    override fun getChapters(bookId: Int): Flow<List<Chapter>> =
+        dao.getChaptersWithBookInfo(bookId).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun getBook(bookId: Int): BookEntity? = dao.getBookById(bookId.toString())
+    override suspend fun getBook(bookId: Int): Book? =
+        dao.getBookById(bookId.toString())?.toDomain()
 
     override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
         dao.updateFavoriteStatus(chapterId, isFavorite)
@@ -196,8 +198,8 @@ class BibleRepositoryImpl @Inject constructor(
 
     override fun getFavorites(): Flow<List<Chapter>> =
         dao.getFavoriteChapters().map { list -> list.map { it.toDomain() } }
-    override fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?> =
-        dao.getChapterByIdFlow(chapterId)
+    override fun getChapterByIdFlow(chapterId: Long): Flow<Chapter?> =
+        dao.getChapterByIdFlow(chapterId).map { it?.toDomain() }
 
 
     //    themas

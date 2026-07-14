@@ -27,7 +27,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import br.app.ide.ouvindoabiblia.MainActivity
 import br.app.ide.ouvindoabiblia.R
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.PlaybackState
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
@@ -328,14 +328,14 @@ class PlaybackService : MediaLibraryService() {
 
 
     private fun createMediaItemsFromChapters(
-        chapters: List<ChapterWithBookInfo>,
+        chapters: List<Chapter>,
         bookId: String,
     ): List<MediaItem> {
         return chapters.map { chapterInfo ->
             val metadata = MediaMetadata.Builder()
-                .setTitle("${chapterInfo.bookName} ${chapterInfo.chapter.number}")
+                .setTitle("${chapterInfo.bookName} ${chapterInfo.number}")
                 .setAlbumTitle(chapterInfo.bookName)
-                .setSubtitle("Capítulo ${chapterInfo.chapter.number}")
+                .setSubtitle("Capítulo ${chapterInfo.number}")
                 .setArtist("Ouvindo a Bíblia")
                 .setArtworkUri(chapterInfo.coverUrl?.toUri())
                 .setIsBrowsable(false)
@@ -343,13 +343,13 @@ class PlaybackService : MediaLibraryService() {
                 .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
                 .setExtras(Bundle().apply {
                     putString("book_id", bookId)
-                    putBoolean("is_favorite", chapterInfo.chapter.isFavorite)
+                    putBoolean("is_favorite", chapterInfo.isFavorite)
                 })
                 .build()
 
             MediaItem.Builder()
-                .setMediaId(MediaContentId.Bible(chapterInfo.chapter.id).raw)
-                .setUri(chapterInfo.chapter.audioUrl)
+                .setMediaId(MediaContentId.Bible(chapterInfo.id).raw)
+                .setUri(chapterInfo.audioUrl)
                 .setMediaMetadata(metadata)
                 .build()
         }
