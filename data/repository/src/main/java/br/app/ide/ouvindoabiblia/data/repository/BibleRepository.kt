@@ -4,7 +4,8 @@ import android.net.Uri
 import br.app.ide.ouvindoabiblia.data.local.entity.BookEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ChapterEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
-import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
@@ -37,7 +38,7 @@ interface BibleRepository {
 
     suspend fun clearPlaybackState()
     fun getLatestPlaybackState(): Flow<PlaybackState?>
-    fun getFavorites(): Flow<List<ChapterWithBookInfo>>
+    fun getFavorites(): Flow<List<Chapter>>
     fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?>
 
     //temas
@@ -56,7 +57,7 @@ interface BibleRepository {
     suspend fun toggleStudyFavorite(studyId: Int, lessonId: Int, isFavorite: Boolean)
 
     // Novo: Fluxo de lições de estudos favoritas
-    fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>>
+    fun getFavoriteStudyLessons(): Flow<List<FavoriteLesson>>
 
     fun getStudyLessonByIdsFlow(studyId: Int, lessonId: Int): Flow<Lesson?>
 

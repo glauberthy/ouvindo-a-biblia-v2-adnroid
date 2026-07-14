@@ -62,8 +62,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
-import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.Accent2
@@ -383,7 +383,7 @@ fun FavoritesTabSelector(
 }
 
 fun LazyListScope.renderBibleFavorites(
-    favorites: List<ChapterWithBookInfo>,
+    favorites: List<Chapter>,
     onPlayChapter: (Int, String, String, Int) -> Unit,
     onRemove: (Long) -> Unit
 ) {
@@ -442,17 +442,17 @@ fun LazyListScope.renderBibleFavorites(
 
                 chapters.forEach { item ->
                     ChapterListItem(
-                        number = item.chapter.number,
+                        number = item.number,
                         onClick = {
-                            val index = (item.chapter.number - 1).coerceAtLeast(0)
+                            val index = (item.number - 1).coerceAtLeast(0)
                             onPlayChapter(
-                                item.chapter.bookId,
+                                item.bookId,
                                 item.bookName,
                                 item.coverUrl ?: "",
                                 index
                             )
                         },
-                        onRemove = { onRemove(item.chapter.id) }
+                        onRemove = { onRemove(item.id) }
                     )
                 }
             }
@@ -461,7 +461,7 @@ fun LazyListScope.renderBibleFavorites(
 }
 
 fun LazyListScope.renderStudyFavorites(
-    favorites: List<FavoriteStudyLessonDto>,
+    favorites: List<FavoriteLesson>,
     onPlayStudy: (Int, String, String, Int) -> Unit,
     onRemove: (Int, Int) -> Unit
 ) {

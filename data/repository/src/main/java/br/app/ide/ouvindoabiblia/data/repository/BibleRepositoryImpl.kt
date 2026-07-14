@@ -17,13 +17,12 @@ import br.app.ide.ouvindoabiblia.data.local.entity.StudyEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.StudyLessonEntity
 import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
 import br.app.ide.ouvindoabiblia.data.local.model.ChapterWithBookInfo
-import br.app.ide.ouvindoabiblia.data.local.model.FavoriteStudyLessonDto
-import br.app.ide.ouvindoabiblia.data.local.model.MomentWithAudio
-import br.app.ide.ouvindoabiblia.data.local.model.StudyWithLessons
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import br.app.ide.ouvindoabiblia.data.remote.dto.BookDto
 import br.app.ide.ouvindoabiblia.data.remote.dto.MoreContentDto
 import br.app.ide.ouvindoabiblia.data.repository.domain.mapper.toDomain
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
+import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreContent
@@ -195,7 +194,8 @@ class BibleRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getFavorites(): Flow<List<ChapterWithBookInfo>> = dao.getFavoriteChapters()
+    override fun getFavorites(): Flow<List<Chapter>> =
+        dao.getFavoriteChapters().map { list -> list.map { it.toDomain() } }
     override fun getChapterByIdFlow(chapterId: Long): Flow<ChapterEntity?> =
         dao.getChapterByIdFlow(chapterId)
 
@@ -334,8 +334,9 @@ class BibleRepositoryImpl @Inject constructor(
         dao.updateStudyFavoriteStatus(studyId, lessonId, isFavorite)
     }
 
-    override fun getFavoriteStudyLessons(): Flow<List<FavoriteStudyLessonDto>> {
+    override fun getFavoriteStudyLessons(): Flow<List<FavoriteLesson>> {
         return dao.getFavoriteStudyLessons()
+            .map { list -> list.map { it.toDomain() } }
             .flowOn(Dispatchers.IO)
     }
 
