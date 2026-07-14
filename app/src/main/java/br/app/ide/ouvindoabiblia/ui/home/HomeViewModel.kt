@@ -38,6 +38,9 @@ class HomeViewModel @Inject constructor(
         .flowOn(Dispatchers.Default) // Processamento (sort/map/filter) fora da Main Thread
         .stateIn(
             scope = viewModelScope,
+            // WhileSubscribed(5s) (padrão idiomático, NÃO trocar por Lazy): compartilha o
+            // stream; revisita <5s reusa sem novo GET; revisita >5s reinicia e re-checa
+            // meta.version DE PROPÓSITO (version-gated, custo leve — só reescreve o Room se mudou).
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = HomeUiState.Loading
         )
