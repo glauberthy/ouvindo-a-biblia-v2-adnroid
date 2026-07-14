@@ -46,8 +46,6 @@ android {
 
 dependencies {
     implementation(project(":data:repository"))
-    implementation(project(":data:local"))
-    implementation(project(":data:remote"))
 
     // --- Core & Compose ---
     implementation(libs.androidx.core.ktx)
