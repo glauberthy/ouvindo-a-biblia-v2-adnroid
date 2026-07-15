@@ -400,6 +400,12 @@ class BibleRepositoryImpl @Inject constructor(
         return runCatching {
             val remote = api.getMoreContent()
 
+            // ISSUE 6.E: version-gating, como syncBibleData/syncThemes/syncStudies. A versão fica
+            // na própria entidade (dao.get()?.version); só reescreve o Room se a versão remota
+            // mudou. Antes fazia INSERT REPLACE a cada coleta, mesmo sem mudança.
+            val cached = dao.get()
+            if (cached != null && cached.version == remote.version) return@runCatching
+
             val rawJson = json.encodeToString(MoreContentDto.serializer(), remote)
 
             dao.save(
