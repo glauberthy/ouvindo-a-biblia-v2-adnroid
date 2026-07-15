@@ -59,8 +59,11 @@ class HomeViewModel @Inject constructor(
             is Resource.Error -> HomeUiState.Error(message)
             is Resource.Success -> {
                 if (data.isEmpty()) {
-                    // Cache vazio (sync ok mas sem dados ainda): mantém loading, como antes.
-                    HomeUiState.Loading
+                    // ISSUE 6.D: sync OK porém 0 livros é estado TERMINAL, não transitório — o
+                    // syncedListResource só emite Success depois de o sync concluir, então não há
+                    // "empty passageiro". Antes isto virava Loading eterno sem saída; agora é Error
+                    // com Retry (coerente com Themes: empty→Error).
+                    HomeUiState.Error("Nenhum livro disponível. Tente novamente.")
                 } else {
                     val bookSummaries = data
                         .sortedBy { it.numericId }
