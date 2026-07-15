@@ -57,8 +57,33 @@ reconfirmar a linha exata ao pegar cada issue.
   código dormente no repo).
 - ✅ **4.D** — Android Auto de verdade (browse + playback por mediaId); lint zerado
   (commit `96a7dfa`). Falta só validar end-to-end em DHU; busca por voz é backlog.
-- 🏁 **Plano concluído** (0→4 + 4.D). Backlog opcional: validação DHU do Auto, busca
+- 🏁 **Plano original concluído** (0→4 + 4.D). Backlog opcional: validação DHU do Auto, busca
   por voz, persistência estilo-Spotify, 35 Typos (baseline), 37 bumps de dependência.
+- 🆕 **FASE 5 aberta** (2026-07-15) — varredura de bugs clássicos de app de áudio. O núcleo
+  (audio focus, becoming-noisy, wake lock, tipo de FGS, ciclo de vida do player) já está
+  **correto**; os achados estão na periferia. 4 issues novas, ordenadas por criticidade:
+  - ✅ **5.A** (CRÍTICA, FEITA 2026-07-15) — `POST_NOTIFICATIONS` declarada + pedida em runtime
+    na `MainActivity`; validada no device (concedida→notificação de mídia; negada→áudio sem crash).
+  - 🔲 **5.B** (MÉDIA) — comando de play descartado antes do `MediaController` conectar (cold start).
+  - 🔲 **5.C** (MÉDIA) — sleep timer conta wall-clock (não pausa junto com a reprodução).
+  - 🔲 **5.D** (BAIXA) — progresso otimista de `fastForward`/`rewind` sem `coerceAtMost(duration)`.
+  - (2 achados de Cast entraram no backlog de Cast, abaixo — estão fora de escopo desta versão.)
+- 🆕 **FASES 6 e 7 abertas** (2026-07-15) — 2ª varredura, agora fora do core de playback
+  (repositório, DAO, ViewModels de conteúdo, app-level, código morto). Detalhes nas seções
+  FASE 6 (bugs funcionais/robustez) e FASE 7 (código morto). Destaques:
+  - ↪️ **6.A REBAIXADA → 7.E** (2026-07-15) — as seções "Continuar Ouvindo"/"Favoritos" da Home
+    NÃO são bug: são scaffolding morto, já substituído por soluções vivas (mini player restaura a
+    sessão no cold start; tela de Favoritos dedicada). Virou remoção de código morto (ver 7.E).
+  - 🔲 **6.B** (MÉDIA) — `ThemeDetails`/`StudyDetails` VMs vazam coletores a cada Retry.
+  - 🔲 **6.C** (MÉDIA) — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF.
+  - 🔲 **6.D/6.E/6.F** (BAIXA/RISCO) — Home preso em Loading com lista vazia; `syncMoreContent`
+    sem version-gating; risco condicional de migração Room < 8.
+  - ✅ **6.G** (MÉDIA, user-facing, FEITA 2026-07-15) — coração de favorito. Eram 2 bugs (metadata do
+    controller como falsa fonte de verdade): (1) `syncStateWithController` revertia o otimista;
+    (2) `toggleFavorite` lia `oldStatus` do metadata → nunca desfavoritava. Fix: `currentIsFavorite`
+    (DB-backed) vira a fonte única. Validado no device (favorita/desfavorita alternando).
+  - 🔲 **FASE 7** — código morto confirmado por grep (clipping da Bíblia, `repeatMode`, shuffle,
+    `artist`, destinos de navegação órfãos, queries de DAO e DTO não usados).
 
 ---
 
@@ -373,6 +398,264 @@ Surgiu da revisão que pegou o lint quebrado da 4.C. Commit `96a7dfa`.
 
 ---
 
+## FASE 5 — Bugs clássicos de app de áudio (varredura 2026-07-15)
+
+Objetivo: fechar os buracos de periferia que faltaram. O núcleo de playback já está sólido —
+`setAudioAttributes(handleAudioFocus=true)` + `setHandleAudioBecomingNoisy(true)` +
+`setWakeMode(WAKE_MODE_NETWORK)` (`di/MediaModule.kt:94-96`), FGS `mediaPlayback` +
+`FOREGROUND_SERVICE_MEDIA_PLAYBACK`, e player não-`@Singleton` liberado só no `onDestroy`.
+As issues abaixo estão ordenadas por criticidade (5.A → 5.D).
+
+### ISSUE 5.A — ✅ FEITA (2026-07-15) — `POST_NOTIFICATIONS` ausente → sem notificação de mídia no Android 13+
+
+- **Problema:** `targetSdk = 36` (`app/build.gradle.kts:16`), mas o `AndroidManifest.xml` **não
+  declarava** `android.permission.POST_NOTIFICATIONS` e o app **nunca a pedia em runtime**
+  (`MainActivity.kt`). Em Android 13+ (API 33), sem essa permissão a notificação do foreground
+  service de mídia é **suprimida pelo SO**: o áudio toca, mas sem os controles na notificação/lockscreen.
+- **Correção:** (1) permissão declarada no manifest (com comentário; ignorada em APIs < 33).
+  (2) `MainActivity` registra um `ActivityResultContracts.RequestPermission` como campo e chama
+  `requestNotificationPermissionIfNeeded()` no `onCreate`, gated em `SDK_INT >= TIRAMISU`, só pedindo
+  se ainda não concedida (`ContextCompat.checkSelfPermission`). Callback é no-op de propósito: negada
+  ou concedida, o áudio funciona; negar só esconde os controles.
+- **Validado no device (moto g53, Android 14 / SDK 34):**
+  - Estado revogado → 1º launch **exibe o diálogo** (`GrantPermissionsActivity`, `REQUEST_PERMISSIONS`).
+  - **Concedida** → ao dar play surge a notificação `MediaStyle` (`category=transport`, ações
+    "Ir para o item anterior"/"Pausar"/"Ir para o próximo item", título "Efésios 4", state=PLAYING).
+  - **Negada** → áudio toca normalmente (mini player em ⏸), **sem crash** (logcat sem FATAL);
+    notificação suprimida pelo SO, como esperado.
+  - Bônus: a Home real **não** mostra "Continuar Ouvindo"/"Favoritos" (confirma 7.E ao vivo); o
+    mini player restaurado faz esse papel.
+- **Esforço:** P · **Depende de:** nada.
+
+### ISSUE 5.B — 🔲 TODO — Comando de play descartado antes do controller conectar (cold start)
+
+- **Problema:** `playBook` (`PlayerViewModel.kt:406`), `playThemePlaylist` (`:354`) e
+  `playStudyPlaylist` (`:914`) começam com `val controller = mediaController ?: return`. No cold
+  start, se o usuário toca num item **antes** de o `MediaController` conectar (o `buildAsync` de
+  `initializeController`, `:323`, leva ~centenas de ms), o toque vira **no-op silencioso**: nada
+  toca e não há feedback. `playStudyById`/`playBook` disparam coroutines que também dependem do
+  controller já resolvido.
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (guardar a última intenção de play e executá-la no
+  callback de conexão do `controllerFuture`, ou expor estado de "conectando" para a UI desabilitar/
+  enfileirar o toque).
+- **Critério de aceitação:** tocar num livro/estudo/tema imediatamente após abrir o app (frio)
+  inicia a reprodução assim que o controller conecta, sem toque perdido.
+- **Esforço:** M · **Depende de:** nada. · **device?** sim (reproduzir a corrida de cold start).
+
+### ISSUE 5.C — 🔲 TODO — Sleep timer conta wall-clock (não pausa com a reprodução)
+
+- **Problema:** `setSleepTimer` (`PlayerViewModel.kt:833-848`) usa `delay(minutes*60*1000L)` num
+  job de tempo de parede, independente do estado real. Se o usuário **pausa**, o timer continua
+  correndo e "pausa" algo já pausado; se a faixa **acaba** sozinha, o timer segue contando; e ele
+  não sobrevive à morte do processo. Comportamento esperado num app de áudio: pausar a contagem
+  quando a reprodução para e retomá-la ao voltar a tocar.
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (ancorar a contagem no tempo de reprodução —
+  descontar em `onIsPlayingChanged`, ou recalcular deadline a cada retomada). Opcional: opção
+  "fim do capítulo atual".
+- **Critério de aceitação:** com o timer ativo, pausar a reprodução congela a contagem; retomar
+  continua de onde parou; ao zerar, a reprodução é pausada.
+- **Esforço:** M · **Depende de:** nada. · **device?** recomendável.
+
+### ISSUE 5.D — 🔲 TODO — Progresso otimista de `fastForward`/`rewind` sem limite pela duração
+
+- **Problema:** `fastForward()` e `rewind()` (`PlayerViewModel.kt:501-511`) somam 30s/10s ao
+  `currentPosition` do `_uiState` sem `coerceAtMost(duration)` (só o `rewind` faz `coerceAtLeast(0)`).
+  Perto do fim da faixa, a barra pode ultrapassar 100% por um instante até o loop de progresso
+  (`startProgressLoop`, 1s) corrigir com a posição real do player. Só visual, mas é jitter perceptível.
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (clampar o update otimista em `0..duration`).
+- **Critério de aceitação:** avançar/retroceder perto das bordas não faz a barra estourar/ficar
+  negativa; posição converge com o player.
+- **Esforço:** P · **Depende de:** nada. · **device?** não (visual, verificável no emulador).
+
+---
+
+## FASE 6 — Bugs funcionais & robustez (2ª varredura 2026-07-15)
+
+Fora do core de playback (já sólido). Achados verificados nos arquivos reais. Ordem por criticidade.
+
+### ISSUE 6.A — ↪️ REBAIXADA para código morto → ver ISSUE 7.E
+
+- **Reclassificada em 2026-07-15.** O que parecia "feature de UI morta a ligar" é, na verdade,
+  **scaffolding de uma Home antiga já substituído por soluções vivas** — não é bug pra corrigir,
+  é código morto pra remover. Detalhe e plano de remoção estão na **ISSUE 7.E** (FASE 7).
+- **Por quê:** as duas seções duplicam funcionalidade que já existe e funciona:
+  - "Continuar Ouvindo" → o **mini player** já restaura a última sessão (pausada) no cold start
+    via `PlayerViewModel.kt:262-283` (`getLatestPlaybackState()`), com o subtítulo caindo
+    literalmente em `"Continuar Ouvindo"`; o player aparece sempre que `title` não é vazio
+    (`MainScreen.kt:126`, `SharedPlayerScreen.kt:97`).
+  - "Favoritos" → já há a **tela de Favoritos dedicada** (`ui/favorites/FavoritesViewModel.kt`,
+    `getFavorites()` + `getFavoriteStudyLessons()`).
+
+### ISSUE 6.B — 🔲 TODO — `ThemeDetails`/`StudyDetails` VMs vazam coletores a cada Retry
+
+- **Problema:** `ThemeDetailsViewModel.loadMoments` e `StudyDetailsViewModel.loadStudyDetails`
+  fazem `viewModelScope.launch { flow.collect {} }` sobre Flows de Room que nunca completam, e
+  `handle(Retry)` re-chama a função **sem cancelar** o job anterior. N toques em "Tentar novamente"
+  (ou reentradas) acumulam N coletores permanentes escrevendo no mesmo `_uiState` → leak de
+  coroutines + corrida de escrita até `onCleared`.
+- **Arquivos:** `ui/themas/ThemeDetailsViewModel.kt`, `ui/studies/StudyDetailsViewModel.kt`.
+- **Critério de aceitação:** só um coletor ativo por vez (guardar/cancelar `Job`, ou migrar para
+  `trigger.flatMapLatest{...}.stateIn(WhileSubscribed)` como Home/Themes/Studies/More).
+- **Esforço:** P · **Depende de:** nada. · **device?** não (revisável por inspeção/teste).
+
+### ISSUE 6.C — 🔲 TODO — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF
+
+- **Problema:** `ColorExtension.kt:18` faz `val loader = ImageLoader(context)` — um loader novo,
+  sem o header `User-Agent: "BibliaFaladaApp"` que o `ImageLoader` singleton do `CoilModule.kt`
+  injeta ("segredo do WAF") e sem os caches compartilhados. Se o host de imagens exige o UA (mesma
+  premissa do resto do app), `execute` não retorna `SuccessResult` → a cor dominante do player cai
+  **sempre** no `defaultColor` (`MainScreen.kt:175`). Independente do WAF, ainda instancia um
+  `ImageLoader` novo **a cada** mudança de `imageUrl` (`MainScreen.kt:172`), ignorando o cache.
+- **Arquivos:** `ui/theme/ColorExtension.kt` (receber o `ImageLoader` singleton por parâmetro),
+  `ui/MainScreen.kt` (passar o loader do `OuvindoBibliaApp`/DI).
+- **Critério de aceitação:** extração usa o loader compartilhado (com UA + cache); a cor do player
+  reflete a capa em device; sem novos `ImageLoader` por frame.
+- **Esforço:** P · **Depende de:** nada. · **device?** sim (confirmar se a cor passa a extrair).
+
+### ISSUE 6.D — 🔲 TODO — Home presa em Loading eterno com sync bem-sucedido e lista vazia
+
+- **Problema:** `HomeViewModel.kt:61-63` mapeia `Resource.Success` com `data.isEmpty()` para
+  `HomeUiState.Loading`, e o estado Loading não tem Retry (`HomeScreen.kt`). Se o repositório
+  emitir Success vazio (0 livros), a Home fica em spinner infinito sem saída. Inconsistente com
+  Themes (empty→Error) e Studies (empty→Empty).
+- **Arquivos:** `ui/home/HomeViewModel.kt` (tratar vazio como Empty/Error com Retry).
+- **Critério de aceitação:** lista vazia após sync não prende em Loading; usuário tem como re-tentar.
+- **Esforço:** P · **Depende de:** nada. · **device?** difícil de reproduzir (especulativo).
+
+### ISSUE 6.E — 🔲 TODO — `syncMoreContent` sem version-gating (escrita redundante)
+
+- **Problema:** diferente de `syncBibleData/syncThemes/syncStudies`, `syncMoreContent`
+  (`BibleRepositoryImpl.kt:~399`) ignora o campo `version` (que é até persistido em
+  `MoreContentEntity.version`). Toda coleta de `getMoreContentResource()` faz fetch de rede +
+  `INSERT REPLACE` no Room mesmo sem mudança. Ineficiência (não perde dados).
+- **Arquivos:** `data/repository/.../BibleRepositoryImpl.kt`.
+- **Critério de aceitação:** sync do "Mais" só reescreve o Room quando `meta.version` muda,
+  como os outros três.
+- **Esforço:** P · **Depende de:** nada.
+
+### ISSUE 6.F — 🔲 VERIFICAR (risco condicional) — Migração Room de schema < 8 → crash no launch
+
+- **Problema:** `DatabaseModule.kt:31-33` registra só `MIGRATION_8_9` e mantém apenas
+  `fallbackToDestructiveMigrationOnDowngrade()` (o destrutivo geral foi removido na 0.2 para
+  preservar favoritos/retomada). Se existir base instalada em schema **< 8**, a atualização lança
+  `IllegalStateException` na 1ª abertura → **crash em loop**. **Falhar alto em bumps futuros sem
+  migração é intencional** (decisão da 0.2); o risco é só o histórico pré-8.
+- **Ação:** confirmar se **alguma versão publicada** rodou com `BibleDatabase.version < 8`. Se não,
+  fechar como "não é bug". Se sim, adicionar `MIGRATION_x_8` (ou destrutivo só para esse caminho).
+- **Arquivos:** `data/local/.../di/DatabaseModule.kt`, `database/BibleDatabase.kt`.
+- **Esforço:** P (investigação) · **Depende de:** histórico de releases.
+
+### ISSUE 6.G — ✅ FEITA (2026-07-15) — Coração de favorito não atualiza corretamente ao tocar (mini e full player)
+
+- **Bug conhecido (reportado pelo usuário):** tocar no coração executa a ação e **salva no banco**,
+  mas o ícone não reflete o novo estado direito. Investigação no device revelou que eram **DOIS
+  problemas**, ambos por confiar no metadata do controller como fonte de verdade do favorito:
+  1. **Reversão do update otimista** — `syncStateWithController()` (`PlayerViewModel.kt:653`) rodava
+     a cada evento do player e **re-derivava** `currentIsFavorite` do
+     `currentMediaItem.mediaMetadata.extras["is_favorite"]` do controller, sobrescrevendo o update
+     otimista do `toggleFavorite` (`:552`) com o valor antigo até o `replaceMediaItem`/Flow do Room
+     convergirem → coração demorava a preencher.
+  2. **Nunca desfavoritava (o mais grave)** — `toggleFavorite` lia o `oldStatus` do MESMO metadata
+     do controller, que **não reflete os toggles anteriores** (o `replaceMediaItem` não "gruda" na
+     releitura do controller — quirk de MediaController/serviço). `oldStatus` vinha **sempre false**
+     → `newStatus` **sempre true** → cada tap só "favoritava", nunca desfavoritava. Confirmado por
+     logcat no device (moto g53): taps consecutivos logavam `old=false new=true` repetido.
+- **Onde a UI lê:** `SharedPlayerScreen.kt:96` liga o ícone a `uiState.currentIsFavorite` (mini
+  `:452`, full `:192`). O full tem `enabled = controlsEnabled`; o mini não (irrelevante ao bug).
+- **Correção (fonte única de verdade = DB, via `currentIsFavorite`):**
+  1. `syncStateWithController` **não escreve mais** `currentIsFavorite` (`:653`+). Quem escreve:
+     `toggleFavorite` (otimista), os observadores de DB (`observeCurrentFavorite`/
+     `observeCurrentStudyFavorite`) e o handler de `EVENT_MEDIA_ITEM_TRANSITION` (valor imediato
+     e correto no instante da troca de faixa, mantido em dia pelo observador de DB).
+  2. `toggleFavorite` lê `oldStatus` de `_uiState.value.currentIsFavorite` (DB-backed), não mais do
+     metadata do controller.
+- **Validado no device (moto g53, Android 14):** favoritar preenche na hora (mini e full),
+  persiste em "Meus Favoritos"; taps consecutivos no full player **alternam** corretamente
+  (`old=true→false`, `old=false→true`), confirmado por logcat + screenshots + teste do próprio
+  usuário. Logs de debug temporários removidos após validação.
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (`toggleFavorite`, `syncStateWithController`,
+  handler de transição). Nenhuma mudança de UI.
+- **Nota de higiene (fora de escopo, achado colateral):** `tryBeginSourceSwitch` (`:194`) reseta só
+  a flag interna `isSourceSwitchInFlight` no timeout de 4s, mas **não** reseta `isSwitchingSource`
+  no uiState — se `finishSourceSwitch()` nunca disparar, os controles do full player (que usam
+  `enabled = controlsEnabled = !isSwitchingSource`) ficam travados desabilitados. Não era a causa da
+  6.G (default é false; no restore não é tocado), mas vale corrigir depois (candidato a nova issue).
+- **Esforço:** P (real) · **device?** sim (foi essencial pra achar o 2º problema).
+
+---
+
+## FASE 7 — Código morto (2ª varredura 2026-07-15)
+
+Candidatos a remoção confirmados por `grep` em `src/main` (0 refs vivas). **Antes de apagar,
+reconfirmar incluindo `src/test`/`androidTest`** e o ROADMAP. Baixa prioridade (não afeta runtime),
+mas paga juros de manutenção. Um único commit de limpeza por área é suficiente.
+
+### ISSUE 7.A — 🔲 TODO — Clipping da Bíblia inalcançável + parâmetros propagados mortos
+
+- Cadeia `onPlayBook(...,0L,0L)` (únicos 2 call-sites vivos: `NavigationGraph.kt:43,53`) →
+  `playBook` → `buildBibleMediaItems` torna `startMs`/`endMs` **sempre 0**. Os ramos
+  `if (startMs>0)` / `if (endMs>startMs)` em `PlayerViewModel.buildBibleMediaItems` são
+  inalcançáveis e o `ClippingConfiguration` da Bíblia sai sempre vazio. Remover os params
+  `startMs`/`endMs` de `playBook`, `buildBibleMediaItems` e do lambda `onPlayBook`
+  (`NavigationGraph`/`MainScreen`). **Manter** o clipping de Tema (`playThemePlaylist`, vivo) e a
+  guarda 2.D em `saveCurrentState` (defesa). Já era "limpeza futura" citada na 3.D.
+
+### ISSUE 7.B — 🔲 TODO — Campos/ações de player nunca lidos
+
+- `PlayerUiState.repeatMode` (grep=1, só a declaração), `PlayerUiState.artist` (write-only:
+  escrito em `PlayerViewModel.kt:675`, 0 leituras), `isShuffleEnabled` (write-only) +
+  `toggleShuffle()` (0 chamadas) — shuffle é feature inteiramente morta. Remover ou implementar.
+
+### ISSUE 7.C — 🔲 TODO — Destinos de navegação órfãos
+
+- `Screen.Player`, `Screen.About`, `Screen.Copyright` (`AppNavigation.kt`) — 0 `composable<>`/
+  `navigate()`. O player é overlay em `MainScreen`, não destino. Remover os 3 tipos.
+
+### ISSUE 7.D — 🔲 TODO — Repositório/DAO/DTO não usados
+
+- **Repo (+ interface):** `getBook(bookId)` (morto **e** com bug latente — chama `getBookById`
+  que filtra pelo slug, nunca casaria com numericId) e `getBookIdFromChapter` (o usado é
+  `getBookNumericIdFromChapter`).
+- **DAO (`BibleDao.kt`):** `getChaptersForBook`, `getChapterWithBookInfoById` (morto **e** com JOIN
+  inválido: cruza `chapters.book_id` numérico com `books.book_id` slug), `updateChapterMetadata`,
+  `insertBooks`, `insertChaptersIgnore`, `clearBooks`, `clearChapters`, `clearStudies`,
+  `clearStudyLessons`, `insertStudies`, `insertStudyLessons`, `getStudies()`, `get()` e `clear()`
+  (de `more_content`).
+- **DTO:** `data/local/.../model/PlaybackStateDto.kt` — classe inteira sem referências.
+- **Intents no-op nunca despachadas:** `HomeIntent.OpenBook`, `ThemesIntent.SelectTheme`,
+  `StudiesIntent.SelectStudy` (navegação é feita direto por callback nas Screens).
+- ⚠️ Alguns `clear*`/`insert*` podem ser úteis como API reservada; confirmar contra testes antes.
+
+### ISSUE 7.E — 🔲 TODO — Seções mortas da Home ("Continuar Ouvindo" / "Favoritos") (ex-6.A)
+
+- **Origem:** rebaixada da 6.A (era classificada como bug). Não é bug: são duas seções de uma Home
+  antiga que **nunca são populadas** e cuja função já é coberta por soluções vivas — logo, remover.
+- **Confirmação em runtime:** `HomeViewModel.toUiState` (`HomeViewModel.kt:82-85`) monta o `Success`
+  só com `filteredBooks`+`selectedFilter`; os campos `continueListeningBook`/`favoriteBooks` ficam
+  no default → os blocos condicionais da `HomeScreen` (`:102` e `:114`) **nunca renderizam**.
+- **Por que é redundante (não ligar):**
+  - "Continuar Ouvindo" já é o **mini player** restaurando a sessão no cold start
+    (`PlayerViewModel.kt:262-283`; subtítulo default `"Continuar Ouvindo"`).
+  - "Favoritos" já tem **tela dedicada** (`ui/favorites/`).
+- **Remoção (fazer numa passada só, verificar compilação a cada arquivo):**
+  1. `HomeContract.kt:8-9` — remover os campos `continueListeningBook` e `favoriteBooks` de
+     `HomeUiState.Success`.
+  2. `HomeScreen.kt:102-140` — remover os dois blocos `item { … }` ("Continuar Ouvindo" e a
+     `LazyRow` de "Favoritos") e os `import` de `ContinueListeningCard`/`FavoriteBookItem`
+     (`:33`,`:35`).
+  3. `HomeComponents.kt` — remover os composables `ContinueListeningCard` (`:137`) e
+     `FavoriteBookItem` (`:233`) **e** as versões antigas comentadas (`:80`, `:176`). Conferir se
+     `SectionHeader` continua usado por outra seção antes de mexer nele.
+  4. `HomeViewModel.kt` — nada a mudar (já não referencia os campos); confirmar que nenhum outro
+     ponto lê os campos removidos (grep `continueListeningBook`/`favoriteBooks` = 0 fora dos acima).
+- **Não confundir:** manter intactos o mini player, a tela de Favoritos e `getFavorites()`/
+  `getLatestPlaybackState()` no repositório (usados por PlaybackService e PlayerViewModel).
+- **Critério de aceitação:** app compila; Home renderiza header + filtro + grid de livros sem os
+  buracos; nenhum símbolo removido referenciado em `src/main`.
+- **Esforço:** P · **Depende de:** nada. · **device?** não (remoção mecânica; smoke test da Home basta).
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
@@ -380,6 +663,13 @@ Surgiu da revisão que pegou o lint quebrado da 4.C. Commit `96a7dfa`.
 - Backlog quando religar: §6.1 posição não volta Cast→local · §6.2 sem fila (auto-avanço) ·
   §6.3 metadados errados p/ Estudo-Tema · §6.4 alvo divergente na transição. Exigem
   device + Chromecast para validar.
+- **Confirmado na varredura 2026-07-15 (código dormente, latente):**
+  - §6.2 — `checkCastCompletion()` (`PlayerViewModel.kt:790`) chama `skipToNextChapter()`, que
+    opera no **controller local** e não faz `loadMediaOnCast` → o próximo capítulo não carrega no
+    dispositivo Cast quando a faixa remota termina.
+  - §6.4 — `onChapterSelected()` (`PlayerViewModel.kt:513`) sempre chama `mediaController.seekTo()`
+    + `play()` **e** o Cast → tocaria local e remoto ao mesmo tempo (áudio duplo). Corrigir junto
+    ao religar o Cast (ramificar por `castSession?.isConnected`).
 
 ---
 
@@ -387,6 +677,20 @@ Surgiu da revisão que pegou o lint quebrado da 4.C. Commit `96a7dfa`.
 
 `0.1 → 0.3 → 1.A → 1.B → 2.A → (2.B, 2.C, 2.D) → 3.C/3.E (baratos) → 3.A/3.B (grande) → 4.x`
 Cast entra quando você tiver uma TV pra testar.
+
+**FASE 5 (nova):** `5.A (crítica, primeiro) → 5.B → 5.C → 5.D`. A 5.A é a de maior impacto e a
+mais autocontida (permissão + request). 5.B e 5.C precisam de device para validar a corrida de
+cold start e o comportamento de pausa; 5.D dá pra fechar no emulador.
+
+**FASE 6 (nova):** `6.G ✅ → 6.B → 6.C → 6.D → 6.E → 6.F`. 6.B/6.C são baratas e de bom retorno.
+6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
+
+**FASE 7 (código morto):** baixa prioridade, fazer depois das 5/6 ou em janela de limpeza. Sequência
+sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e 7.C (destinos de navegação
+órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
+3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
+
+**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B → 6.C → 5.B → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
 
 ---
 
