@@ -66,7 +66,8 @@ reconfirmar a linha exata ao pegar cada issue.
     na `MainActivity`; validada no device (concedida→notificação de mídia; negada→áudio sem crash).
   - ✅ **5.B** (MÉDIA, FEITA 2026-07-15) — play em cold start guardado (`pendingPlayAction`) e
     executado ao conectar o controller; validado no device (6 toques adiados → Êxodo tocou).
-  - 🔲 **5.C** (MÉDIA) — sleep timer conta wall-clock (não pausa junto com a reprodução).
+  - ✅ **5.C** (MÉDIA, FEITA 2026-07-15) — sleep timer conta tempo de reprodução (tick só quando
+    `isPlaying`); pausa junto com o áudio. Validado no device.
   - 🔲 **5.D** (BAIXA) — progresso otimista de `fastForward`/`rewind` sem `coerceAtMost(duration)`.
   - (2 achados de Cast entraram no backlog de Cast, abaixo — estão fora de escopo desta versão.)
 - 🆕 **FASES 6 e 7 abertas** (2026-07-15) — 2ª varredura, agora fora do core de playback
@@ -451,19 +452,19 @@ As issues abaixo estão ordenadas por criticidade (5.A → 5.D).
   description=Êxodo 1`). Hack de atraso + logs removidos após validação.
 - **Esforço:** M · **device?** sim (corrida de cold start reproduzida com atraso artificial).
 
-### ISSUE 5.C — 🔲 TODO — Sleep timer conta wall-clock (não pausa com a reprodução)
+### ISSUE 5.C — ✅ FEITA (2026-07-15) — Sleep timer conta wall-clock (não pausa com a reprodução)
 
-- **Problema:** `setSleepTimer` (`PlayerViewModel.kt:833-848`) usa `delay(minutes*60*1000L)` num
-  job de tempo de parede, independente do estado real. Se o usuário **pausa**, o timer continua
-  correndo e "pausa" algo já pausado; se a faixa **acaba** sozinha, o timer segue contando; e ele
-  não sobrevive à morte do processo. Comportamento esperado num app de áudio: pausar a contagem
-  quando a reprodução para e retomá-la ao voltar a tocar.
-- **Arquivos:** `ui/player/PlayerViewModel.kt` (ancorar a contagem no tempo de reprodução —
-  descontar em `onIsPlayingChanged`, ou recalcular deadline a cada retomada). Opcional: opção
-  "fim do capítulo atual".
-- **Critério de aceitação:** com o timer ativo, pausar a reprodução congela a contagem; retomar
-  continua de onde parou; ao zerar, a reprodução é pausada.
-- **Esforço:** M · **Depende de:** nada. · **device?** recomendável.
+- **Problema:** `setSleepTimer` usava `delay(minutes*60*1000L)` — um job de tempo de parede,
+  independente do estado real. Se o usuário **pausava**, o timer continuava correndo e disparava
+  na hora errada; se a faixa acabava sozinha, seguia contando.
+- **Correção:** troca o `delay` único por um laço com tick de 1s que **só desconta enquanto
+  `_uiState.value.isPlaying`** — o cronômetro conta tempo de reprodução, pausando junto com o
+  áudio e retomando ao voltar a tocar. Ao zerar, pausa (mesma lógica Cast/local de antes).
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (`setSleepTimer`).
+- **Validado no device (moto g53), teste do usuário:** timer de 5 min + 3 ciclos de pausa/play; o
+  logcat (log temporário, removido depois) mostrou `remaining` caindo 1s/s enquanto `playing=true`
+  e **congelado** enquanto `playing=false`, retomando a cada play.
+- **Esforço:** M · **device?** sim (comportamento de pausa validado ao vivo).
 
 ### ISSUE 5.D — 🔲 TODO — Progresso otimista de `fastForward`/`rewind` sem limite pela duração
 
@@ -697,8 +698,8 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
 `0.1 → 0.3 → 1.A → 1.B → 2.A → (2.B, 2.C, 2.D) → 3.C/3.E (baratos) → 3.A/3.B (grande) → 4.x`
 Cast entra quando você tiver uma TV pra testar.
 
-**FASE 5 (nova):** `5.A ✅ → 5.B ✅ → 5.C → 5.D`. 5.A e 5.B feitas e validadas em device. Falta
-5.C (sleep timer, precisa device p/ o comportamento de pausa) e 5.D (dá pra fechar no emulador).
+**FASE 5 (nova):** `5.A ✅ → 5.B ✅ → 5.C ✅ → 5.D`. 5.A/5.B/5.C feitas e validadas em device.
+Falta só 5.D (progresso otimista de fastForward/rewind; dá pra fechar no emulador).
 
 **FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D → 6.E → 6.F`.
 6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
@@ -708,7 +709,7 @@ sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e
 órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
 3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
 
-**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B ✅ → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
+**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B ✅ → 5.C ✅ → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
 
 ---
 
