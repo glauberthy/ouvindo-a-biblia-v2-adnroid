@@ -50,9 +50,13 @@ reconfirmar a linha exata ao pegar cada issue.
   no build atual (0 leaks após repro do zero + heap dump forçado).
 - ✅ **4.B** — `onPlaybackResumption` migrado para a overload com `isForPlayback`
   (Media3 1.7+); removido o `@Deprecated`. Comportamento preservado.
+- ✅ **4.A** — `onTaskRemoved` sem `super` (evita `stopSelf` ao pausar). Opção A já
+  ocorre no moto g53 por conta do SO; mudança é hardening. Achado à parte: persistência
+  "estilo-Spotify" (foreground pausado) conflita com notificação dismissível.
 - ❌ **Cast** (§6.1–6.4) — **FORA DE ESCOPO desta versão** (desligado via kill-switch;
   código dormente no repo).
-- ⏭️ **Próximo:** 4.A (notificação opção A — confirmada: persiste + dismissível).
+- 🏁 **Plano original concluído** (0→4). Backlog opcional: Android Auto (playback por
+  mediaId), persistência estilo-Spotify, 35 Typos (baseline), 37 bumps de dependência.
 
 ---
 
@@ -273,14 +277,31 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
 
 ## FASE 4 — Polimento & features
 
-### ISSUE 4.A — Opção A: notificação persiste no estado pausado após fechar app
+### ISSUE 4.A — ✅ FEITA — Opção A: notificação persiste pausada após fechar app
 
-- **Problema:** decisão de produto adiada. Hoje pausado+swipe remove a notificação (efetivamente
-  opção B). Para opção A, a notificação precisa virar dismissível em vez de sumir sozinha.
-- **Arquivos:** `service/PlaybackService.kt` (notificação/foreground).
-- **Critério de aceitação:** pausado + fechar app → notificação permanece; usuário pode dispensá-la
-  manualmente.
-- **Validação:** device. **Esforço:** M · **Depende de:** nada (baixa prioridade).
+- **Feito:** removida a chamada `super.onTaskRemoved()` em `PlaybackService.onTaskRemoved`.
+  O default do `MediaSessionService` faz `if (!isPlaybackOngoing() || !isAnySessionPlaying())
+  pauseAllPlayersAndStopSelf()` → com o player **pausado** ele dá `stopSelf()` (= Opção B).
+  O comentário do código já afirmava Opção A; a chamada super contradizia. Commit `719e6f1`.
+- **Validação no moto g53 (A/B, mesmo swipe pausado):** comportamento **idêntico** entre o
+  build com e sem `super`. A Motorola mata o processo *cached* direto no `remove task`
+  (adj 915) **sem entregar `onTaskRemoved`**, e a notificação *detached* (`flags=0x8`,
+  dismissível) sobrevive à morte do processo. Ou seja, a **Opção A já ocorre por conta do SO**
+  neste aparelho — a premissa "hoje some (Opção B)" não reproduz. A mudança é hardening
+  correto (garante Opção A onde o `onTaskRemoved` É entregue pausado, ex.: Android stock).
+- **Critério de aceitação:** atendido (notificação permanece + dismissível `flags=0x8`).
+
+### 🔭 Roadmap separado — persistência "estilo-Spotify" (CONFLITA com 4.A)
+
+- **Achado no device:** o Spotify mantém `isForeground=true` **mesmo pausado** (notificação
+  com `FOREGROUND_SERVICE`+`NO_CLEAR`, **não-dismissível**), por isso o processo dele
+  **sobrevive** ao swipe na Motorola. O Media3, por padrão, **rebaixa** o serviço do
+  foreground no pause (`stopForeground` → notificação dismissível), então o processo vira
+  *cached* e é morto no `remove task`.
+- **Tensão:** persistir como o Spotify exige foreground pausado → notificação **não-dismissível**,
+  o que **contradiz** o critério da 4.A (dismissível). São objetivos opostos. Decidir à parte
+  se o objetivo é "processo sobrevive p/ resume instantâneo" (Spotify, notif. grudada) ou
+  "notif. dispensável" (atual). Não implementado.
 
 ### ISSUE 4.B — ✅ FEITA — `onPlaybackResumption` `@Deprecated` (§ Diag02 4b)
 
