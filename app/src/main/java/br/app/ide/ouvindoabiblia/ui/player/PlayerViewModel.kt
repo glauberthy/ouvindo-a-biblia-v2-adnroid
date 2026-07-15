@@ -543,10 +543,12 @@ class PlayerViewModel @Inject constructor(
 
         val type = extras.getString("type") ?: "bible"
 
-        val oldStatus = currentItem.mediaMetadata
-            .extras
-            ?.getBoolean("is_favorite", false) == true
-
+        // ISSUE 6.G: a fonte de verdade do favorito é o currentIsFavorite do uiState (mantido pelo
+        // observador de DB), NÃO o metadata do controller. O extra "is_favorite" do
+        // currentMediaItem não reflete os toggles anteriores de forma confiável (o replaceMediaItem
+        // não "gruda" na releitura do controller), então lê-lo aqui fazia oldStatus vir sempre
+        // false → newStatus sempre true → nunca desfavoritava.
+        val oldStatus = _uiState.value.currentIsFavorite
         val newStatus = !oldStatus
 
         _uiState.update { it.copy(currentIsFavorite = newStatus) }
@@ -632,6 +634,13 @@ class PlayerViewModel @Inject constructor(
                     val extras = player.currentMediaItem?.mediaMetadata?.extras
                     val type = extras?.getString("type") ?: "bible"
 
+                    // ISSUE 6.G: reflete o favorito do novo item imediatamente (metadata é correto
+                    // no instante da troca de faixa). Substitui a escrita que antes vinha do
+                    // syncStateWithController. Depois, o observador de DB abaixo mantém sincronizado.
+                    // (Tema não mostra coração — guarda isThemeMode na UI —, então o valor é inócuo.)
+                    val transitionFavorite = extras?.getBoolean("is_favorite", false) == true
+                    _uiState.update { it.copy(currentIsFavorite = transitionFavorite) }
+
                     if (type == "study") {
                         favoriteObservationJob?.cancel()
 
@@ -658,9 +667,12 @@ class PlayerViewModel @Inject constructor(
             val meta = player.mediaMetadata
             val isTheme = MediaContentId.parse(currentItem?.mediaId.orEmpty()) is MediaContentId.ThemeMoment
 
-            val currentIsFavorite = currentItem?.mediaMetadata
-                ?.extras
-                ?.getBoolean("is_favorite", false) == true
+            // ISSUE 6.G: NÃO derivamos currentIsFavorite aqui. Este resync roda a cada evento do
+            // player e lê o metadata do controller, que fica ANTIGO enquanto o replaceMediaItem do
+            // toggle faz round-trip — sobrescrevia o update otimista e o coração só atualizava
+            // depois. O favorito agora é escrito só por: (1) toggleFavorite (otimista), (2) os
+            // observadores de DB (observeCurrentFavorite/observeCurrentStudyFavorite) e (3) o
+            // handler de EVENT_MEDIA_ITEM_TRANSITION (valor correto no instante da troca).
 
             state.copy(
                 isPlaying = player.isPlaying,
@@ -680,8 +692,8 @@ class PlayerViewModel @Inject constructor(
                 isShuffleEnabled = player.shuffleModeEnabled,
                 chapters = extractChaptersFromPlayer(player),
                 timeline = extractTimelineFromPlayer(player),
-                isThemeMode = isTheme,
-                currentIsFavorite = currentIsFavorite
+                isThemeMode = isTheme
+                // currentIsFavorite intencionalmente NÃO alterado aqui (ISSUE 6.G, ver acima).
             )
         }
     }
