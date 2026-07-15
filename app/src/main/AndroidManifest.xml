@@ -36,8 +36,11 @@
 
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />
-                <!-- Compatibilidade com clientes MediaBrowserService (ex.: Android Auto). -->
+                <!-- Compatibilidade com clientes MediaBrowserService (ex.: Android Auto/AAOS).
+                     CATEGORY_DEFAULT: alguns hosts de mídia (AAOS) consultam os serviços com
+                     MATCH_DEFAULT_ONLY, que exige esta categoria para o serviço ser listado. -->
                 <action android:name="android.media.browse.MediaBrowserService" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
 

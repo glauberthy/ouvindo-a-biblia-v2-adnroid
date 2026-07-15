@@ -468,8 +468,12 @@ class PlaybackService : MediaLibraryService() {
             session: MediaSession,
             controller: MediaSession.ControllerInfo
         ): MediaSession.ConnectionResult {
+            // DEFAULT_SESSION_AND_LIBRARY_COMMANDS (não _SESSION_COMMANDS): é o default de um
+            // MediaLibrarySession e inclui os comandos de BIBLIOTECA (getLibraryRoot/getChildren/
+            // getItem). Usar só DEFAULT_SESSION_COMMANDS negava o browse (PERMISSION_DENIED) para
+            // clientes MediaBrowser como o Android Auto (ISSUE 4.D).
             val sessionCommands =
-                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().build()
+                MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon().build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(sessionCommands).build()
         }
