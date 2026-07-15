@@ -74,7 +74,8 @@ reconfirmar a linha exata ao pegar cada issue.
   - ↪️ **6.A REBAIXADA → 7.E** (2026-07-15) — as seções "Continuar Ouvindo"/"Favoritos" da Home
     NÃO são bug: são scaffolding morto, já substituído por soluções vivas (mini player restaura a
     sessão no cold start; tela de Favoritos dedicada). Virou remoção de código morto (ver 7.E).
-  - 🔲 **6.B** (MÉDIA) — `ThemeDetails`/`StudyDetails` VMs vazam coletores a cada Retry.
+  - ✅ **6.B** (MÉDIA, FEITA 2026-07-15) — `ThemeDetails`/`StudyDetails` migradas p/
+    `refreshTrigger.flatMapLatest{...}.stateIn` → Retry não vaza mais coletores.
   - 🔲 **6.C** (MÉDIA) — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF.
   - 🔲 **6.D/6.E/6.F** (BAIXA/RISCO) — Home preso em Loading com lista vazia; `syncMoreContent`
     sem version-gating; risco condicional de migração Room < 8.
@@ -486,17 +487,23 @@ Fora do core de playback (já sólido). Achados verificados nos arquivos reais. 
   - "Favoritos" → já há a **tela de Favoritos dedicada** (`ui/favorites/FavoritesViewModel.kt`,
     `getFavorites()` + `getFavoriteStudyLessons()`).
 
-### ISSUE 6.B — 🔲 TODO — `ThemeDetails`/`StudyDetails` VMs vazam coletores a cada Retry
+### ISSUE 6.B — ✅ FEITA (2026-07-15) — `ThemeDetails`/`StudyDetails` VMs vazam coletores a cada Retry
 
 - **Problema:** `ThemeDetailsViewModel.loadMoments` e `StudyDetailsViewModel.loadStudyDetails`
-  fazem `viewModelScope.launch { flow.collect {} }` sobre Flows de Room que nunca completam, e
-  `handle(Retry)` re-chama a função **sem cancelar** o job anterior. N toques em "Tentar novamente"
-  (ou reentradas) acumulam N coletores permanentes escrevendo no mesmo `_uiState` → leak de
+  faziam `viewModelScope.launch { flow.collect {} }` sobre Flows de Room que nunca completam, e
+  `handle(Retry)` re-chamava a função **sem cancelar** o job anterior. N toques em "Tentar novamente"
+  (ou reentradas) acumulavam N coletores permanentes escrevendo no mesmo `_uiState` → leak de
   coroutines + corrida de escrita até `onCleared`.
+- **Correção:** migrados para o padrão idiomático das demais VMs —
+  `refreshTrigger(MutableStateFlow).flatMapLatest { <flows de Room> }.stateIn(WhileSubscribed(5s))`.
+  O `flatMapLatest` **cancela o coletor anterior** a cada emissão do trigger, então `Retry`
+  (`refreshTrigger.update{it+1}`) nunca acumula coletores. `onStart { emit(Loading) }` preserva o
+  Loading a cada (re)carga; `catch { emit(Error) }` dentro do flatMapLatest isola erros por tentativa.
 - **Arquivos:** `ui/themas/ThemeDetailsViewModel.kt`, `ui/studies/StudyDetailsViewModel.kt`.
-- **Critério de aceitação:** só um coletor ativo por vez (guardar/cancelar `Job`, ou migrar para
-  `trigger.flatMapLatest{...}.stateIn(WhileSubscribed)` como Home/Themes/Studies/More).
-- **Esforço:** P · **Depende de:** nada. · **device?** não (revisável por inspeção/teste).
+- **Validado:** compila; smoke test no device (moto g53) — telas de detalhe de Tema
+  ("Ansiedade e confiança em Deus") e de Estudo ("Estudos Expositivos em Apocalipse") carregam o
+  Success corretamente. O fim do vazamento é garantido pela semântica do `flatMapLatest`.
+- **Esforço:** P · **device?** não (era revisável por inspeção; smoke test confirmou o caminho feliz).
 
 ### ISSUE 6.C — 🔲 TODO — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF
 
@@ -682,7 +689,7 @@ Cast entra quando você tiver uma TV pra testar.
 mais autocontida (permissão + request). 5.B e 5.C precisam de device para validar a corrida de
 cold start e o comportamento de pausa; 5.D dá pra fechar no emulador.
 
-**FASE 6 (nova):** `6.G ✅ → 6.B → 6.C → 6.D → 6.E → 6.F`. 6.B/6.C são baratas e de bom retorno.
+**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C → 6.D → 6.E → 6.F`. 6.C é barata e de bom retorno.
 6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
 
 **FASE 7 (código morto):** baixa prioridade, fazer depois das 5/6 ou em janela de limpeza. Sequência
@@ -690,7 +697,7 @@ sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e
 órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
 3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
 
-**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B → 6.C → 5.B → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
+**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C → 5.B → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
 
 ---
 
