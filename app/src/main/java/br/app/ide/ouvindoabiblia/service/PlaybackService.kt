@@ -247,26 +247,33 @@ class PlaybackService : MediaLibraryService() {
                         }
                     }
                 }
-//                else {
-//                    Log.w(TAG, "⚠️ Restore: Falha ao reconstruir playlist (Livro não encontrado?)")
-//                }
             }
-//            else {
-//                Log.d(TAG, "⚠️ Restore: Nada salvo no banco.")
-//            }
         }
     }
 
     /**
-     * Função Mágica: Converte o estado salvo (PlaybackState) em itens tocáveis (MediaItems).
-     * Retorna null se o livro ou capítulos não existirem mais.
+     * Converte o estado salvo (PlaybackState) em itens tocáveis. Fina camada sobre
+     * [buildPlaylistFromMediaId], que é compartilhada com o playback por `mediaId` do
+     * Android Auto (`onSetMediaItems`/`onAddMediaItems`/`onGetItem`).
      */
     @OptIn(UnstableApi::class)
-    private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? {
-        val mediaId = state.mediaId
+    private suspend fun buildPlaylistFromState(state: PlaybackState): MediaSession.MediaItemsWithStartPosition? =
+        buildPlaylistFromMediaId(state.mediaId, state.positionMs)
 
+    /**
+     * Reconstrói a playlist COMPLETA a partir de um `mediaId` (Bíblia → livro inteiro;
+     * Estudo → estudo inteiro), com `startIndex` apontando para o item pedido e a posição
+     * dada. Retorna null p/ tema/inválido ou quando o conteúdo não existe mais no banco.
+     *
+     * É a peça central do playback por `mediaId`: o Android Auto reenvia só o id do item
+     * navegado (sem URI), então precisamos remontar aqui os `MediaItem`s tocáveis.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun buildPlaylistFromMediaId(
+        mediaId: String,
+        positionMs: Long,
+    ): MediaSession.MediaItemsWithStartPosition? {
         when (val content = MediaContentId.parse(mediaId)) {
-            // 1. RESTORE DE ESTUDOS
             is MediaContentId.Study -> {
                 val studyId = content.studyId
                 val studyData = repository.getStudyWithLessons(studyId).first()
@@ -295,36 +302,47 @@ class PlaybackService : MediaLibraryService() {
                 }
 
                 if (playlist.isEmpty()) {
-                    Log.w(TAG, "restore abortado: estudo $studyId sem aulas no banco (mediaId=$mediaId)")
+                    Log.w(TAG, "buildPlaylist abortado: estudo $studyId sem aulas no banco (mediaId=$mediaId)")
                     return null
                 }
                 val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
-                return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
+                return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, positionMs)
             }
 
-            // 2. RESTORE DE BÍBLIA
             is MediaContentId.Bible -> {
                 val bookNumericId = repository.getBookNumericIdFromChapter(content.chapterId.toInt())
                 if (bookNumericId == null) {
-                    Log.w(TAG, "restore abortado: livro não encontrado p/ capítulo ${content.chapterId} (mediaId=$mediaId)")
+                    Log.w(TAG, "buildPlaylist abortado: livro não encontrado p/ capítulo ${content.chapterId} (mediaId=$mediaId)")
                     return null
                 }
                 val chapters = repository.getChapters(bookNumericId).first()
                 if (chapters.isEmpty()) {
-                    Log.w(TAG, "restore abortado: livro $bookNumericId sem capítulos no banco (mediaId=$mediaId)")
+                    Log.w(TAG, "buildPlaylist abortado: livro $bookNumericId sem capítulos no banco (mediaId=$mediaId)")
                     return null
                 }
                 val playlist = createMediaItemsFromChapters(chapters, bookNumericId.toString())
                 val startIndex = playlist.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
-                return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, state.positionMs)
+                return MediaSession.MediaItemsWithStartPosition(playlist, startIndex, positionMs)
             }
 
-            // Tema/pasta/inválido: não há retomada a reconstruir.
+            // Tema/pasta/inválido: não há playlist a reconstruir.
             else -> {
-                Log.w(TAG, "buildPlaylistFromState: mediaId sem restore (tema/inválido): $mediaId")
+                Log.w(TAG, "buildPlaylistFromMediaId: mediaId sem playlist (tema/inválido): $mediaId")
                 return null
             }
         }
+    }
+
+    /**
+     * Resolve um `mediaId` no seu `MediaItem` tocável ÚNICO (com URI). Reaproveita
+     * [buildPlaylistFromMediaId] e devolve o item no `startIndex` (o próprio item pedido).
+     * Usado por `onAddMediaItems`/`onGetItem` (Android Auto) para dar URI a itens que
+     * chegam só com o id.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun resolvePlayableItem(mediaId: String): MediaItem? {
+        val built = buildPlaylistFromMediaId(mediaId, 0L) ?: return null
+        return built.mediaItems.getOrNull(built.startIndex)
     }
 
 
@@ -519,6 +537,8 @@ class PlaybackService : MediaLibraryService() {
                                 )
                             }
                         } catch (e: Exception) {
+                            // Falha de retomada não pode ficar invisível (consistência c/ 2.C).
+                            Log.w(TAG, "onPlaybackResumption: falha ao reconstruir playlist do banco", e)
                             completer.set(
                                 MediaSession.MediaItemsWithStartPosition(
                                     emptyList(),
@@ -551,9 +571,31 @@ class PlaybackService : MediaLibraryService() {
 
             markExplicitPlaybackRequest(item)
 
-            // A expansão de "pasta de livro" (id `{bookId}|{idx}`) foi removida na 3.D
-            // junto com o ChaptersScreen morto — nada mais produz esse mediaId. Playlists
-            // completas de Bíblia hoje chegam prontas de PlayerViewModel.playBook.
+            // Android Auto: um toque num item navegado chega como UM item SEM URI
+            // (`localConfiguration == null`). Expandimos para a playlist completa
+            // (livro/estudo inteiro) com o índice apontando para o item tocado, para
+            // dar auto-avanço e next/prev — como o `playBook` do app.
+            if (mediaItems.size == 1 && item.localConfiguration == null && item.mediaId.isNotEmpty()) {
+                return CallbackToFutureAdapter.getFuture { completer ->
+                    serviceScope.launch(Dispatchers.IO) {
+                        val expanded = buildPlaylistFromMediaId(item.mediaId, startPositionMs)
+                        if (expanded != null) {
+                            completer.set(expanded)
+                        } else {
+                            // Não expansível (tema/inválido): deixa o fluxo padrão resolver.
+                            completer.set(
+                                MediaSession.MediaItemsWithStartPosition(
+                                    mediaItems, startIndex, startPositionMs
+                                )
+                            )
+                        }
+                    }
+                    "onSetMediaItems"
+                }
+            }
+
+            // App (telefone): playlists completas já chegam prontas de PlayerViewModel.
+            // A expansão de "pasta de livro" (id `{bookId}|{idx}`) foi removida na 3.D.
             return super.onSetMediaItems(
                 mediaSession,
                 controller,
@@ -561,6 +603,30 @@ class PlaybackService : MediaLibraryService() {
                 startIndex,
                 startPositionMs
             )
+        }
+
+        // Android Auto reenvia itens navegados só com o `mediaId` (sem URI). Aqui
+        // resolvemos cada um no seu MediaItem tocável (com URI). Itens que já vêm com
+        // URI (do app) passam intactos. É o que faz o playback por `mediaId` funcionar.
+        @OptIn(UnstableApi::class)
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>
+        ): ListenableFuture<MutableList<MediaItem>> {
+            return CallbackToFutureAdapter.getFuture { completer ->
+                serviceScope.launch(Dispatchers.IO) {
+                    val resolved = mediaItems.mapNotNull { item ->
+                        when {
+                            item.localConfiguration != null -> item
+                            item.mediaId.isNotEmpty() -> resolvePlayableItem(item.mediaId)
+                            else -> null
+                        }
+                    }.toMutableList()
+                    completer.set(resolved)
+                }
+                "onAddMediaItems"
+            }
         }
 
         override fun onGetLibraryRoot(
@@ -622,12 +688,46 @@ class PlaybackService : MediaLibraryService() {
             }
         }
 
+        // Android Auto pede o item específico (metadados) por id. Um numérico puro pode
+        // ser um LIVRO (nó navegável) ou um CAPÍTULO (tocável) — o namespace numérico é
+        // compartilhado (ver MediaContentId) —, então checamos o livro primeiro.
+        @OptIn(UnstableApi::class)
         override fun onGetItem(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             mediaId: String
         ): ListenableFuture<LibraryResult<MediaItem>> {
-            return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED))
+            return CallbackToFutureAdapter.getFuture { completer ->
+                serviceScope.launch(Dispatchers.IO) {
+                    try {
+                        val book = repository.getBooks().first()
+                            .firstOrNull { it.numericId.toString() == mediaId }
+                        val item = if (book != null) {
+                            MediaItem.Builder()
+                                .setMediaId(book.numericId.toString())
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(book.name)
+                                        .setIsBrowsable(true)
+                                        .setIsPlayable(false)
+                                        .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+                                        .build()
+                                ).build()
+                        } else {
+                            resolvePlayableItem(mediaId)
+                        }
+                        if (item != null) {
+                            completer.set(LibraryResult.ofItem(item, null))
+                        } else {
+                            completer.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "onGetItem: falha ao resolver mediaId=$mediaId", e)
+                        completer.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                    }
+                }
+                "onGetItem"
+            }
         }
     }
 

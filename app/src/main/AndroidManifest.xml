@@ -10,6 +10,12 @@
         tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <!--
+      tools:ignore MissingIntentFilterForMediaSearch: o app suporta Android Auto por
+      NAVEGAÇÃO + playback por mediaId (onGetChildren/onGetItem/onAddMediaItems no
+      PlaybackService). Busca por VOZ (MEDIA_PLAY_FROM_SEARCH) é backlog — não declaramos
+      a capacidade para não anunciar algo que ainda não suportamos.
+    -->
     <application
         android:name=".OuvindoBibliaApp"
         android:allowBackup="false"
@@ -19,7 +25,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.OuvindoABiblia">
+        android:theme="@style/Theme.OuvindoABiblia"
+        tools:ignore="MissingIntentFilterForMediaSearch">
 
         <service
             android:name=".service.PlaybackService"
@@ -29,6 +36,8 @@
 
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />
+                <!-- Compatibilidade com clientes MediaBrowserService (ex.: Android Auto). -->
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
 
