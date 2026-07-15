@@ -7,14 +7,19 @@ import androidx.navigation.toRoute
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ThemeDetailsViewModel @Inject constructor(
     private val repository: BibleRepository,
@@ -26,43 +31,38 @@ class ThemeDetailsViewModel @Inject constructor(
     val themeTitle: String = args.themeTitle
     private val themeId: Int = args.themeId
 
-    private val _uiState = MutableStateFlow<ThemeDetailsUiState>(ThemeDetailsUiState.Loading)
-    val uiState: StateFlow<ThemeDetailsUiState> = _uiState.asStateFlow()
+    // ISSUE 6.B: refreshTrigger + flatMapLatest (padrão idiomático das demais VMs). O
+    // flatMapLatest cancela o coletor anterior a cada Retry; antes, cada Retry lançava um novo
+    // collect{} sobre Flows de Room que nunca completam, sem cancelar o anterior → N coletores
+    // permanentes escrevendo no mesmo estado. WhileSubscribed(5s) igual a Home/Themes/Studies/More.
+    private val refreshTrigger = MutableStateFlow(0)
 
-    init {
-        loadMoments()
-    }
-
-    fun handle(intent: ThemeDetailsIntent) {
-        when (intent) {
-            is ThemeDetailsIntent.Retry -> loadMoments()
-        }
-    }
-
-    private fun loadMoments() {
-        viewModelScope.launch {
-            _uiState.value = ThemeDetailsUiState.Loading
-
+    val uiState: StateFlow<ThemeDetailsUiState> = refreshTrigger
+        .flatMapLatest {
             combine(
                 repository.getThemeById(themeId),
                 repository.getMomentsForTheme(themeId)
             ) { theme, moments ->
-                theme to moments
+                if (theme == null) {
+                    ThemeDetailsUiState.Error("Tema não encontrado")
+                } else {
+                    ThemeDetailsUiState.Success(theme = theme, moments = moments)
+                }
             }
+                .onStart { emit(ThemeDetailsUiState.Loading) }
                 .catch { e ->
-                    _uiState.value =
-                        ThemeDetailsUiState.Error(e.message ?: "Erro ao carregar tema")
+                    emit(ThemeDetailsUiState.Error(e.message ?: "Erro ao carregar tema"))
                 }
-                .collect { (theme, moments) ->
-                    if (theme == null) {
-                        _uiState.value = ThemeDetailsUiState.Error("Tema não encontrado")
-                    } else {
-                        _uiState.value = ThemeDetailsUiState.Success(
-                            theme = theme,
-                            moments = moments
-                        )
-                    }
-                }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ThemeDetailsUiState.Loading
+        )
+
+    fun handle(intent: ThemeDetailsIntent) {
+        when (intent) {
+            is ThemeDetailsIntent.Retry -> refreshTrigger.update { it + 1 }
         }
     }
 }
