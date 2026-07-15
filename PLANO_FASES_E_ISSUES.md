@@ -64,7 +64,8 @@ reconfirmar a linha exata ao pegar cada issue.
   **correto**; os achados estão na periferia. 4 issues novas, ordenadas por criticidade:
   - ✅ **5.A** (CRÍTICA, FEITA 2026-07-15) — `POST_NOTIFICATIONS` declarada + pedida em runtime
     na `MainActivity`; validada no device (concedida→notificação de mídia; negada→áudio sem crash).
-  - 🔲 **5.B** (MÉDIA) — comando de play descartado antes do `MediaController` conectar (cold start).
+  - ✅ **5.B** (MÉDIA, FEITA 2026-07-15) — play em cold start guardado (`pendingPlayAction`) e
+    executado ao conectar o controller; validado no device (6 toques adiados → Êxodo tocou).
   - 🔲 **5.C** (MÉDIA) — sleep timer conta wall-clock (não pausa junto com a reprodução).
   - 🔲 **5.D** (BAIXA) — progresso otimista de `fastForward`/`rewind` sem `coerceAtMost(duration)`.
   - (2 achados de Cast entraram no backlog de Cast, abaixo — estão fora de escopo desta versão.)
@@ -429,20 +430,26 @@ As issues abaixo estão ordenadas por criticidade (5.A → 5.D).
     mini player restaurado faz esse papel.
 - **Esforço:** P · **Depende de:** nada.
 
-### ISSUE 5.B — 🔲 TODO — Comando de play descartado antes do controller conectar (cold start)
+### ISSUE 5.B — ✅ FEITA (2026-07-15) — Comando de play descartado antes do controller conectar (cold start)
 
-- **Problema:** `playBook` (`PlayerViewModel.kt:406`), `playThemePlaylist` (`:354`) e
-  `playStudyPlaylist` (`:914`) começam com `val controller = mediaController ?: return`. No cold
-  start, se o usuário toca num item **antes** de o `MediaController` conectar (o `buildAsync` de
-  `initializeController`, `:323`, leva ~centenas de ms), o toque vira **no-op silencioso**: nada
-  toca e não há feedback. `playStudyById`/`playBook` disparam coroutines que também dependem do
-  controller já resolvido.
-- **Arquivos:** `ui/player/PlayerViewModel.kt` (guardar a última intenção de play e executá-la no
-  callback de conexão do `controllerFuture`, ou expor estado de "conectando" para a UI desabilitar/
-  enfileirar o toque).
-- **Critério de aceitação:** tocar num livro/estudo/tema imediatamente após abrir o app (frio)
-  inicia a reprodução assim que o controller conecta, sem toque perdido.
-- **Esforço:** M · **Depende de:** nada. · **device?** sim (reproduzir a corrida de cold start).
+- **Problema:** `playBook`, `playThemePlaylist` e `playStudyPlaylist` começavam com
+  `val controller = mediaController ?: return`. No cold start, se o usuário tocava num item **antes**
+  de o `MediaController` conectar (o `buildAsync` de `initializeController` leva ~centenas de ms), o
+  toque virava **no-op silencioso**: nada tocava e não havia feedback.
+- **Correção:** campo `pendingPlayAction: (() -> Unit)?` + helper `isControllerReady()`
+  (`mediaController?.isConnected == true`). Os 3 play methods, se `!isControllerReady()`, **guardam
+  a intenção** (lambda que re-chama o próprio método com os mesmos args) e retornam; no callback de
+  conexão do `controllerFuture` a intenção pendente é executada (o play explícito sobrepõe a sessão
+  restaurada). Guardamos só a **última** intenção. `playStudyById` funila em `playStudyPlaylist`,
+  então fica coberto.
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (`pendingPlayAction`, `isControllerReady`,
+  `initializeController`, `playBook`/`playThemePlaylist`/`playStudyPlaylist`).
+- **Validado no device (moto g53), teste do usuário:** com atraso artificial de 30s na conexão do
+  controller (hack temporário, removido depois), o usuário tocou 6× em livros durante a janela →
+  logcat mostrou 6× "playBook adiado" (nenhum toque perdido) e, ao conectar, "executando intenção
+  pendente"; a **última** intenção (Êxodo) tocou sozinha (`media_session state=PLAYING,
+  description=Êxodo 1`). Hack de atraso + logs removidos após validação.
+- **Esforço:** M · **device?** sim (corrida de cold start reproduzida com atraso artificial).
 
 ### ISSUE 5.C — 🔲 TODO — Sleep timer conta wall-clock (não pausa com a reprodução)
 
@@ -690,9 +697,8 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
 `0.1 → 0.3 → 1.A → 1.B → 2.A → (2.B, 2.C, 2.D) → 3.C/3.E (baratos) → 3.A/3.B (grande) → 4.x`
 Cast entra quando você tiver uma TV pra testar.
 
-**FASE 5 (nova):** `5.A (crítica, primeiro) → 5.B → 5.C → 5.D`. A 5.A é a de maior impacto e a
-mais autocontida (permissão + request). 5.B e 5.C precisam de device para validar a corrida de
-cold start e o comportamento de pausa; 5.D dá pra fechar no emulador.
+**FASE 5 (nova):** `5.A ✅ → 5.B ✅ → 5.C → 5.D`. 5.A e 5.B feitas e validadas em device. Falta
+5.C (sleep timer, precisa device p/ o comportamento de pausa) e 5.D (dá pra fechar no emulador).
 
 **FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D → 6.E → 6.F`.
 6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
@@ -702,7 +708,7 @@ sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e
 órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
 3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
 
-**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
+**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B ✅ → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
 
 ---
 
