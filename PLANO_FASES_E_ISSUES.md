@@ -55,8 +55,10 @@ reconfirmar a linha exata ao pegar cada issue.
   "estilo-Spotify" (foreground pausado) conflita com notificação dismissível.
 - ❌ **Cast** (§6.1–6.4) — **FORA DE ESCOPO desta versão** (desligado via kill-switch;
   código dormente no repo).
-- 🏁 **Plano original concluído** (0→4). Backlog opcional: Android Auto (playback por
-  mediaId), persistência estilo-Spotify, 35 Typos (baseline), 37 bumps de dependência.
+- ✅ **4.D** — Android Auto de verdade (browse + playback por mediaId); lint zerado
+  (commit `96a7dfa`). Falta só validar end-to-end em DHU; busca por voz é backlog.
+- 🏁 **Plano concluído** (0→4 + 4.D). Backlog opcional: validação DHU do Auto, busca
+  por voz, persistência estilo-Spotify, 35 Typos (baseline), 37 bumps de dependência.
 
 ---
 
@@ -289,6 +291,11 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
   dismissível) sobrevive à morte do processo. Ou seja, a **Opção A já ocorre por conta do SO**
   neste aparelho — a premissa "hoje some (Opção B)" não reproduz. A mudança é hardening
   correto (garante Opção A onde o `onTaskRemoved` É entregue pausado, ex.: Android stock).
+- **Tradeoff consciente (revisão):** sem `stopSelf`, quando o `onTaskRemoved` chega pausado
+  o serviço fica *started* e `player.release()` só ocorre no `onDestroy` — que o SO
+  normalmente NÃO chama num kill de processo cached. Não é vazamento (a morte do processo
+  libera os recursos nativos), mas não há mais caminho que garanta `onDestroy` no task
+  removal. Alinhado ao roadmap persistente.
 - **Critério de aceitação:** atendido (notificação permanece + dismissível `flags=0x8`).
 
 ### 🔭 Roadmap separado — persistência "estilo-Spotify" (CONFLITA com 4.A)
@@ -319,7 +326,11 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
 
 - **Feito:**
   - **Lint errors (2):** `@OptIn(UnstableApi::class)` no `bitmapLoader`/`onDestroy`
-    do `PlaybackService` → `:app:lintDebug` sem errors. Commit `72eb8d9`.
+    do `PlaybackService`. Commit `72eb8d9`. ⚠️ **CORREÇÃO (revisão):** a declaração de
+    Android Auto neste mesmo passo (`0bc8436`) REINTRODUZIU 2 lint errors
+    (`MissingMediaBrowserServiceIntentFilter`, `MissingIntentFilterForMediaSearch`) e o
+    lint não foi re-rodado — a afirmação "sem errors" ficou falsa até `96a7dfa`, que
+    completou o Auto e zerou o lint (ver 4.D abaixo).
   - **UnusedResources (21):** drawables órfãos, `colors.xml` enxuto, `backup_rules.xml`;
     rastreado 0 refs cada (99→77 warnings). Commit `5b1d985`.
   - **StrictMode:** ligado só em debug no `OuvindoBibliaApp` (thread detectAll + vm
@@ -333,6 +344,23 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
   e `onCleared()` remove listener do Cast/callback/controller. Fechado.
 - **Deixado para depois (não-hygiene):** 35 Typos (falso-positivo pt-BR — candidato a
   baseline), 37 bumps de dependência (tarefa à parte, arriscado num pass de higiene).
+
+### ISSUE 4.D — ✅ FEITA — Android Auto de verdade (browse + playback por mediaId)
+
+Surgiu da revisão que pegou o lint quebrado da 4.C. Commit `96a7dfa`.
+- **Manifest:** serviço declarado como `MediaBrowserService` (honesto — somos
+  `MediaLibraryService`) → zera `MissingMediaBrowserServiceIntentFilter`. Busca por VOZ
+  (`MEDIA_PLAY_FROM_SEARCH`) suprimida com `tools:ignore` + doc — Auto por navegação
+  funciona sem voz; voz é backlog e não anunciamos capacidade que não temos.
+- **Playback por mediaId (era o dealbreaker):** `onAddMediaItems` resolve id→item com URI;
+  `onSetMediaItems` expande item único navegado (sem URI) na playlist completa c/ índice
+  certo (auto-avanço); `onGetItem` deixou de ser stub (resolve livro browsable ou item
+  tocável). Refator `buildPlaylistFromState`→`buildPlaylistFromMediaId`+`resolvePlayableItem`
+  compartilhado com o resume. App (telefone) manda itens com URI → segue pelo `super`, sem
+  regressão.
+- **Validação:** lint 0 errors (77 warns), compile+test OK, resume no device sem crash.
+  ⚠️ **Browse+playback end-to-end no Auto NÃO validados** — exigem DHU (USB + app Android
+  Auto). Pendente de validação em DHU.
 
 ---
 
