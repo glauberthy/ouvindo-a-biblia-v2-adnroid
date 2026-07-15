@@ -526,7 +526,12 @@ class PlayerViewModel @Inject constructor(
 
     fun fastForward() {
         mediaController?.seekForward()
-        _uiState.update { it.copy(currentPosition = it.currentPosition + 30_000) }
+        // ISSUE 5.D: limita o progresso otimista pela duração (o rewind já tinha coerceAtLeast(0)).
+        // Sem isto, avançar perto do fim estourava a fração > 100% até o loop de progresso corrigir.
+        _uiState.update {
+            val newPos = it.currentPosition + 30_000
+            it.copy(currentPosition = if (it.duration > 0) newPos.coerceAtMost(it.duration) else newPos)
+        }
     }
 
     fun rewind() {
