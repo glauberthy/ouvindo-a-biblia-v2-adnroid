@@ -48,9 +48,11 @@ reconfirmar a linha exata ao pegar cada issue.
   removidos; StrictMode em debug; Android Auto declarado; **Cast DESLIGADO** nesta
   versão (kill-switch `CastConfig.ENABLED`). Vazamento do LeakCanary: **não reproduz**
   no build atual (0 leaks após repro do zero + heap dump forçado).
+- ✅ **4.B** — `onPlaybackResumption` migrado para a overload com `isForPlayback`
+  (Media3 1.7+); removido o `@Deprecated`. Comportamento preservado.
 - ❌ **Cast** (§6.1–6.4) — **FORA DE ESCOPO desta versão** (desligado via kill-switch;
   código dormente no repo).
-- ⏭️ **Próximo:** 4.A (notificação opção A) / 4.B (`onPlaybackResumption` deprecated).
+- ⏭️ **Próximo:** 4.A (notificação opção A — confirmada: persiste + dismissível).
 
 ---
 
@@ -280,11 +282,17 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
   manualmente.
 - **Validação:** device. **Esforço:** M · **Depende de:** nada (baixa prioridade).
 
-### ISSUE 4.B — `onPlaybackResumption` `@Deprecated` (§ Diag02 4b)
+### ISSUE 4.B — ✅ FEITA — `onPlaybackResumption` `@Deprecated` (§ Diag02 4b)
 
-- **Problema:** sobrescrita marcada como deprecated no Media3; risco em upgrade.
-- **Critério de aceitação:** alinhar com a API atual recomendada do Media3.
-- **Validação:** device. **Esforço:** M · **Depende de:** nada.
+- **Feito:** migrado para a overload `onPlaybackResumption(MediaSession, ControllerInfo,
+  isForPlayback: Boolean)` (Media3 1.7+, presente na 1.9.2); removido o `@Deprecated`.
+  O antigo (2 args) delegava e por isso ainda funcionava, só com warning.
+- **Semântica do flag:** `false` → sistema quer só metadados (notificação de "continuar"
+  no boot), não inicia playback; `true` → devolve playlist+posição e o framework dá play.
+  Retornamos o mesmo `MediaItemsWithStartPosition` nos dois casos → comportamento preservado.
+- **Verificação:** `./gradlew :app:compileDebugKotlin` OK, sem warning de deprecação;
+  nenhuma outra referência à assinatura antiga (grep). Path `isForPlayback=false` só roda
+  no boot do device com sessão salva.
 
 ### ISSUE 4.C — ✅ FEITA — Android Auto (declarar) / StrictMode / higiene de lint
 

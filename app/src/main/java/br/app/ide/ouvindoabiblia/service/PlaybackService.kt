@@ -453,10 +453,17 @@ class PlaybackService : MediaLibraryService() {
         }
 
         // AGORA REUTILIZA A LÓGICA DO RESTORE (DRY)
-        @Deprecated("Deprecated in Media3")
+        // Media3 1.7+: a overload com `isForPlayback` substitui a antiga (2 args), que virou
+        // @Deprecated. Semântica do flag:
+        //   - false → o sistema só quer METADADOS (ex.: notificação de "continuar" que a UI do
+        //     Android monta no boot); NÃO deve iniciar playback.
+        //   - true  → devolvemos a playlist + posição e o framework dá play automaticamente.
+        // Retornamos o mesmo MediaItemsWithStartPosition nos dois casos; quem decide tocar é o
+        // próprio framework a partir do flag, então o comportamento atual é preservado.
         override fun onPlaybackResumption(
             mediaSession: MediaSession,
-            controller: MediaSession.ControllerInfo
+            controller: MediaSession.ControllerInfo,
+            isForPlayback: Boolean
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
             return CallbackToFutureAdapter.getFuture { completer ->
                 serviceScope.launch(Dispatchers.Main) {
