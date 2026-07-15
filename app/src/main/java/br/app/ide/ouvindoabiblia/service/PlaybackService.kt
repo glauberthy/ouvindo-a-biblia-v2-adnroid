@@ -409,15 +409,19 @@ class PlaybackService : MediaLibraryService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         // Modelo persistente (Opção A): ao remover dos recentes NÃO liberamos o
         // player nem encerramos o serviço — nem tocando, nem pausado.
-        //  - Tocando: o áudio continua e a notificação permanece.
-        //  - Pausado: a notificação permanece e o usuário pode dar play pela
-        //    notificação/headset.
-        // Apenas persistimos o estado atual. O player é liberado exclusivamente
-        // no onDestroy real do serviço (DIAGNOSTICO_02 §5.1/§5.2/§5.3).
+        //  - Tocando: o áudio continua e a notificação permanece (foreground).
+        //  - Pausado: a notificação permanece (dismissível) e o usuário pode dar
+        //    play pela notificação/headset ou dispensá-la manualmente com swipe.
+        //
+        // IMPORTANTE: NÃO chamamos super.onTaskRemoved(). O default do
+        // MediaSessionService faz `if (!isPlaybackOngoing() || !isAnySessionPlaying())
+        // pauseAllPlayersAndStopSelf()` — ou seja, quando PAUSADO ele dá stopSelf(),
+        // o serviço morre e a notificação some (efetivamente a Opção B). Pular o super
+        // é seguro: Service.onTaskRemoved (a base) é no-op. O player é liberado
+        // exclusivamente no onDestroy real do serviço (DIAGNOSTICO_02 §5.1/§5.2/§5.3).
         // saveCurrentState() já trata currentMediaItem nulo e ignora Tema (moment).
-        Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} -> DECISAO=manter")
+        Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} -> DECISAO=manter (sem super/stopSelf)")
         saveCurrentState()
-        super.onTaskRemoved(rootIntent)
     }
 
     @OptIn(UnstableApi::class)
