@@ -875,7 +875,16 @@ class PlayerViewModel @Inject constructor(
         if (minutes <= 0) return
 
         sleepTimerJob = viewModelScope.launch {
-            delay(minutes * 60 * 1000L)
+            // ISSUE 5.C: conta TEMPO DE REPRODUÇÃO, não wall-clock. Antes era um único
+            // `delay(minutes*60*1000)` que continuava correndo com o áudio pausado e disparava
+            // na hora errada. Agora fazemos tick de 1s e só descontamos enquanto está tocando —
+            // o cronômetro pausa junto com a reprodução e retoma quando ela volta.
+            val tickMs = 1_000L
+            var remainingMs = minutes * 60 * 1000L
+            while (remainingMs > 0) {
+                delay(tickMs)
+                if (_uiState.value.isPlaying) remainingMs -= tickMs
+            }
             if (castSession?.isConnected == true) {
                 castSession?.remoteMediaClient?.pause()
             } else {
