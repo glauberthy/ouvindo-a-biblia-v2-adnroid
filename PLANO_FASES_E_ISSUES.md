@@ -76,7 +76,8 @@ reconfirmar a linha exata ao pegar cada issue.
     sessão no cold start; tela de Favoritos dedicada). Virou remoção de código morto (ver 7.E).
   - ✅ **6.B** (MÉDIA, FEITA 2026-07-15) — `ThemeDetails`/`StudyDetails` migradas p/
     `refreshTrigger.flatMapLatest{...}.stateIn` → Retry não vaza mais coletores.
-  - 🔲 **6.C** (MÉDIA) — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF.
+  - ✅ **6.C** (MÉDIA, FEITA 2026-07-15) — `extractDominantColorFromUrl` usa `context.imageLoader`
+    (singleton com UA+cache). Achado: extração já funcionava (CDN não exige UA); ganho = cache/perf.
   - 🔲 **6.D/6.E/6.F** (BAIXA/RISCO) — Home preso em Loading com lista vazia; `syncMoreContent`
     sem version-gating; risco condicional de migração Room < 8.
   - ✅ **6.G** (MÉDIA, user-facing, FEITA 2026-07-15) — coração de favorito. Eram 2 bugs (metadata do
@@ -505,19 +506,23 @@ Fora do core de playback (já sólido). Achados verificados nos arquivos reais. 
   Success corretamente. O fim do vazamento é garantido pela semântica do `flatMapLatest`.
 - **Esforço:** P · **device?** não (era revisável por inspeção; smoke test confirmou o caminho feliz).
 
-### ISSUE 6.C — 🔲 TODO — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF
+### ISSUE 6.C — ✅ FEITA (2026-07-15) — `extractDominantColorFromUrl` cria `ImageLoader` sem o User-Agent do WAF
 
-- **Problema:** `ColorExtension.kt:18` faz `val loader = ImageLoader(context)` — um loader novo,
-  sem o header `User-Agent: "BibliaFaladaApp"` que o `ImageLoader` singleton do `CoilModule.kt`
-  injeta ("segredo do WAF") e sem os caches compartilhados. Se o host de imagens exige o UA (mesma
-  premissa do resto do app), `execute` não retorna `SuccessResult` → a cor dominante do player cai
-  **sempre** no `defaultColor` (`MainScreen.kt:175`). Independente do WAF, ainda instancia um
-  `ImageLoader` novo **a cada** mudança de `imageUrl` (`MainScreen.kt:172`), ignorando o cache.
-- **Arquivos:** `ui/theme/ColorExtension.kt` (receber o `ImageLoader` singleton por parâmetro),
-  `ui/MainScreen.kt` (passar o loader do `OuvindoBibliaApp`/DI).
-- **Critério de aceitação:** extração usa o loader compartilhado (com UA + cache); a cor do player
-  reflete a capa em device; sem novos `ImageLoader` por frame.
-- **Esforço:** P · **Depende de:** nada. · **device?** sim (confirmar se a cor passa a extrair).
+- **Problema:** `ColorExtension.kt:18` fazia `val loader = ImageLoader(context)` — um loader novo,
+  sem o header `User-Agent: "BibliaFaladaApp"` do singleton do `CoilModule.kt` e sem os caches
+  compartilhados, instanciado **a cada** mudança de `imageUrl` (`MainScreen.kt:172`).
+- **Correção:** troca por `context.imageLoader` (extensão do Coil), que devolve o **singleton** via
+  o `ImageLoaderFactory` do `OuvindoBibliaApp` (UA do WAF + cache de memória/disco). Mudança mínima,
+  sem tocar em `MainScreen` nem na assinatura da função.
+- **Achado honesto no device (moto g53):** a premissa "cor cai sempre no `defaultColor`" **NÃO se
+  confirmou** — o CDN de imagens não exige o UA, então a extração **já funcionava** com o loader
+  simples. Capas diferentes já davam cores diferentes (Efésios→navy, Josué→laranja, Romanos→dourado).
+  Portanto o ganho real da correção é: (1) **cache compartilhado** (não rebaixa a capa a cada abertura
+  do player), (2) **sem novo `ImageLoader` por troca de capa** (memória/perf), (3) **hardening** do UA
+  caso o CDN passe a exigir. Sem regressão: fundo do player continua refletindo a capa.
+- **Arquivos:** `ui/theme/ColorExtension.kt`.
+- **Validado no device:** full player de "Romanos Cap. 11" com fundo dourado/âmbar casando com a capa.
+- **Esforço:** P · **device?** sim (confirmou: extração mantida, agora via singleton+cache).
 
 ### ISSUE 6.D — 🔲 TODO — Home presa em Loading eterno com sync bem-sucedido e lista vazia
 
@@ -689,7 +694,7 @@ Cast entra quando você tiver uma TV pra testar.
 mais autocontida (permissão + request). 5.B e 5.C precisam de device para validar a corrida de
 cold start e o comportamento de pausa; 5.D dá pra fechar no emulador.
 
-**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C → 6.D → 6.E → 6.F`. 6.C é barata e de bom retorno.
+**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D → 6.E → 6.F`.
 6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
 
 **FASE 7 (código morto):** baixa prioridade, fazer depois das 5/6 ou em janela de limpeza. Sequência
@@ -697,7 +702,7 @@ sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e
 órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
 3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
 
-**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C → 5.B → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
+**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B → 5.C → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
 
 ---
 
