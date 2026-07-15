@@ -63,6 +63,14 @@ class PlayerViewModel @Inject constructor(
     private var mediaController: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
+    // ISSUE 5.B: intenção de play que chegou ANTES do controller conectar (cold start). O
+    // buildAsync() leva ~centenas de ms; sem isto, um toque nesse intervalo virava no-op silencioso.
+    // Guardamos só a última intenção; é executada no callback de conexão do controllerFuture.
+    private var pendingPlayAction: (() -> Unit)? = null
+
+    // Controller pronto para receber comandos de transporte.
+    private fun isControllerReady(): Boolean = mediaController?.isConnected == true
+
     // --- JOBS ---
     private var sleepTimerJob: Job? = null
     private var progressJob: Job? = null
@@ -336,6 +344,13 @@ class PlayerViewModel @Inject constructor(
                 // Inicia loop de progresso
                 startProgressLoop()
 
+                // ISSUE 5.B: se o usuário tocou em algo antes de o controller conectar, executa
+                // agora a intenção guardada (o play explícito sobrepõe a sessão restaurada).
+                pendingPlayAction?.let { action ->
+                    pendingPlayAction = null
+                    action()
+                }
+
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Falha na conexão com MediaService", e)
             }
@@ -351,6 +366,12 @@ class PlayerViewModel @Inject constructor(
         moments: List<Moment>,
         startIndex: Int = 0
     ) {
+        // ISSUE 5.B: se o controller ainda não conectou (cold start), guarda a intenção e sai;
+        // será reexecutada quando conectar, em vez de virar no-op silencioso.
+        if (!isControllerReady()) {
+            pendingPlayAction = { playThemePlaylist(themeTitle, themeCoverUrl, moments, startIndex) }
+            return
+        }
         val controller = mediaController ?: return
         if (!tryBeginSourceSwitch()) return
 
@@ -403,6 +424,11 @@ class PlayerViewModel @Inject constructor(
         startMs: Long = 0L,
         endMs: Long = 0L
     ) {
+        // ISSUE 5.B: adia o play se o controller ainda não conectou (cold start).
+        if (!isControllerReady()) {
+            pendingPlayAction = { playBook(bookId, bookTitle, coverUrl, initialIndex, startMs, endMs) }
+            return
+        }
         val controller = mediaController ?: return
         if (!tryBeginSourceSwitch()) return
 
@@ -923,6 +949,12 @@ class PlayerViewModel @Inject constructor(
         lessons: List<Lesson>,
         startIndex: Int = 0
     ) {
+        // ISSUE 5.B: adia o play se o controller ainda não conectou (cold start). Cobre também
+        // playStudyById, que funila aqui após buscar as aulas.
+        if (!isControllerReady()) {
+            pendingPlayAction = { playStudyPlaylist(studyTitle, studyCoverUrl, lessons, startIndex) }
+            return
+        }
         val controller = mediaController ?: return
 
         // Cobre os dois ramos abaixo (retomar a mesma aula ou carregar nova playlist).
