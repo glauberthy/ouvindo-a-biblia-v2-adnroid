@@ -68,7 +68,7 @@ reconfirmar a linha exata ao pegar cada issue.
     executado ao conectar o controller; validado no device (6 toques adiados → Êxodo tocou).
   - ✅ **5.C** (MÉDIA, FEITA 2026-07-15) — sleep timer conta tempo de reprodução (tick só quando
     `isPlaying`); pausa junto com o áudio. Validado no device.
-  - 🔲 **5.D** (BAIXA) — progresso otimista de `fastForward`/`rewind` sem `coerceAtMost(duration)`.
+  - ✅ **5.D** (BAIXA, FEITA 2026-07-15) — `fastForward` com `coerceAtMost(duration)` (rewind já OK).
   - (2 achados de Cast entraram no backlog de Cast, abaixo — estão fora de escopo desta versão.)
 - 🆕 **FASES 6 e 7 abertas** (2026-07-15) — 2ª varredura, agora fora do core de playback
   (repositório, DAO, ViewModels de conteúdo, app-level, código morto). Detalhes nas seções
@@ -80,8 +80,9 @@ reconfirmar a linha exata ao pegar cada issue.
     `refreshTrigger.flatMapLatest{...}.stateIn` → Retry não vaza mais coletores.
   - ✅ **6.C** (MÉDIA, FEITA 2026-07-15) — `extractDominantColorFromUrl` usa `context.imageLoader`
     (singleton com UA+cache). Achado: extração já funcionava (CDN não exige UA); ganho = cache/perf.
-  - 🔲 **6.D/6.E/6.F** (BAIXA/RISCO) — Home preso em Loading com lista vazia; `syncMoreContent`
-    sem version-gating; risco condicional de migração Room < 8.
+  - ✅ **6.D/6.E** (BAIXA, FEITAS 2026-07-15) — Home vazio→Error com Retry (era Loading eterno);
+    `syncMoreContent` com version-gating via `dao.get()?.version`.
+  - 🔲 **6.F** (RISCO) — risco condicional de migração Room < 8 (só investigação).
   - ✅ **6.G** (MÉDIA, user-facing, FEITA 2026-07-15) — coração de favorito. Eram 2 bugs (metadata do
     controller como falsa fonte de verdade): (1) `syncStateWithController` revertia o otimista;
     (2) `toggleFavorite` lia `oldStatus` do metadata → nunca desfavoritava. Fix: `currentIsFavorite`
@@ -466,16 +467,15 @@ As issues abaixo estão ordenadas por criticidade (5.A → 5.D).
   e **congelado** enquanto `playing=false`, retomando a cada play.
 - **Esforço:** M · **device?** sim (comportamento de pausa validado ao vivo).
 
-### ISSUE 5.D — 🔲 TODO — Progresso otimista de `fastForward`/`rewind` sem limite pela duração
+### ISSUE 5.D — ✅ FEITA (2026-07-15) — Progresso otimista de `fastForward`/`rewind` sem limite pela duração
 
-- **Problema:** `fastForward()` e `rewind()` (`PlayerViewModel.kt:501-511`) somam 30s/10s ao
-  `currentPosition` do `_uiState` sem `coerceAtMost(duration)` (só o `rewind` faz `coerceAtLeast(0)`).
-  Perto do fim da faixa, a barra pode ultrapassar 100% por um instante até o loop de progresso
-  (`startProgressLoop`, 1s) corrigir com a posição real do player. Só visual, mas é jitter perceptível.
-- **Arquivos:** `ui/player/PlayerViewModel.kt` (clampar o update otimista em `0..duration`).
-- **Critério de aceitação:** avançar/retroceder perto das bordas não faz a barra estourar/ficar
-  negativa; posição converge com o player.
-- **Esforço:** P · **Depende de:** nada. · **device?** não (visual, verificável no emulador).
+- **Problema:** `fastForward()` somava 30s ao `currentPosition` do `_uiState` sem
+  `coerceAtMost(duration)` (só o `rewind` fazia `coerceAtLeast(0)`). Perto do fim da faixa, a barra
+  podia ultrapassar 100% por um instante até o loop de progresso (1s) corrigir. Só visual.
+- **Correção:** o update otimista do `fastForward` agora faz `coerceAtMost(duration)` (guardado por
+  `duration > 0`, para não clampar quando a duração ainda é desconhecida). `rewind` já estava OK.
+- **Arquivos:** `ui/player/PlayerViewModel.kt` (`fastForward`).
+- **Esforço:** P · **device?** não (clamp verificável por inspeção; sem regressão no smoke test).
 
 ---
 
@@ -532,26 +532,30 @@ Fora do core de playback (já sólido). Achados verificados nos arquivos reais. 
 - **Validado no device:** full player de "Romanos Cap. 11" com fundo dourado/âmbar casando com a capa.
 - **Esforço:** P · **device?** sim (confirmou: extração mantida, agora via singleton+cache).
 
-### ISSUE 6.D — 🔲 TODO — Home presa em Loading eterno com sync bem-sucedido e lista vazia
+### ISSUE 6.D — ✅ FEITA (2026-07-15) — Home presa em Loading eterno com sync bem-sucedido e lista vazia
 
-- **Problema:** `HomeViewModel.kt:61-63` mapeia `Resource.Success` com `data.isEmpty()` para
-  `HomeUiState.Loading`, e o estado Loading não tem Retry (`HomeScreen.kt`). Se o repositório
-  emitir Success vazio (0 livros), a Home fica em spinner infinito sem saída. Inconsistente com
-  Themes (empty→Error) e Studies (empty→Empty).
-- **Arquivos:** `ui/home/HomeViewModel.kt` (tratar vazio como Empty/Error com Retry).
-- **Critério de aceitação:** lista vazia após sync não prende em Loading; usuário tem como re-tentar.
-- **Esforço:** P · **Depende de:** nada. · **device?** difícil de reproduzir (especulativo).
+- **Problema:** `HomeViewModel.toUiState` mapeava `Resource.Success` com `data.isEmpty()` para
+  `HomeUiState.Loading`, e o Loading não tem Retry. Se o repo emitisse Success vazio (0 livros), a
+  Home ficava em spinner infinito. Inconsistente com Themes (empty→Error) e Studies (empty→Empty).
+- **Correção:** `Success(empty)` → `HomeUiState.Error("Nenhum livro disponível. Tente novamente.")`,
+  que a `HomeScreen` (`:53`) renderiza com Retry. **Seguro:** `syncedListResource` só emite `Success`
+  DEPOIS de o `sync()` concluir (o `sync` é `suspend` e é aguardado antes do `emitAll`), então não
+  há "empty transitório" que causaria flash de erro — vazio aqui é estado terminal.
+- **Arquivos:** `ui/home/HomeViewModel.kt`.
+- **Validado:** smoke test no device — Home carrega o grid de livros normalmente (não cai no Error).
+- **Esforço:** P · **device?** o caso vazio em si é difícil de reproduzir (0 livros); confirmado que
+  não há regressão no caminho normal.
 
-### ISSUE 6.E — 🔲 TODO — `syncMoreContent` sem version-gating (escrita redundante)
+### ISSUE 6.E — ✅ FEITA (2026-07-15) — `syncMoreContent` sem version-gating (escrita redundante)
 
-- **Problema:** diferente de `syncBibleData/syncThemes/syncStudies`, `syncMoreContent`
-  (`BibleRepositoryImpl.kt:~399`) ignora o campo `version` (que é até persistido em
-  `MoreContentEntity.version`). Toda coleta de `getMoreContentResource()` faz fetch de rede +
-  `INSERT REPLACE` no Room mesmo sem mudança. Ineficiência (não perde dados).
-- **Arquivos:** `data/repository/.../BibleRepositoryImpl.kt`.
-- **Critério de aceitação:** sync do "Mais" só reescreve o Room quando `meta.version` muda,
-  como os outros três.
-- **Esforço:** P · **Depende de:** nada.
+- **Problema:** diferente de `syncBibleData/syncThemes/syncStudies`, `syncMoreContent` ignorava o
+  campo `version` e fazia fetch + `INSERT REPLACE` no Room a cada coleta de `getMoreContentResource()`,
+  mesmo sem mudança. Ineficiência (não perde dados).
+- **Correção:** version-gating via `dao.get()?.version` (a versão vive na própria `MoreContentEntity`):
+  se `cached != null && cached.version == remote.version`, retorna sem reescrever. (Bônus: usa o
+  `dao.get()`, que era listado como código morto na 7.D — sai da lista.)
+- **Arquivos:** `data/repository/.../BibleRepositoryImpl.kt` (`syncMoreContent`).
+- **Esforço:** P · **device?** não (lógica espelha os outros syncs; verificável por inspeção).
 
 ### ISSUE 6.F — 🔲 VERIFICAR (risco condicional) — Migração Room de schema < 8 → crash no launch
 
@@ -639,8 +643,9 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
 - **DAO (`BibleDao.kt`):** `getChaptersForBook`, `getChapterWithBookInfoById` (morto **e** com JOIN
   inválido: cruza `chapters.book_id` numérico com `books.book_id` slug), `updateChapterMetadata`,
   `insertBooks`, `insertChaptersIgnore`, `clearBooks`, `clearChapters`, `clearStudies`,
-  `clearStudyLessons`, `insertStudies`, `insertStudyLessons`, `getStudies()`, `get()` e `clear()`
-  (de `more_content`).
+  `clearStudyLessons`, `insertStudies`, `insertStudyLessons`, `getStudies()` e `clear()`
+  (de `more_content`). ⚠️ `get()` (de `more_content`) **saiu da lista**: passou a ser usado pelo
+  version-gating da 6.E.
 - **DTO:** `data/local/.../model/PlaybackStateDto.kt` — classe inteira sem referências.
 - **Intents no-op nunca despachadas:** `HomeIntent.OpenBook`, `ThemesIntent.SelectTheme`,
   `StudiesIntent.SelectStudy` (navegação é feita direto por callback nas Screens).
@@ -698,10 +703,9 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
 `0.1 → 0.3 → 1.A → 1.B → 2.A → (2.B, 2.C, 2.D) → 3.C/3.E (baratos) → 3.A/3.B (grande) → 4.x`
 Cast entra quando você tiver uma TV pra testar.
 
-**FASE 5 (nova):** `5.A ✅ → 5.B ✅ → 5.C ✅ → 5.D`. 5.A/5.B/5.C feitas e validadas em device.
-Falta só 5.D (progresso otimista de fastForward/rewind; dá pra fechar no emulador).
+**FASE 5 (nova):** `5.A ✅ → 5.B ✅ → 5.C ✅ → 5.D ✅`. **FASE 5 CONCLUÍDA.**
 
-**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D → 6.E → 6.F`.
+**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D ✅ → 6.E ✅ → 6.F`. Só falta 6.F (investigação).
 6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
 
 **FASE 7 (código morto):** baixa prioridade, fazer depois das 5/6 ou em janela de limpeza. Sequência
@@ -709,7 +713,8 @@ sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e
 órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
 3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
 
-**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B ✅ → 5.C ✅ → (5.D, 6.D, 6.E) → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
+**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B ✅ → 5.C ✅ → 5.D ✅ → 6.D ✅ → 6.E ✅ → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
+Restam só **6.F** (investigação de migração) e a **FASE 7** (código morto).
 
 ---
 
