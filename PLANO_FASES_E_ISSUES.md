@@ -358,9 +358,18 @@ Surgiu da revisão que pegou o lint quebrado da 4.C. Commit `96a7dfa`.
   tocável). Refator `buildPlaylistFromState`→`buildPlaylistFromMediaId`+`resolvePlayableItem`
   compartilhado com o resume. App (telefone) manda itens com URI → segue pelo `super`, sem
   regressão.
-- **Validação:** lint 0 errors (77 warns), compile+test OK, resume no device sem crash.
-  ⚠️ **Browse+playback end-to-end no Auto NÃO validados** — exigem DHU (USB + app Android
-  Auto). Pendente de validação em DHU.
+- **Bug pego na validação (commit `bcfe4bc`):** `onConnect` restringia os comandos a
+  `DEFAULT_SESSION_COMMANDS` (sem os de biblioteca) → `getLibraryRoot/getChildren/getItem`
+  davam `PERMISSION_DENIED` para clientes `MediaBrowser`, ou seja **o Auto não navegaria**.
+  Corrigido para `DEFAULT_SESSION_AND_LIBRARY_COMMANDS` (default do MediaLibrarySession).
+- **Validação:** lint 0 errors, compile+test OK, resume no device sem crash. **Teste
+  instrumentado `AndroidAutoBrowseTest`** (roda no emulador AAOS com conteúdo sincronizado):
+  conecta um `MediaBrowser` real e prova raiz→livros→capítulos, `onGetItem`, e playback por
+  `mediaId` (item cru expande no livro inteiro c/ startIndex correto). ✅ passa.
+- **Nota:** no emulador AAOS o app **não é LISTADO** no seletor de fontes de mídia (filtro do
+  host p/ apps user-installed/debug — descartado cache e toggle "show debug apps"). Isso é
+  independente do contrato de browse+playback, que o teste prova. Validação na UI real fica
+  p/ **DHU + Android Auto** (celular), onde a descoberta difere do AAOS.
 
 ---
 
