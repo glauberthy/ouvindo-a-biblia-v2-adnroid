@@ -26,7 +26,9 @@ Run a single unit test class/method:
 ./gradlew :data:repository:test --tests "*.ExampleUnitTest.someMethod"
 ```
 
-Note: the `app` module compiles against `compileSdk = 35`; the `data:*` library modules use `compileSdk = 36`. `minSdk` is 26 (app) / 24 (libraries). KSP (not kapt) drives Room and Hilt code generation — a clean build after touching entities/DAOs/`@Module`s may need `./gradlew clean`.
+Note: all modules use `compileSdk = 36` and the app `targetSdk = 36` (unified). `minSdk` is 26 (app) / 24 (libraries). KSP (not kapt) drives Room and Hilt code generation — a clean build after touching entities/DAOs/`@Module`s may need `./gradlew clean`.
+
+Release build: `assembleRelease`/`bundleRelease` are signed via `signingConfigs.release`, which reads `keystore.properties` (repo root, git-ignored; see `keystore.properties.example`). Without that file the release builds unsigned but doesn't break `assembleDebug`.
 
 ## Module architecture
 
@@ -69,5 +71,7 @@ This is the most intricate part — read `PlaybackService.kt` and `PlayerViewMod
 ## Gotchas
 
 - Many Media3 APIs are `@UnstableApi` and require `@OptIn(UnstableApi::class)`.
-- The OkHttp client sends a required `User-Agent: BibliaFaladaApp` header (server WAF rejects without it); the ExoPlayer `DefaultHttpDataSource` sets the same UA. Don't drop it.
+- The OkHttp client sends a required `User-Agent: BibliaFaladaApp` header (server WAF rejects without it); the ExoPlayer `DefaultHttpDataSource` sets the same UA. Don't drop it. The WAF also **rate-limits** — the Coil `ImageLoader` (`CoilModule`) has a 429 retry/backoff interceptor because the Home fires ~66 cover requests at once.
+- **`applicationId` ≠ `namespace`**: applicationId is `ag.uny.ouvindoabiblia` (store identity — reactivating the old app with its ~100k downloads); the code namespace and all packages stay `br.app.ide.ouvindoabiblia`. So `context.packageName` = `ag.uny.…`, but class names (e.g., the `CastOptionsProvider` meta-data, `MainActivity` component) are `br.app.ide.…`. Don't "fix" one to match the other.
+- Type-safe Navigation route matching must use `NavDestination.hasRoute(KClass)`, **not** `route.contains(::class.simpleName)` — R8 obfuscates `simpleName` in release, breaking substring matches (caused a double-selected bottom bar).
 - Entity file is named `MoreContenEntity.kt` (typo in filename) but the class is `MoreContentEntity` — search by class name.
