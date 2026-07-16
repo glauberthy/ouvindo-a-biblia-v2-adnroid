@@ -641,10 +641,11 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
   escrito em `PlayerViewModel.kt:675`, 0 leituras), `isShuffleEnabled` (write-only) +
   `toggleShuffle()` (0 chamadas) — shuffle é feature inteiramente morta. Remover ou implementar.
 
-### ISSUE 7.C — 🔲 TODO — Destinos de navegação órfãos
+### ISSUE 7.C — ✅ FEITA (2026-07-16) — Destinos de navegação órfãos
 
-- `Screen.Player`, `Screen.About`, `Screen.Copyright` (`AppNavigation.kt`) — 0 `composable<>`/
-  `navigate()`. O player é overlay em `MainScreen`, não destino. Remover os 3 tipos.
+- Removidos `Screen.Player`, `Screen.About`, `Screen.Copyright` de `AppNavigation.kt` — confirmado
+  0 refs em `app/src` (`Screen.Player`/`.About`/`.Copyright` = 0; `composable<>` = 0). O player é
+  overlay em `MainScreen`, não destino. Compila limpo (`:app:compileDebugKotlin` BUILD SUCCESSFUL).
 
 ### ISSUE 7.D — 🔲 TODO — Repositório/DAO/DTO não usados
 

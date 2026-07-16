@@ -33,22 +33,8 @@ sealed interface Screen {
 
     // Telas de Detalhe
     @Serializable
-    data class Player(
-        val bookId: String,
-        val bookTitle: String,
-        val coverUrl: String
-    ) : Screen
-
-    @Serializable
     data class ThemeDetails(
         val themeId: Int,
         val themeTitle: String
     ) : Screen
-
-    // Conteúdo do Menu "Mais"
-    @Serializable
-    data object About : Screen
-
-    @Serializable
-    data object Copyright : Screen
 }
