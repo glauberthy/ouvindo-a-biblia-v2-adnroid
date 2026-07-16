@@ -721,14 +721,11 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 `PUB-20..25` (Console/manual, não dependem de código).
 
 ### 🔴 BLOQUEIA — Código/Build
-- **PUB-01 · Assinar o release (signingConfig)** · 🤖+🧑 · 🔧 SCAFFOLDING FEITO (2026-07-16),
-  AGUARDANDO KEYSTORE DO DONO · *(Audit 01 §2)* — `app/build.gradle.kts` agora tem
-  `signingConfigs.release` lendo de `keystore.properties` (fora do git), com fallback: sem o arquivo,
-  o release fica unsigned e `assembleDebug`/`bundleRelease` seguem funcionando (verificado). Criado
-  `keystore.properties.example` versionado; `.gitignore` já cobre `keystore.properties` + `*.jks`.
-  **Falta o dono:** rodar o `keytool` p/ criar a upload keystore, copiar o `.example` p/
-  `keystore.properties` e preencher. **Aceitação:** com a keystore, `keytool -printcert -jarfile
-  app-release.aab` mostra o certificado. **Destrava PUB-10..16.**
+- **PUB-01 · Assinar o release (signingConfig)** · 🤖+🧑 · ✅ FEITA (2026-07-16) · *(Audit 01 §2)* —
+  `signingConfigs.release` lê `keystore.properties` (fora do git); dono criou a upload keystore
+  (`ag.uny.ouvindoabiblia`, alias `ouvindoabiblia`). **`assembleRelease` gera APK assinado** —
+  `apksigner` confirma SHA-256 `842d3a33…` (esperado `84:2D:3A:33:…`), esquema v2. `bundleRelease`
+  usa o mesmo signingConfig → AAB sairá assinado igual. Instalado no device (vc4/vn3.0).
 
 ### 🟡 CORRIGIR ANTES — Código
 - **PUB-02 · Erro de playback silencioso** · 🤖 · ✅ FEITA (2026-07-16) · *(Audit 02 §3)* —
@@ -746,7 +743,11 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
   `MoreScreen` já mapeia Error→ErrorScreen+Retry. Paridade com a 6.D. Compila limpo.
 
 ### 🟡 CORRIGIR ANTES — Testes no APK de RELEASE assinado · 🔬 (dependem de PUB-01)
-- **PUB-10 · Smoke do release** *(Audit 01 §3)* — release ofuscado (R8): sync do JSON + playback Media3.
+- **PUB-10 · Smoke do release** *(Audit 01 §3)* — ✅ FEITA (2026-07-16, ver `docs/archive/SMOKE_TEST_02_RELEASE.md`):
+  APK R8 assinado instalado (vc4); cold start sem crash; **as 4 sincronizações (Bíblia/Temas/Estudos/Mais)
+  parseiam sem erro de serialização/R8**; playback das 3 fontes PLAYING (som confirmado pelo usuário);
+  persistência 5.1 (force-stop→restore PAUSED). PUB-14/PUB-15 cobertos no release; restam PUB-11/12
+  (feitos no debug), PUB-13, PUB-16.
 - **PUB-11 · Falha de rede** *(Audit 02 T1)* — 1º uso offline → Error+Retry nas 4 telas; queda no meio não crasha.
 - **PUB-12 · Erro de playback** *(Audit 02 T2)* — 404/rede fora → sem crash; validar feedback do PUB-02.
 - **PUB-13 · POST_NOTIFICATIONS negado (Android 13+)** *(Audit 02 T3)* — negar → áudio toca; conceder → notificação com controles.
