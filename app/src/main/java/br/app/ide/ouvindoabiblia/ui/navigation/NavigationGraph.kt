@@ -25,7 +25,7 @@ fun NavigationGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController,
     windowSizeClass: WindowSizeClass,
-    onPlayBook: (Int, String, String, Int, Long, Long) -> Unit,
+    onPlayBook: (Int, String, String, Int) -> Unit,
     onPlayTheme: (String, String, List<Moment>, Int) -> Unit,
     onPlayStudy: (Int, String, String, Int) -> Unit,
     bottomContentPadding: Dp = 0.dp,
@@ -40,7 +40,7 @@ fun NavigationGraph(
             HomeScreen(
                 windowSizeClass = windowSizeClass,
                 onNavigateToBook = { numericId, name, cover ->
-                    onPlayBook(numericId, name, cover, 0, 0L, 0L)
+                    onPlayBook(numericId, name, cover, 0)
                 },
                 bottomContentPadding = bottomContentPadding
             )
@@ -50,7 +50,7 @@ fun NavigationGraph(
         composable<Screen.Favorites> {
             FavoritesScreen(
                 onPlayChapter = { numericId, name, cover, index ->
-                    onPlayBook(numericId, name, cover, index, 0L, 0L)
+                    onPlayBook(numericId, name, cover, index)
                 },
                 // Agora os tipos batem: (Int, String, String, Int)
                 onPlayStudy = { studyId, title, cover, index ->

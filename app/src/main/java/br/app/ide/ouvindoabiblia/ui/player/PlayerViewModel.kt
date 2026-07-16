@@ -125,35 +125,16 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    // A Bíblia nunca usa clipping (os capítulos tocam inteiros); o clipping vivo é só o de
+    // Tema (ver playThemePlaylist). Por isso este builder não seta ClippingConfiguration.
     private fun buildBibleMediaItems(
         bookId: Int,
-        chapters: List<Chapter>,
-        targetChapterIndex: Int,
-        startMs: Long,
-        endMs: Long
+        chapters: List<Chapter>
     ): List<MediaItem> {
-        return chapters.mapIndexed { index, chapterInfo ->
-            val clippingConfigBuilder = MediaItem.ClippingConfiguration.Builder()
-
-            if (index == targetChapterIndex) {
-                if (startMs > 0) {
-                    clippingConfigBuilder.setStartPositionMs(startMs)
-                }
-                if (endMs > startMs) {
-                    clippingConfigBuilder.setEndPositionMs(endMs)
-                }
-            }
-
+        return chapters.map { chapterInfo ->
             MediaItem.Builder()
                 .setMediaId(MediaContentId.Bible(chapterInfo.id).raw)
                 .setUri(chapterInfo.audioUrl)
-                .setClippingConfiguration(
-                    if (index == targetChapterIndex) {
-                        clippingConfigBuilder.build()
-                    } else {
-                        MediaItem.ClippingConfiguration.UNSET
-                    }
-                )
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle("${chapterInfo.bookName} ${chapterInfo.number}")
@@ -420,13 +401,11 @@ class PlayerViewModel @Inject constructor(
         bookId: Int,
         bookTitle: String,
         coverUrl: String,
-        initialIndex: Int = 0,
-        startMs: Long = 0L,
-        endMs: Long = 0L
+        initialIndex: Int = 0
     ) {
         // ISSUE 5.B: adia o play se o controller ainda não conectou (cold start).
         if (!isControllerReady()) {
-            pendingPlayAction = { playBook(bookId, bookTitle, coverUrl, initialIndex, startMs, endMs) }
+            pendingPlayAction = { playBook(bookId, bookTitle, coverUrl, initialIndex) }
             return
         }
         val controller = mediaController ?: return
@@ -449,10 +428,7 @@ class PlayerViewModel @Inject constructor(
 
             val playlist = buildBibleMediaItems(
                 bookId = bookId,
-                chapters = chapters,
-                targetChapterIndex = initialIndex,
-                startMs = startMs,
-                endMs = endMs
+                chapters = chapters
             )
 
             _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }

@@ -321,14 +321,12 @@ fun MainScreen(
                         modifier = Modifier.fillMaxSize(),
                         navController = navController,
                         windowSizeClass = windowSizeClass,
-                        onPlayBook = { numericId, name, cover, index, startMs, endMs ->
+                        onPlayBook = { numericId, name, cover, index ->
                             playerViewModel.playBook(
                                 bookId = numericId,
                                 bookTitle = name,
                                 coverUrl = cover,
-                                initialIndex = index,
-                                startMs = startMs,
-                                endMs = endMs
+                                initialIndex = index
                             )
                         },
                         onPlayTheme = { themeTitle, themeCoverUrl, moments, startIndex ->

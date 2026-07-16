@@ -198,9 +198,9 @@ class PlaybackService : MediaLibraryService() {
         }
         // ISSUE 2.D (guarda explícita): num item recortado, player.currentPosition é
         // RELATIVO ao início do recorte, mas buildPlaylistFromState reconstrói SEM
-        // recorte e aplicaria a posição como ABSOLUTA (retomada errada). Hoje o recorte
-        // da Bíblia é inalcançável (playBook só recebe startMs=0 dos call-sites vivos),
-        // mas a guarda permanece como defesa caso um caminho de recorte seja religado.
+        // recorte e aplicaria a posição como ABSOLUTA (retomada errada). A Bíblia não
+        // recorta (params de clipping removidos na 7.A); o recorte vivo é só o de Tema,
+        // que não é persistido — a guarda protege esse caso e qualquer recorte futuro.
         if (currentMediaItem.clippingConfiguration != MediaItem.ClippingConfiguration.UNSET) {
             Log.w(TAG, "saveCurrentState: posição de item recortado não persistida (2.D): $mediaId")
             return

@@ -625,15 +625,16 @@ Candidatos a remoção confirmados por `grep` em `src/main` (0 refs vivas). **An
 reconfirmar incluindo `src/test`/`androidTest`** e o ROADMAP. Baixa prioridade (não afeta runtime),
 mas paga juros de manutenção. Um único commit de limpeza por área é suficiente.
 
-### ISSUE 7.A — 🔲 TODO — Clipping da Bíblia inalcançável + parâmetros propagados mortos
+### ISSUE 7.A — ✅ FEITA (2026-07-16) — Clipping da Bíblia inalcançável + parâmetros propagados mortos
 
-- Cadeia `onPlayBook(...,0L,0L)` (únicos 2 call-sites vivos: `NavigationGraph.kt:43,53`) →
-  `playBook` → `buildBibleMediaItems` torna `startMs`/`endMs` **sempre 0**. Os ramos
-  `if (startMs>0)` / `if (endMs>startMs)` em `PlayerViewModel.buildBibleMediaItems` são
-  inalcançáveis e o `ClippingConfiguration` da Bíblia sai sempre vazio. Remover os params
-  `startMs`/`endMs` de `playBook`, `buildBibleMediaItems` e do lambda `onPlayBook`
-  (`NavigationGraph`/`MainScreen`). **Manter** o clipping de Tema (`playThemePlaylist`, vivo) e a
-  guarda 2.D em `saveCurrentState` (defesa). Já era "limpeza futura" citada na 3.D.
+- Removidos os params `startMs`/`endMs` (sempre 0 nos call-sites vivos) de toda a cadeia da Bíblia:
+  `onPlayBook` (`NavigationGraph`: tipo + 2 call-sites; `MainScreen`: lambda + chamada de
+  `playBook`), `PlayerViewModel.playBook` (assinatura + `pendingPlayAction`) e
+  `buildBibleMediaItems`. Este último perdeu também `targetChapterIndex` (só servia ao clipping) e
+  o bloco `ClippingConfiguration` inteiro — a Bíblia não recorta (agora `map`, sem `setClippingConfiguration`).
+- **Mantidos (vivos):** clipping de Tema (`playThemePlaylist`/`moment.startMs`), o `startMs`/`endMs`
+  de `ThemeDetailsScreen`, e a guarda 2.D em `saveCurrentState` (comentário atualizado p/ refletir
+  que agora protege só o recorte de Tema + futuros). Compila limpo (`:app:compileDebugKotlin`).
 
 ### ISSUE 7.B — ✅ FEITA (2026-07-16) — Campos/ações de player nunca lidos
 
