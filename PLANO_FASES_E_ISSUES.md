@@ -649,21 +649,22 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
   0 refs em `app/src` (`Screen.Player`/`.About`/`.Copyright` = 0; `composable<>` = 0). O player é
   overlay em `MainScreen`, não destino. Compila limpo (`:app:compileDebugKotlin` BUILD SUCCESSFUL).
 
-### ISSUE 7.D — 🔲 TODO — Repositório/DAO/DTO não usados
+### ISSUE 7.D — ✅ FEITA (2026-07-16) — Repositório/DAO/DTO não usados
 
-- **Repo (+ interface):** `getBook(bookId)` (morto **e** com bug latente — chama `getBookById`
-  que filtra pelo slug, nunca casaria com numericId) e `getBookIdFromChapter` (o usado é
-  `getBookNumericIdFromChapter`).
-- **DAO (`BibleDao.kt`):** `getChaptersForBook`, `getChapterWithBookInfoById` (morto **e** com JOIN
-  inválido: cruza `chapters.book_id` numérico com `books.book_id` slug), `updateChapterMetadata`,
-  `insertBooks`, `insertChaptersIgnore`, `clearBooks`, `clearChapters`, `clearStudies`,
-  `clearStudyLessons`, `insertStudies`, `insertStudyLessons`, `getStudies()` e `clear()`
-  (de `more_content`). ⚠️ `get()` (de `more_content`) **saiu da lista**: passou a ser usado pelo
-  version-gating da 6.E.
-- **DTO:** `data/local/.../model/PlaybackStateDto.kt` — classe inteira sem referências.
-- **Intents no-op nunca despachadas:** `HomeIntent.OpenBook`, `ThemesIntent.SelectTheme`,
-  `StudiesIntent.SelectStudy` (navegação é feita direto por callback nas Screens).
-- ⚠️ Alguns `clear*`/`insert*` podem ser úteis como API reservada; confirmar contra testes antes.
+Confirmado 0 refs em TODOS os módulos (main+test+androidTest; nenhum teste referencia). Build
+completo limpo com regeneração do Room (KSP `data:local`). **Removidos:**
+- **Repo (interface + impl):** `getBook(bookId)` (morto + bug latente do slug) e
+  `getBookIdFromChapter` (o vivo é `getBookNumericIdFromChapter`). Com `getBook` fora, o DAO
+  `getBookById` ficou órfão → removido também.
+- **DAO (`BibleDao.kt`):** `getChaptersForBook`, `getBookById`, `getChapterWithBookInfoById`
+  (JOIN inválido), `updateChapterMetadata`, `insertBooks`, `insertChaptersIgnore`, `clearBooks`,
+  `clearChapters`, `insertStudies`, `insertStudyLessons`, `getStudies()`, `clearStudies`,
+  `clearStudyLessons`. **Caminho vivo de sync preservado** (`refreshBibleData`/`refreshThemesData`/
+  `refreshStudiesData` usam os `*Ignore` singulares + `update*Metadata`). `get()`/`observe()`/`save()`/
+  `clear()` de `more_content` mantidos (vivos, 6.E). `api.getStudies()` remoto é outro símbolo (vivo).
+- **DTO:** arquivo `PlaybackStateDto.kt` apagado (classe inteira sem refs).
+- **Intents no-op:** `HomeIntent.OpenBook`, `ThemesIntent.SelectTheme`, `StudiesIntent.SelectStudy`
+  removidos dos contracts + os branches no-op nos 3 `handle()` (navegação é por callback nas Screens).
 
 ### ISSUE 7.E — ✅ FEITA (2026-07-16) — Seções mortas da Home ("Continuar Ouvindo" / "Favoritos") (ex-6.A)
 
@@ -733,16 +734,15 @@ Cast entra quando você tiver uma TV pra testar.
 
 **FASE 5 (nova):** `5.A ✅ → 5.B ✅ → 5.C ✅ → 5.D ✅`. **FASE 5 CONCLUÍDA.**
 
-**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D ✅ → 6.E ✅ → 6.F`. Só falta 6.F (investigação).
-6.F é só investigação (pode virar no-op). (6.A saiu daqui: rebaixada para 7.E — código morto.)
+**FASE 6 (nova):** `6.G ✅ → 6.B ✅ → 6.C ✅ → 6.D ✅ → 6.E ✅ → 6.F ✅`. **FASE 6 CONCLUÍDA.**
+6.F fechada sem código (2026-07-16: nenhuma base DB<8 no mundo real). (6.A rebaixada para 7.E.)
 
-**FASE 7 (código morto):** baixa prioridade, fazer depois das 5/6 ou em janela de limpeza. Sequência
-sugerida: `7.E → 7.C → 7.B → 7.A → 7.D`. 7.E (seções mortas da Home) e 7.C (destinos de navegação
-órfãos) são as remoções mais autocontidas e sem risco; 7.A (clipping) já estava mapeada desde a
-3.D; 7.D (repo/DAO/DTO) por último, confirmando contra `src/test`/`androidTest` antes de apagar.
+**FASE 7 (código morto):** `7.E ✅ → 7.C ✅ → 7.B ✅ → 7.A ✅ → 7.D ✅`. **FASE 7 CONCLUÍDA (2026-07-16).**
 
-**Sugestão global de prioridade:** `5.A ✅ → 6.G ✅ → 6.B ✅ → 6.C ✅ → 5.B ✅ → 5.C ✅ → 5.D ✅ → 6.D ✅ → 6.E ✅ → 6.F → FASE 7 (7.E → 7.C → 7.B → 7.A → 7.D)`.
-Restam só **6.F** (investigação de migração) e a **FASE 7** (código morto).
+**TODAS AS FASES (0→7) CONCLUÍDAS.** Backlog residual só-quando-religar: Cast (§6.1-6.4, abaixo),
+persistência estilo-Spotify (conflita c/ 4.A), validar Auto em DHU, busca por voz no Auto, 35 typos
+de lint, 37 bumps de dependência, e o achado colateral da 6.G (`tryBeginSourceSwitch` timeout não
+reseta `isSwitchingSource` no uiState).
 
 ---
 

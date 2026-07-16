@@ -12,5 +12,4 @@ sealed interface ThemesUiState {
 
 sealed interface ThemesIntent {
     object Retry : ThemesIntent
-    data class SelectTheme(val themeId: Int) : ThemesIntent
 }

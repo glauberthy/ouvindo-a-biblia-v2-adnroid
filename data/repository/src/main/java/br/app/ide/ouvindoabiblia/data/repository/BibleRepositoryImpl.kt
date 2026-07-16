@@ -98,9 +98,6 @@ class BibleRepositoryImpl @Inject constructor(
     override fun getChapters(bookId: Int): Flow<List<Chapter>> =
         dao.getChaptersWithBookInfo(bookId).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun getBook(bookId: Int): Book? =
-        dao.getBookById(bookId.toString())?.toDomain()
-
     override suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean) {
         dao.updateFavoriteStatus(chapterId, isFavorite)
     }
@@ -163,20 +160,6 @@ class BibleRepositoryImpl @Inject constructor(
         }
     }
 
-
-    override suspend fun getBookIdFromChapter(chapterId: Int): Int? {
-        return try {
-            // 1. chapterId já é Int, apenas convertemos para Long para o DAO se necessário
-            val chapter = dao.getChapterById(chapterId.toLong()) ?: return null
-
-            // 2. Retornamos o bookId da ChapterEntity, que já é o numericId (Int)
-            // Não precisamos mais buscar o slug ("genesis"), o número (ex: 6) é o que o Player precisa.
-            chapter.bookId
-        } catch (e: Exception) {
-            Log.e(TAG, "Erro ao buscar ID do livro: ${e.message}")
-            null
-        }
-    }
 
     // --- CORREÇÃO NO SYNC (MAPEAMENTO) ---
     override suspend fun syncBibleData(): Result<Unit> = withContext(Dispatchers.IO) {

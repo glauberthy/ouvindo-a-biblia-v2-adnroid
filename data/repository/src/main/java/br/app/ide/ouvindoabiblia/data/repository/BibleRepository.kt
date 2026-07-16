@@ -23,9 +23,7 @@ interface BibleRepository {
      */
     fun getBooksResource(): Flow<Resource<List<Book>>>
     fun getChapters(bookId: Int): Flow<List<Chapter>>
-    suspend fun getBook(bookId: Int): Book?
     suspend fun getBookNumericIdFromChapter(chapterId: Int): Int?
-    suspend fun getBookIdFromChapter(chapterId: Int): Int?
 
     // --- INTERAÇÃO ---
     suspend fun toggleFavorite(chapterId: Long, isFavorite: Boolean)

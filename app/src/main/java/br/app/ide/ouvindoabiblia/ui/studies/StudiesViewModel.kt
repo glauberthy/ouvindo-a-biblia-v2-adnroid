@@ -44,7 +44,6 @@ class StudiesViewModel @Inject constructor(
     fun handle(intent: StudiesIntent) {
         when (intent) {
             is StudiesIntent.Retry -> refreshTrigger.update { it + 1 }
-            is StudiesIntent.SelectStudy -> { /* Navegação pela UI */ }
         }
     }
 

@@ -49,7 +49,6 @@ class HomeViewModel @Inject constructor(
         when (intent) {
             is HomeIntent.SelectFilter -> _selectedFilter.value = intent.filter
             is HomeIntent.Retry -> refreshTrigger.update { it + 1 }
-            is HomeIntent.OpenBook -> { /* Navegação tratada na UI */ }
         }
     }
 

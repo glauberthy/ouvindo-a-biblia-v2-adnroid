@@ -49,34 +49,12 @@ interface BibleDao {
     )
     fun getChaptersWithBookInfo(bookId: Int): Flow<List<ChapterWithBookInfo>>
 
-    // Busca capítulos de um livro específico
-    @Query("SELECT * FROM chapters WHERE book_id = :bookId ORDER BY chapter_number ASC")
-    fun getChaptersForBook(bookId: Int): Flow<List<ChapterEntity>> // Agora recebe Int
-
-    // Busca um único livro (útil para pegar a capa no player)
-    @Query("SELECT * FROM books WHERE book_id = :bookId LIMIT 1")
-    suspend fun getBookById(bookId: String): BookEntity?
-
     // --- ESCRITA (Usada quando o app inicia e baixa o JSON) ---
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBookIgnore(book: BookEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertChapterIgnore(chapter: ChapterEntity): Long
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertBooks(books: List<BookEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertChaptersIgnore(chapters: List<ChapterEntity>): List<Long>
-
-    // Deleta tudo (útil para resetar dados se o JSON mudar muito)
-    @Query("DELETE FROM books")
-    suspend fun clearBooks()
-
-    @Query("DELETE FROM chapters")
-    suspend fun clearChapters()
-
 
     //Verificação rápida para saber se precisa popular o banco inicial
     @Query("SELECT COUNT(*) FROM books")
@@ -147,44 +125,6 @@ interface BibleDao {
 
     @Query("UPDATE chapters SET is_favorite = :isFavorite WHERE id = :chapterId")
     suspend fun updateFavoriteStatus(chapterId: Long, isFavorite: Boolean)
-
-
-    // Busca um capítulo específico pelo ID (Mantido para compatibilidade, se usado em outro lugar)
-    @Transaction
-    @Query(
-        """
-    SELECT 
-        chapters.*, 
-        books.name as bookName, 
-        books.image_url as coverUrl,
-        books.testament as testament,      -- Adicionado
-        books.total_chapters as totalChapters -- Adicionado
-    FROM chapters 
-    INNER JOIN books ON chapters.book_id = books.book_id 
-    WHERE chapters.audio_url = :audioUrl OR chapters.book_id = :audioUrl 
-    LIMIT 1
-"""
-    )
-    suspend fun getChapterWithBookInfoById(audioUrl: String): ChapterWithBookInfo?
-
-
-    @Query(
-        """
-        UPDATE chapters 
-        SET audio_url = :audioUrl, 
-            filename = :filename,
-            book_id = :bookId,
-            chapter_number = :chapterNumber
-        WHERE id = :id
-    """
-    )
-    suspend fun updateChapterMetadata(
-        id: Long,
-        audioUrl: String,
-        filename: String,
-        bookId: Int,
-        chapterNumber: Int
-    )
 
 
     // 1. Salvar o Estado (Substitui se já existir, mantendo sempre o ID=1)
@@ -275,25 +215,9 @@ interface BibleDao {
     fun getMomentsForTheme(themeId: Int): Flow<List<MomentWithAudio>>
 
     //Estudos
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertStudies(studies: List<StudyEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertStudyLessons(lessons: List<StudyLessonEntity>)
-
-    @Query("SELECT * FROM studies")
-    fun getStudies(): Flow<List<StudyEntity>>
-
     @Transaction
     @Query("SELECT * FROM studies WHERE id = :studyId")
     fun getStudyWithLessons(studyId: Int): Flow<StudyWithLessons>
-
-    @Query("DELETE FROM studies")
-    suspend fun clearStudies()
-
-    @Query("DELETE FROM study_lessons")
-    suspend fun clearStudyLessons()
-
 
     @Query("SELECT COUNT(*) FROM themes")
     suspend fun getThemesCount(): Int

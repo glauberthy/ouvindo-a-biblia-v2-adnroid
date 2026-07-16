@@ -21,6 +21,5 @@ enum class TestamentFilter { ALL, AT, NT }
 
 sealed interface HomeIntent {
     data class SelectFilter(val filter: TestamentFilter) : HomeIntent
-    data class OpenBook(val bookId: Int) : HomeIntent
     data object Retry : HomeIntent
 }

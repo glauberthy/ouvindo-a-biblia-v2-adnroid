@@ -13,5 +13,4 @@ sealed interface StudiesUiState {
 
 sealed interface StudiesIntent {
     data object Retry : StudiesIntent
-    data class SelectStudy(val studyId: Int) : StudiesIntent
 }

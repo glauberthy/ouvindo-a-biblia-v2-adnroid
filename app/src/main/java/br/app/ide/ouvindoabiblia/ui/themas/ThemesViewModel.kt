@@ -43,7 +43,6 @@ class ThemesViewModel @Inject constructor(
     fun handle(intent: ThemesIntent) {
         when (intent) {
             is ThemesIntent.Retry -> refreshTrigger.update { it + 1 }
-            is ThemesIntent.SelectTheme -> { /* Navegação tratada na Screen */ }
         }
     }
 
