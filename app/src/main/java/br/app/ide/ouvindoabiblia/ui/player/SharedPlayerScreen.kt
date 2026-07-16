@@ -38,8 +38,11 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,12 +90,23 @@ fun SharedPlayerScreen(
     onSetSpeed: (Float) -> Unit,
     onChapterSelect: (Int) -> Unit,
     onOpen: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onConsumePlaybackError: () -> Unit
 ) {
     // ESTADO
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showSpeedSheet by remember { mutableStateOf(false) }
     var showChapters by remember { mutableStateOf(false) }
+
+    // ISSUE PUB-02: feedback de erro de reprodução (URL 404/rede fora). Toast único por erro
+    // (consume-once): mostra e limpa o estado para não repetir na recomposição.
+    val context = LocalContext.current
+    LaunchedEffect(uiState.playbackError) {
+        uiState.playbackError?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            onConsumePlaybackError()
+        }
+    }
     val isFavorite = uiState.currentIsFavorite
     val hasMedia = uiState.title.isNotEmpty()
     val isBusy = uiState.isBuffering || uiState.isSwitchingSource
@@ -685,7 +699,8 @@ fun SharedPlayerScreenMiniPreview() {
         onSetSpeed = {},
         onChapterSelect = {},
         onOpen = {},
-        onToggleFavorite = {}
+        onToggleFavorite = {},
+        onConsumePlaybackError = {}
     )
 }
 
@@ -722,6 +737,7 @@ fun SharedPlayerScreenFullPreview() {
         onSetSpeed = {},
         onChapterSelect = {},
         onOpen = {},
-        onToggleFavorite = {}
+        onToggleFavorite = {},
+        onConsumePlaybackError = {}
     )
 }

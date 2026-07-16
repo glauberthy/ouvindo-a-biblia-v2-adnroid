@@ -536,6 +536,12 @@ class PlayerViewModel @Inject constructor(
         _uiState.update { it.copy(playbackSpeed = speed) }
     }
 
+    // ISSUE PUB-02: a UI chama isto após exibir o Toast de erro (padrão consume-once),
+    // evitando que o mesmo erro reapareça a cada recomposição.
+    fun consumePlaybackError() {
+        _uiState.update { it.copy(playbackError = null) }
+    }
+
     fun toggleFavorite() {
         val controller = mediaController ?: return
         val currentIndex = controller.currentMediaItemIndex
@@ -619,6 +625,15 @@ class PlayerViewModel @Inject constructor(
             override fun onEvents(player: Player, events: Player.Events) {
                 if (events.contains(Player.EVENT_PLAYER_ERROR)) {
                     finishSourceSwitch()
+                    // ISSUE PUB-02: o ExoPlayer já tentou 3x (DefaultLoadErrorHandlingPolicy) antes
+                    // de emitir o erro. Aqui só damos feedback ao usuário — a UI mostra um Toast e
+                    // chama consumePlaybackError(). Mensagem genérica (não expõe o stacktrace).
+                    _uiState.update {
+                        it.copy(
+                            playbackError =
+                                "Não foi possível reproduzir. Verifique sua conexão e tente novamente."
+                        )
+                    }
                 }
 
                 if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)) {

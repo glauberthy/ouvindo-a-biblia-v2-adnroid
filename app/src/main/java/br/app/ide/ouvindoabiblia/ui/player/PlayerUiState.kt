@@ -64,5 +64,8 @@ data class PlayerUiState(
     val timeline: List<PlayerTimelineItem> = emptyList(),
     val isThemeMode: Boolean = false,
     val currentIsFavorite: Boolean = false,
-    val isSwitchingSource: Boolean = false
+    val isSwitchingSource: Boolean = false,
+    // ISSUE PUB-02: erro de reprodução (URL 404/rede fora após os retries do ExoPlayer).
+    // Consumido uma vez pela UI (Toast) e limpo via consumePlaybackError(); null = sem erro.
+    val playbackError: String? = null
 )

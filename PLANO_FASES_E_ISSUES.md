@@ -710,6 +710,72 @@ completo limpo com regeneração do Room (KSP `data:local`). **Removidos:**
 
 ---
 
+## FASE 8 — Publicação na Play Store (produção) — consolidada das 4 auditorias (2026-07-16)
+
+Origem: `docs/archive/AUDITORIA_01..04_*.md` + `docs/archive/CHECKLIST_PUBLICACAO.md`. Issues
+autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolve) · 🧑 **MANUAL**
+(dono no Play Console/docs) · 🔬 **TESTE-DEVICE**. Severidade: 🔴 BLOQUEIA · 🟡 CORRIGIR ANTES ·
+🟢 PODE ESPERAR. `arquivo:linha` reconfirmados em 2026-07-16 (reconfirmar ao pegar cada uma).
+
+**Ordem:** `PUB-01` → `PUB-02/03/04` → `PUB-10..16` (testes no release). Em paralelo desde já:
+`PUB-20..25` (Console/manual, não dependem de código).
+
+### 🔴 BLOQUEIA — Código/Build
+- **PUB-01 · Assinar o release (signingConfig)** · 🤖 · *(Audit 01 §2)* — `bundleRelease` gera AAB
+  **não assinado** (`app/build.gradle.kts`: `signingConfig`=0; `keytool` não acha certificado) → Play
+  rejeita. Configurar `signingConfigs.release` lendo de `keystore.properties` (fora do git), com
+  fallback que não quebra `assembleDebug` sem keystore; fornecer comando `keytool` + `keystore.properties.example`
+  versionado. **Aceitação:** `keytool -printcert -jarfile app-release.aab` mostra o certificado.
+  **Depende de:** nada — **primeiro (destrava PUB-10..16).**
+
+### 🟡 CORRIGIR ANTES — Código
+- **PUB-02 · Erro de playback silencioso** · 🤖 · ✅ FEITA (2026-07-16) · *(Audit 02 §3)* —
+  `PlayerViewModel.kt:620` `EVENT_PLAYER_ERROR` agora seta `playbackError` no `PlayerUiState` (campo
+  novo); `SharedPlayerScreen` mostra um Toast (consume-once via `consumePlaybackError()`, ligado no
+  `MainScreen`). Mensagem genérica pt-BR (não expõe stacktrace). `finishSourceSwitch()` preservado →
+  controles não travam. Compila limpo. 🔬 validar em device no PUB-12.
+- **PUB-03 · Desligar OkHttp `Level.BODY` no release** · 🤖 · *(Audit 01 §4 / 03 §5)* —
+  `NetworkModule.kt:37`: logging incondicional. Gate por `BuildConfig.DEBUG` → `NONE`/`BASIC`.
+  **Aceitação:** release não loga corpo.
+- **PUB-04 · Loading eterno na tela "Mais"** · 🤖 · *(Audit 02 §1)* — `BibleRepositoryImpl.kt:428`:
+  `content==null` + sync OK → `Loading` sem Retry (edge estreito). Trocar por `Error` (paridade 6.D).
+  **Aceitação:** nesse edge mostra Error+Retry.
+
+### 🟡 CORRIGIR ANTES — Testes no APK de RELEASE assinado · 🔬 (dependem de PUB-01)
+- **PUB-10 · Smoke do release** *(Audit 01 §3)* — release ofuscado (R8): sync do JSON + playback Media3.
+- **PUB-11 · Falha de rede** *(Audit 02 T1)* — 1º uso offline → Error+Retry nas 4 telas; queda no meio não crasha.
+- **PUB-12 · Erro de playback** *(Audit 02 T2)* — 404/rede fora → sem crash; validar feedback do PUB-02.
+- **PUB-13 · POST_NOTIFICATIONS negado (Android 13+)** *(Audit 02 T3)* — negar → áudio toca; conceder → notificação com controles.
+- **PUB-14 · Persistência sob estresse** *(Audit 02 T4)* — rotação/bg-fg/matar processo → restaura sessão sem auto-tocar; validar R8.
+- **PUB-15 · StrictMode / ANR** *(Audit 02 T5)* — debug + `adb logcat | grep StrictMode`; sem I/O na main; sem ANR.
+- **PUB-16 · Android 8 (API 26)** *(Audit 02 T6)* — smoke em aparelho antigo: notificação+FGS sem `NoSuchMethodError`/`VerifyError`.
+
+### 🔴 BLOQUEIA — Console / Documentos · 🧑 MANUAL (Claude Code não faz; começar já, em paralelo)
+- **PUB-20 · Política de Privacidade** *(Audit 04 §1)* — obrigatória mesmo sem coleta. Redigir + hospedar
+  URL + informar no Console. Pode linkar na tela "Mais" via JSON (sem código).
+- **PUB-21 · Data Safety form** *(Audit 04 §2)* — provável "nenhum dado coletado" (só IP+UA);
+  **confirmar se o servidor grava logs de IP**; marcar "criptografado em trânsito: sim".
+- **PUB-22 · Content Rating (IARC)** *(Audit 04 §3)* — questionário → provável "Livre".
+- **PUB-23 · Declaração de Foreground Service** *(Audit 04 §4)* — Android 14+: descrição + caso de uso +
+  **vídeo demo** (tocar → apagar tela → áudio segue). Código pronto; vídeo gravado com o app assinado.
+- **PUB-24 · Assets da ficha** *(Audit 04 §5)* — ícone 512², feature graphic 1024×500, screenshots de
+  celular (mín. 2), título/descrições, categoria, e-mail de contato.
+- **PUB-25 · Declarar sem login/compras/anúncios** *(Audit 04 §6)* — N/A no código; só marcar "não".
+
+### 🟢 PODE ESPERAR — backlog pós-launch (não bloqueia)
+- **PUB-30** 🤖 Stripar `Log` no release (`-assumenosideeffects`) / rebaixar `Log.i` de lifecycle. *(Audit 03 §5)*
+- **PUB-31** 🤖 Acento "Ouvindo A Biblia" → "Bíblia" (`app_name`). *(Audit 01 §8)*
+- **PUB-32** 🤖 77 warnings de lint (typos, bumps, ícone). *(Audit 03 §6)*
+- **PUB-33** 🤖 `Player` fora do padrão MVI (consistência). *(Audit 03 §3)*
+- **PUB-34** 🤖 i18n: strings de UI → `strings.xml` (só se internacionalizar). *(Audit 03 §7)*
+- **PUB-35** 🤖 "Optimize Imports" antes do tag de release. *(Audit 03 §1)*
+- **Operacional:** incrementar `versionCode` a cada upload. *(Audit 01 §5)*
+
+**Go/No-Go:** GO quando todos os 🔴 (PUB-01, PUB-20..25) e 🟡 (PUB-02/03/04, PUB-10..16) estiverem
+✅ ou aceitos. Os 🟢 ficam para depois. Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
@@ -739,7 +805,11 @@ Cast entra quando você tiver uma TV pra testar.
 
 **FASE 7 (código morto):** `7.E ✅ → 7.C ✅ → 7.B ✅ → 7.A ✅ → 7.D ✅`. **FASE 7 CONCLUÍDA (2026-07-16).**
 
-**TODAS AS FASES (0→7) CONCLUÍDAS.** Backlog residual só-quando-religar: Cast (§6.1-6.4, abaixo),
+**FASE 8 (publicação Play Store):** 🔲 ABERTA (2026-07-16) — `PUB-01` (assinatura) → `PUB-02/03/04`
+(código) → `PUB-10..16` (testes no release); em paralelo `PUB-20..25` (Console/manual). Go/No-Go e
+detalhes na seção FASE 8 acima e em `docs/archive/CHECKLIST_PUBLICACAO.md`.
+
+**FASES 0→7 CONCLUÍDAS; FASE 8 (publicação) ABERTA.** Backlog residual só-quando-religar: Cast (§6.1-6.4, abaixo),
 persistência estilo-Spotify (conflita c/ 4.A), validar Auto em DHU, busca por voz no Auto, 35 typos
 de lint, 37 bumps de dependência, e o achado colateral da 6.G (`tryBeginSourceSwitch` timeout não
 reseta `isSwitchingSource` no uiState).
