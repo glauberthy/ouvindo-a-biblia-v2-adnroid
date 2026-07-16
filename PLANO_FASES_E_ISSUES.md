@@ -755,15 +755,19 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-16 · Android 8 (API 26)** *(Audit 02 T6)* — smoke em aparelho antigo: notificação+FGS sem `NoSuchMethodError`/`VerifyError`.
 
 ### 🔴 BLOQUEIA — Console / Documentos · 🧑 MANUAL (Claude Code não faz; começar já, em paralelo)
-- **PUB-20 · Política de Privacidade** *(Audit 04 §1)* — obrigatória mesmo sem coleta. Redigir + hospedar
-  URL + informar no Console. Pode linkar na tela "Mais" via JSON (sem código).
+- **PUB-20 · Política de Privacidade** *(Audit 04 §1)* — obrigatória mesmo sem coleta. 📝 RASCUNHO
+  PRONTO em `docs/POLITICA_DE_PRIVACIDADE.md` (fiel ao app; placeholders `[...]`). Falta o dono:
+  preencher, confirmar "logs do servidor", hospedar URL e informar no Console. Pode linkar na tela
+  "Mais" via JSON (sem código).
 - **PUB-21 · Data Safety form** *(Audit 04 §2)* — provável "nenhum dado coletado" (só IP+UA);
   **confirmar se o servidor grava logs de IP**; marcar "criptografado em trânsito: sim".
 - **PUB-22 · Content Rating (IARC)** *(Audit 04 §3)* — questionário → provável "Livre".
 - **PUB-23 · Declaração de Foreground Service** *(Audit 04 §4)* — Android 14+: descrição + caso de uso +
   **vídeo demo** (tocar → apagar tela → áudio segue). Código pronto; vídeo gravado com o app assinado.
-- **PUB-24 · Assets da ficha** *(Audit 04 §5)* — ícone 512², feature graphic 1024×500, screenshots de
-  celular (mín. 2), título/descrições, categoria, e-mail de contato.
+- **PUB-24 · Assets da ficha** *(Audit 04 §5)* — 📝 TEXTOS RASCUNHADOS em `docs/FICHA_PLAY_STORE.md`
+  (título, descrição curta/longa, categoria, tags, content rating). Falta o dono: produzir os
+  **assets gráficos** (ícone 512², feature graphic 1024×500, screenshots de celular) e revisar/colar
+  os textos no Console + e-mail de contato.
 - **PUB-25 · Declarar sem login/compras/anúncios** *(Audit 04 §6)* — N/A no código; só marcar "não".
 
 ### 🟢 PODE ESPERAR — backlog pós-launch (não bloqueia)
