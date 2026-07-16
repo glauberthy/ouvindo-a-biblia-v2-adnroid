@@ -555,10 +555,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun toggleShuffle() {
-        mediaController?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-    }
-
     fun setPlaybackSpeed(speed: Float) {
         mediaController?.setPlaybackSpeed(speed)
         _uiState.update { it.copy(playbackSpeed = speed) }
@@ -715,12 +711,10 @@ class PlayerViewModel @Inject constructor(
                 // 2. AJUSTE: Pegamos o Subtitle para ser a segunda linha da UI (Capítulo)
                 subtitle = meta.subtitle?.toString() ?: "",
 
-                artist = meta.artist?.toString() ?: "Ouvindo a Bíblia",
                 imageUrl = meta.artworkUri?.toString() ?: state.imageUrl,
                 duration = player.duration.coerceAtLeast(0L),
                 currentChapterIndex = player.currentMediaItemIndex,
                 playbackSpeed = player.playbackParameters.speed,
-                isShuffleEnabled = player.shuffleModeEnabled,
                 chapters = extractChaptersFromPlayer(player),
                 timeline = extractTimelineFromPlayer(player),
                 isThemeMode = isTheme

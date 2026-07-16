@@ -635,11 +635,12 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
   (`NavigationGraph`/`MainScreen`). **Manter** o clipping de Tema (`playThemePlaylist`, vivo) e a
   guarda 2.D em `saveCurrentState` (defesa). Já era "limpeza futura" citada na 3.D.
 
-### ISSUE 7.B — 🔲 TODO — Campos/ações de player nunca lidos
+### ISSUE 7.B — ✅ FEITA (2026-07-16) — Campos/ações de player nunca lidos
 
-- `PlayerUiState.repeatMode` (grep=1, só a declaração), `PlayerUiState.artist` (write-only:
-  escrito em `PlayerViewModel.kt:675`, 0 leituras), `isShuffleEnabled` (write-only) +
-  `toggleShuffle()` (0 chamadas) — shuffle é feature inteiramente morta. Remover ou implementar.
+- Removidos de `PlayerUiState`: `repeatMode` (só a declaração, 0 uso), `artist` (write-only) e
+  `isShuffleEnabled` (write-only). Removidos de `PlayerViewModel`: a função `toggleShuffle()`
+  (0 chamadas) e as escritas de `artist`/`isShuffleEnabled` no `syncStateWithController`. Shuffle
+  era feature inteiramente morta (nenhuma leitura na UI). Compila limpo (`:app:compileDebugKotlin`).
 
 ### ISSUE 7.C — ✅ FEITA (2026-07-16) — Destinos de navegação órfãos
 
