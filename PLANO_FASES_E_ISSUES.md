@@ -738,9 +738,10 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
   *(Audit 01 §4 / 03 §5)* — `NetworkModule.kt`: `provideOkHttpClient` agora recebe
   `@ApplicationContext` e gateia por `FLAG_DEBUGGABLE` → `Level.BODY` em debug, `Level.NONE` em
   release (mesmo critério do `OuvindoBibliaApp`, independe de BuildConfig por módulo). Compila limpo.
-- **PUB-04 · Loading eterno na tela "Mais"** · 🤖 · *(Audit 02 §1)* — `BibleRepositoryImpl.kt:428`:
-  `content==null` + sync OK → `Loading` sem Retry (edge estreito). Trocar por `Error` (paridade 6.D).
-  **Aceitação:** nesse edge mostra Error+Retry.
+- **PUB-04 · Loading eterno na tela "Mais"** · 🤖 · ✅ FEITA (2026-07-16) · *(Audit 02 §1)* —
+  `BibleRepositoryImpl.kt` `getMoreContentResource`: o ramo `content==null` + sync OK virou
+  `Resource.Error("Nenhum conteúdo disponível. Tente novamente.")` (era `Resource.Loading`).
+  `MoreScreen` já mapeia Error→ErrorScreen+Retry. Paridade com a 6.D. Compila limpo.
 
 ### 🟡 CORRIGIR ANTES — Testes no APK de RELEASE assinado · 🔬 (dependem de PUB-01)
 - **PUB-10 · Smoke do release** *(Audit 01 §3)* — release ofuscado (R8): sync do JSON + playback Media3.

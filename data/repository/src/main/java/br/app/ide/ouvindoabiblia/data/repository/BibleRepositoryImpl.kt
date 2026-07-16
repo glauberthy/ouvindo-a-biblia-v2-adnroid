@@ -425,7 +425,10 @@ class BibleRepositoryImpl @Inject constructor(
                     result.isFailure -> Resource.Error(
                         result.exceptionOrNull()?.localizedMessage ?: "Erro ao carregar conteúdo"
                     )
-                    else -> Resource.Loading
+                    // ISSUE PUB-04: sync OK mas sem conteúdo (edge raro: cache decodifica p/ null) é
+                    // TERMINAL, não transitório. Antes virava Loading eterno sem saída; agora Error
+                    // com Retry (paridade com a ISSUE 6.D na Home).
+                    else -> Resource.Error("Nenhum conteúdo disponível. Tente novamente.")
                 }
             }
         )
