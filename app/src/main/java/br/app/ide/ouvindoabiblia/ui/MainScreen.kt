@@ -68,6 +68,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -241,37 +242,21 @@ fun MainScreen(
 
                         items.forEach { item ->
 
+                            // BUG 1: seleção por hasRoute (compara pelo serialName do @Serializable,
+                            // imune à ofuscação do R8). Antes usava contains(::class.simpleName), que o
+                            // R8 renomeava no release -> match por substring casava vários itens.
                             val isSelected = currentDestination?.hierarchy?.any { navDestination ->
-                                val currentRoute = navDestination.route ?: ""
-
                                 when (item.screen) {
-                                    is Screen.Themes -> {
-                                        currentRoute.contains(
-                                            Screen.Themes::class.simpleName ?: ""
-                                        ) ||
-                                                currentRoute.contains(
-                                                    Screen.ThemeDetails::class.simpleName ?: ""
-                                                )
-                                    }
+                                    is Screen.Themes ->
+                                        navDestination.hasRoute(Screen.Themes::class) ||
+                                                navDestination.hasRoute(Screen.ThemeDetails::class)
 
-                                    is Screen.Estudos -> {
-                                        currentRoute.contains(
-                                            Screen.Estudos::class.simpleName ?: ""
-                                        ) ||
-                                                currentRoute.contains(
-                                                    Screen.StudyDetails::class.simpleName ?: ""
-                                                )
-                                    }
+                                    is Screen.Estudos ->
+                                        navDestination.hasRoute(Screen.Estudos::class) ||
+                                                navDestination.hasRoute(Screen.StudyDetails::class)
 
-                                    is Screen.Home -> {
-                                        currentRoute.contains(
-                                            Screen.Home::class.simpleName ?: ""
-                                        )
-                                    }
-
-                                    else -> {
-                                        currentRoute.contains(item.screen::class.simpleName ?: "")
-                                    }
+                                    else ->
+                                        navDestination.hasRoute(item.screen::class)
                                 }
                             } == true
 
