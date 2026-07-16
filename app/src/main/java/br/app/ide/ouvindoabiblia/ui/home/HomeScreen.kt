@@ -2,7 +2,6 @@ package br.app.ide.ouvindoabiblia.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -10,12 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,11 +27,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.ide.ouvindoabiblia.ui.home.components.BookFilterBar
 import br.app.ide.ouvindoabiblia.ui.home.components.BookGridItem
-import br.app.ide.ouvindoabiblia.ui.home.components.ContinueListeningCard
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
-import br.app.ide.ouvindoabiblia.ui.home.components.FavoriteBookItem
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
-import br.app.ide.ouvindoabiblia.ui.home.components.SectionHeader
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 
@@ -97,46 +91,6 @@ private fun HomeContent(
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             HomeHeader()
-        }
-
-        state.continueListeningBook?.let { book ->
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    SectionHeader(title = "Continuar Ouvindo")
-                    ContinueListeningCard(
-                        book = book,
-                        onClick = { onNavigateToBook(book.id, book.title, book.imageUrl ?: "") }
-                    )
-                }
-            }
-        }
-
-        if (state.favoriteBooks.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    SectionHeader(title = "Favoritos")
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        items(
-                            items = state.favoriteBooks,
-                            key = { it.id }
-                        ) { book ->
-                            FavoriteBookItem(
-                                book = book,
-                                onClick = {
-                                    onNavigateToBook(
-                                        book.id,
-                                        book.title,
-                                        book.imageUrl ?: ""
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            }
         }
 
         item(span = { GridItemSpan(maxLineSpan) }) {

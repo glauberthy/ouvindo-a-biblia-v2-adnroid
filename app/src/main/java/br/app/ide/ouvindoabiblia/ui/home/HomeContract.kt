@@ -5,8 +5,6 @@ sealed interface HomeUiState {
     data object Loading : HomeUiState
     data class Error(val message: String) : HomeUiState
     data class Success(
-        val continueListeningBook: BookSummary? = null,
-        val favoriteBooks: List<BookSummary> = emptyList(),
         val filteredBooks: List<BookSummary> = emptyList(),
         val selectedFilter: TestamentFilter = TestamentFilter.ALL
     ) : HomeUiState

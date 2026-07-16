@@ -557,17 +557,28 @@ Fora do core de playback (já sólido). Achados verificados nos arquivos reais. 
 - **Arquivos:** `data/repository/.../BibleRepositoryImpl.kt` (`syncMoreContent`).
 - **Esforço:** P · **device?** não (lógica espelha os outros syncs; verificável por inspeção).
 
-### ISSUE 6.F — 🔲 VERIFICAR (risco condicional) — Migração Room de schema < 8 → crash no launch
+### ISSUE 6.F — ✅ FECHADA (2026-07-16) — NÃO é bug: nenhuma base pré-8 no mundo real
 
-- **Problema:** `DatabaseModule.kt:31-33` registra só `MIGRATION_8_9` e mantém apenas
+- **Problema (hipótese):** `DatabaseModule.kt:31-33` registra só `MIGRATION_8_9` e mantém apenas
   `fallbackToDestructiveMigrationOnDowngrade()` (o destrutivo geral foi removido na 0.2 para
-  preservar favoritos/retomada). Se existir base instalada em schema **< 8**, a atualização lança
-  `IllegalStateException` na 1ª abertura → **crash em loop**. **Falhar alto em bumps futuros sem
-  migração é intencional** (decisão da 0.2); o risco é só o histórico pré-8.
-- **Ação:** confirmar se **alguma versão publicada** rodou com `BibleDatabase.version < 8`. Se não,
-  fechar como "não é bug". Se sim, adicionar `MIGRATION_x_8` (ou destrutivo só para esse caminho).
-- **Arquivos:** `data/local/.../di/DatabaseModule.kt`, `database/BibleDatabase.kt`.
-- **Esforço:** P (investigação) · **Depende de:** histórico de releases.
+  preservar favoritos/retomada). Base instalada em schema **< 8** lançaria `IllegalStateException`
+  na 1ª abertura → crash em loop.
+- **Investigação (2026-07-16):** rastreado o `version` no git deste repo — subiu 1→2→…→8→**9**
+  (`d9facb0`→`f48381c`); só a v9 tem migração. A tag **`v1.0.0-rc1` (2026-02-08)** tinha
+  `version = 2`. Confirmado com o usuário:
+  1. **App antigo da loja (5 anos):** é OUTRA versão/codebase, sem Room `bible_db`. No update o
+     Room cria o banco do zero na v9 → sem migração → **sem crash**.
+  2. **Builds 1–7 deste repo (rc1 etc.):** rodaram **só no device de dev do usuário (1 aparelho)** —
+     NÃO foram para Play nem testadores. Sem base pré-8 no mundo real.
+  3. **Relançamento = 1º publish real:** todo mundo instala do zero → `bible_db` nasce na v9.
+- **Veredito:** não é bug. O comportamento atual (MIGRATION_8_9 + lança-se-faltar-migração) é o
+  desejado daqui pra frente (decisão da 0.2). **Nenhuma mudança de código.**
+- **Cuidado operacional (não é código):** antes de instalar o relançamento no device de dev, o
+  usuário deve **desinstalar/limpar dados** do app (senão crasha uma vez só nesse aparelho).
+- **Blindagem opcional (dispensada):** `fallbackToDestructiveMigrationFrom(1,2,3,4,5,6,7)` recriaria
+  o banco só vindo de 1–7 e manteria o "lança" p/ 9→10+; não adotada por afetar só 1 device de dev.
+- **Arquivos:** nenhum alterado.
+- **Esforço:** P (investigação) · **Fechada sem código.**
 
 ### ISSUE 6.G — ✅ FEITA (2026-07-15) — Coração de favorito não atualiza corretamente ao tocar (mini e full player)
 
@@ -651,7 +662,21 @@ mas paga juros de manutenção. Um único commit de limpeza por área é suficie
   `StudiesIntent.SelectStudy` (navegação é feita direto por callback nas Screens).
 - ⚠️ Alguns `clear*`/`insert*` podem ser úteis como API reservada; confirmar contra testes antes.
 
-### ISSUE 7.E — 🔲 TODO — Seções mortas da Home ("Continuar Ouvindo" / "Favoritos") (ex-6.A)
+### ISSUE 7.E — ✅ FEITA (2026-07-16) — Seções mortas da Home ("Continuar Ouvindo" / "Favoritos") (ex-6.A)
+
+**Removido (compila limpo, `:app:compileDebugKotlin` BUILD SUCCESSFUL):**
+- `HomeContract.kt` — campos `continueListeningBook` e `favoriteBooks` de `HomeUiState.Success`.
+- `HomeScreen.kt` — os dois blocos `item {}` mortos + imports órfãos (`Column`, `LazyRow`,
+  `lazy.items`, `ContinueListeningCard`, `FavoriteBookItem`, `SectionHeader`).
+- `HomeComponents.kt` — composables `ContinueListeningCard`/`FavoriteBookItem` (vivos e as versões
+  antigas comentadas) + 11 imports órfãos. **`SectionHeader` mantido** (usado por
+  `MoreSectionDetailsScreen.kt`).
+- Grep pós-remoção: 0 refs aos símbolos removidos em `src/main`/`test`/`androidTest`.
+- Preservados: mini player (restaura sessão), tela `ui/favorites/`, `getFavorites()`/
+  `getLatestPlaybackState()` no repositório.
+
+<!-- detalhamento original abaixo -->
+
 
 - **Origem:** rebaixada da 6.A (era classificada como bug). Não é bug: são duas seções de uma Home
   antiga que **nunca são populadas** e cuja função já é coberta por soluções vivas — logo, remover.
