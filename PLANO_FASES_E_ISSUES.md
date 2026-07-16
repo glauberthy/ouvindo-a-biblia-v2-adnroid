@@ -734,9 +734,10 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
   novo); `SharedPlayerScreen` mostra um Toast (consume-once via `consumePlaybackError()`, ligado no
   `MainScreen`). Mensagem genérica pt-BR (não expõe stacktrace). `finishSourceSwitch()` preservado →
   controles não travam. Compila limpo. 🔬 validar em device no PUB-12.
-- **PUB-03 · Desligar OkHttp `Level.BODY` no release** · 🤖 · *(Audit 01 §4 / 03 §5)* —
-  `NetworkModule.kt:37`: logging incondicional. Gate por `BuildConfig.DEBUG` → `NONE`/`BASIC`.
-  **Aceitação:** release não loga corpo.
+- **PUB-03 · Desligar OkHttp `Level.BODY` no release** · 🤖 · ✅ FEITA (2026-07-16) ·
+  *(Audit 01 §4 / 03 §5)* — `NetworkModule.kt`: `provideOkHttpClient` agora recebe
+  `@ApplicationContext` e gateia por `FLAG_DEBUGGABLE` → `Level.BODY` em debug, `Level.NONE` em
+  release (mesmo critério do `OuvindoBibliaApp`, independe de BuildConfig por módulo). Compila limpo.
 - **PUB-04 · Loading eterno na tela "Mais"** · 🤖 · *(Audit 02 §1)* — `BibleRepositoryImpl.kt:428`:
   `content==null` + sync OK → `Loading` sem Retry (edge estreito). Trocar por `Error` (paridade 6.D).
   **Aceitação:** nesse edge mostra Error+Retry.

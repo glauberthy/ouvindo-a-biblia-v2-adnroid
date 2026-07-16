@@ -1,10 +1,13 @@
 package br.app.ide.ouvindoabiblia.data.remote.di
 
+import android.content.Context
+import android.content.pm.ApplicationInfo
 import br.app.ide.ouvindoabiblia.data.remote.api.BibleApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -31,10 +34,17 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        // Log detalhado para ver headers e resposta do servidor
+    fun provideOkHttpClient(@ApplicationContext context: Context): OkHttpClient {
+        // ISSUE PUB-03: log de corpo/headers só em builds debug. Em release fica NONE para
+        // não vazar payload no logcat nem custar desempenho. Gate pelo FLAG_DEBUGGABLE do app
+        // (mesmo critério do OuvindoBibliaApp.isDebuggable()) — independe de BuildConfig por módulo.
+        val isDebuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (isDebuggable) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
         return OkHttpClient.Builder()
