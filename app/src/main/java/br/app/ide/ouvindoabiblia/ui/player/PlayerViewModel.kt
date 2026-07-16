@@ -321,6 +321,10 @@ class PlayerViewModel @Inject constructor(
 
                 if ((mediaController?.mediaItemCount ?: 0) > 0) {
                     syncStateWithController()
+                    // BUGFIX restore: no cold start não há EVENT_MEDIA_ITEM_TRANSITION, então o
+                    // observer de favorito do item restaurado nunca era ligado e o coração ficava
+                    // vazio mesmo favoritado. Liga aqui o observer do item atual.
+                    observeFavoriteForCurrentItem()
                 }
                 // Inicia loop de progresso
                 startProgressLoop()
@@ -649,29 +653,9 @@ class PlayerViewModel @Inject constructor(
                 syncStateWithController()
 
                 if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
-                    val extras = player.currentMediaItem?.mediaMetadata?.extras
-                    val type = extras?.getString("type") ?: "bible"
-
-                    // ISSUE 6.G: reflete o favorito do novo item imediatamente (metadata é correto
-                    // no instante da troca de faixa). Substitui a escrita que antes vinha do
-                    // syncStateWithController. Depois, o observador de DB abaixo mantém sincronizado.
-                    // (Tema não mostra coração — guarda isThemeMode na UI —, então o valor é inócuo.)
-                    val transitionFavorite = extras?.getBoolean("is_favorite", false) == true
-                    _uiState.update { it.copy(currentIsFavorite = transitionFavorite) }
-
-                    if (type == "study") {
-                        favoriteObservationJob?.cancel()
-
-                        val studyId = extras?.getInt("study_id") ?: 0
-                        val lessonId = extras?.getInt("lesson_id") ?: 0
-
-                        if (studyId != 0 && lessonId != 0) {
-                            observeCurrentStudyFavorite(studyId, lessonId)
-                        }
-                    } else {
-                        studyFavoriteObservationJob?.cancel()
-                        observeCurrentFavorite(player.currentMediaItem?.mediaId)
-                    }
+                    // ISSUE 6.G: reflete o favorito do novo item imediatamente e liga o observer
+                    // de DB. (Extraído p/ observeFavoriteForCurrentItem para reusar no restore.)
+                    observeFavoriteForCurrentItem()
                 }
             }
         })
@@ -895,6 +879,35 @@ class PlayerViewModel @Inject constructor(
             sessionManagerListener,
             CastSession::class.java
         )
+    }
+
+    /**
+     * ISSUE 6.G + restore de sessão: reflete o favorito do item ATUAL no uiState e liga o
+     * observador de DB correspondente (Bíblia ou Estudo). Chamado tanto no
+     * EVENT_MEDIA_ITEM_TRANSITION quanto no connect do controller (cold start), pois no restore
+     * NÃO há transition — sem isto o coração fica vazio mesmo com o item favoritado no banco.
+     */
+    private fun observeFavoriteForCurrentItem() {
+        val player = mediaController ?: return
+        val current = player.currentMediaItem ?: return
+        val extras = current.mediaMetadata.extras
+        val type = extras?.getString("type") ?: "bible"
+
+        // Valor otimista imediato a partir do metadata; o observador de DB abaixo corrige/mantém.
+        val currentFavorite = extras?.getBoolean("is_favorite", false) == true
+        _uiState.update { it.copy(currentIsFavorite = currentFavorite) }
+
+        if (type == "study") {
+            favoriteObservationJob?.cancel()
+            val studyId = extras?.getInt("study_id") ?: 0
+            val lessonId = extras?.getInt("lesson_id") ?: 0
+            if (studyId != 0 && lessonId != 0) {
+                observeCurrentStudyFavorite(studyId, lessonId)
+            }
+        } else {
+            studyFavoriteObservationJob?.cancel()
+            observeCurrentFavorite(current.mediaId)
+        }
     }
 
     private fun observeCurrentFavorite(chapterId: String?) {
