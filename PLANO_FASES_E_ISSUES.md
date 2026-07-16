@@ -721,12 +721,14 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 `PUB-20..25` (Console/manual, não dependem de código).
 
 ### 🔴 BLOQUEIA — Código/Build
-- **PUB-01 · Assinar o release (signingConfig)** · 🤖 · *(Audit 01 §2)* — `bundleRelease` gera AAB
-  **não assinado** (`app/build.gradle.kts`: `signingConfig`=0; `keytool` não acha certificado) → Play
-  rejeita. Configurar `signingConfigs.release` lendo de `keystore.properties` (fora do git), com
-  fallback que não quebra `assembleDebug` sem keystore; fornecer comando `keytool` + `keystore.properties.example`
-  versionado. **Aceitação:** `keytool -printcert -jarfile app-release.aab` mostra o certificado.
-  **Depende de:** nada — **primeiro (destrava PUB-10..16).**
+- **PUB-01 · Assinar o release (signingConfig)** · 🤖+🧑 · 🔧 SCAFFOLDING FEITO (2026-07-16),
+  AGUARDANDO KEYSTORE DO DONO · *(Audit 01 §2)* — `app/build.gradle.kts` agora tem
+  `signingConfigs.release` lendo de `keystore.properties` (fora do git), com fallback: sem o arquivo,
+  o release fica unsigned e `assembleDebug`/`bundleRelease` seguem funcionando (verificado). Criado
+  `keystore.properties.example` versionado; `.gitignore` já cobre `keystore.properties` + `*.jks`.
+  **Falta o dono:** rodar o `keytool` p/ criar a upload keystore, copiar o `.example` p/
+  `keystore.properties` e preencher. **Aceitação:** com a keystore, `keytool -printcert -jarfile
+  app-release.aab` mostra o certificado. **Destrava PUB-10..16.**
 
 ### 🟡 CORRIGIR ANTES — Código
 - **PUB-02 · Erro de playback silencioso** · 🤖 · ✅ FEITA (2026-07-16) · *(Audit 02 §3)* —

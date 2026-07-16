@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +9,16 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
+
+// ISSUE PUB-01: assinatura de release lida de keystore.properties (FORA do git — ver
+// keystore.properties.example). Se o arquivo não existir (CI sem segredos, dev rodando só debug),
+// o release fica sem signingConfig e o assembleDebug segue funcionando normalmente.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+val keystoreProperties = Properties().apply {
+    if (hasReleaseKeystore) FileInputStream(keystorePropertiesFile).use { load(it) }
+}
+
 android {
     namespace = "br.app.ide.ouvindoabiblia"
     compileSdk = 36
@@ -20,6 +33,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Só cria a config se a keystore de upload estiver presente (senão release fica unsigned,
+        // sem quebrar o build de quem não tem os segredos).
+        if (hasReleaseKeystore) {
+            create("release") {
+                // storeFile é resolvido a partir da RAIZ do projeto (rootProject).
+                storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -28,6 +55,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Assina o release só quando a keystore existe (ver bloco signingConfigs acima).
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
