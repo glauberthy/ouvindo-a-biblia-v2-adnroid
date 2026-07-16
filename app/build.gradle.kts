@@ -24,7 +24,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "br.app.ide.ouvindoabiblia"
+        applicationId = "ag.uny.ouvindoabiblia"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
