@@ -750,7 +750,13 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-11 · Falha de rede** *(Audit 02 T1)* — 1º uso offline → Error+Retry nas 4 telas; queda no meio não crasha.
 - **PUB-12 · Erro de playback** *(Audit 02 T2)* — 404/rede fora → sem crash; validar feedback do PUB-02.
 - **PUB-13 · POST_NOTIFICATIONS negado (Android 13+)** *(Audit 02 T3)* — negar → áudio toca; conceder → notificação com controles.
-- **PUB-14 · Persistência sob estresse** *(Audit 02 T4)* — rotação/bg-fg/matar processo → restaura sessão sem auto-tocar; validar R8.
+- **PUB-14 · Persistência sob estresse** *(Audit 02 T4)* — rotação/bg-fg/matar processo → restaura sessão sem auto-tocar; validar R8. ✅ smoke DEBUG OK (background+FGS; force-stop→reabrir restaura PAUSED).
+  - **BUGFIX achado aqui (commit `ef96f85`, follow-up 6.G):** favorito do item RESTAURADO não refletia
+    no mini/full player (salvo no DB, coração vazio). O observer de favorito só ligava no
+    `EVENT_MEDIA_ITEM_TRANSITION`, que não dispara no cold-start restore. Fix:
+    `observeFavoriteForCurrentItem()` também no connect (`initializeController`). Validado no device.
+- **Smoke DEBUG (2026-07-16):** A/B/C/E ✅ (usuário confirmou som+aparência). D2 (ErrorScreen) e D3
+  (Toast PUB-02) ✅ testados manualmente pelo usuário. Restam no APK de release: PUB-10..16 + Android 8/Auto.
 - **PUB-15 · StrictMode / ANR** *(Audit 02 T5)* — debug + `adb logcat | grep StrictMode`; sem I/O na main; sem ANR.
 - **PUB-16 · Android 8 (API 26)** *(Audit 02 T6)* — smoke em aparelho antigo: notificação+FGS sem `NoSuchMethodError`/`VerifyError`.
 
