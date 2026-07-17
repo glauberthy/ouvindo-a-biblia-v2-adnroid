@@ -79,8 +79,19 @@ class PlaybackService : MediaLibraryService() {
     @Volatile
     private var lastExplicitPlaybackRequestAt = 0L
 
+    // BUG B (notificação-fantasma): só há sessão de mídia "de verdade" quando o usuário
+    // realmente pediu/iniciou playback neste processo. restoreLastSession() carrega uma
+    // sessão salva no player só por abrir o app (serviço apenas BOUND, nunca started), o
+    // que fazia o Media3 postar uma notificação de mídia não-foreground para conteúdo que
+    // o usuário nunca mandou tocar; no swipe o processo morria e a notificação ficava órfã
+    // (onTaskRemoved NÃO dispara em serviço só-bound). Este flag distingue "restaurado-
+    // nunca-tocado" (não postar) de "tocando/pausado-após-tocar" (postar/manter — 5.1).
+    @Volatile
+    private var hasStartedPlaybackThisProcess = false
+
     private fun markExplicitPlaybackRequest(item: MediaItem?) {
         lastExplicitPlaybackRequestAt = SystemClock.elapsedRealtime()
+        hasStartedPlaybackThisProcess = true
     }
 
     /**
@@ -157,6 +168,11 @@ class PlaybackService : MediaLibraryService() {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 // Liga/desliga o save periódico conforme a reprodução real.
                 if (isPlaying) startPeriodicSave() else stopPeriodicSave()
+                // BUG B: qualquer início real de playback (inclusive via botão da
+                // notificação/mini-player numa sessão restaurada, que não passa por
+                // onSetMediaItems) marca a sessão como ativa — a partir daí a notificação
+                // é legítima e deve ser postada/mantida (5.1), mesmo quando pausada.
+                if (isPlaying) hasStartedPlaybackThisProcess = true
             }
 
         })
@@ -403,7 +419,19 @@ class PlaybackService : MediaLibraryService() {
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
         // Media3 decide aqui se o serviço deve ir/ficar em foreground. Logamos para
         // ver a promoção a foreground (notificação de mídia) no diagnóstico.
-        Log.i(LC_TAG, "onUpdateNotification startInForegroundRequired=$startInForegroundRequired")
+        Log.i(LC_TAG, "onUpdateNotification startInForegroundRequired=$startInForegroundRequired hasStarted=$hasStartedPlaybackThisProcess")
+        // BUG B (notificação-fantasma): NÃO postar a notificação de mídia de uma sessão
+        // só restaurada que o usuário nunca tocou. Esse caso chega SEMPRE com
+        // startInForegroundRequired=false (nunca foi promovido a foreground) e com
+        // hasStartedPlaybackThisProcess=false. Suprimir só a interseção dos dois preserva:
+        //  - tocando (startInForegroundRequired=true) -> posta (foreground, 5.1);
+        //  - pausado-após-tocar (hasStarted=true, startInForegroundRequired=false) -> posta/mantém.
+        // O flag é obrigatório: gate só por startInForegroundRequired esconderia a
+        // notificação legítima do cenário pausado-após-tocar.
+        if (!hasStartedPlaybackThisProcess && !startInForegroundRequired) {
+            Log.i(LC_TAG, "onUpdateNotification -> SUPRIMIDA (sessão restaurada nunca tocada)")
+            return
+        }
         super.onUpdateNotification(session, startInForegroundRequired)
     }
 
@@ -438,8 +466,24 @@ class PlaybackService : MediaLibraryService() {
         // é seguro: Service.onTaskRemoved (a base) é no-op. O player é liberado
         // exclusivamente no onDestroy real do serviço (DIAGNOSTICO_02 §5.1/§5.2/§5.3).
         // saveCurrentState() já trata currentMediaItem nulo e ignora Tema (moment).
-        Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} -> DECISAO=manter (sem super/stopSelf)")
         saveCurrentState()
+
+        // BUG B (defesa extra): se nunca houve playback neste processo E não está tocando,
+        // não há sessão ativa a preservar (5.1 não se aplica) — encerra o serviço e remove
+        // qualquer notificação remanescente. No caso reproduzido (só-restaurado, serviço
+        // apenas bound) onTaskRemoved nem dispara, então o gate real está em
+        // onUpdateNotification; esta guarda cobre bordas (ex.: serviço já started sem play).
+        if (!player.isPlaying && !hasStartedPlaybackThisProcess) {
+            Log.i(LC_TAG, "onTaskRemoved isPlaying=false hasStarted=false -> DECISAO=encerrar (stopSelf)")
+            mediaSession?.run {
+                player.release()
+                release()
+                mediaSession = null
+            }
+            stopSelf()
+            return
+        }
+        Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} hasStarted=$hasStartedPlaybackThisProcess -> DECISAO=manter (5.1)")
     }
 
     @OptIn(UnstableApi::class)
