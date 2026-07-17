@@ -10,10 +10,12 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
+import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -47,7 +49,19 @@ object NetworkModule {
             }
         }
 
+        // BUG A (cold start lento): cache HTTP para GET condicional. Os JSONs estáticos
+        // (biblia_index 230KB, themes, estudos, mais) vêm com ETag/Last-Modified e
+        // `cache-control: must-revalidate`. Sem Cache, o OkHttp baixava o payload inteiro
+        // (200) a cada abertura; com Cache, ele revalida (If-None-Match) e o servidor
+        // responde 304 quando nada mudou — pulando os 230KB. Complementa o version-gate
+        // do repositório (que evita reescrever o Room, mas não evitava o download).
+        val cache = Cache(
+            directory = File(context.cacheDir, "http_cache"),
+            maxSize = 10L * 1024 * 1024 // 10 MB — folgado para os poucos JSONs
+        )
+
         return OkHttpClient.Builder()
+            .cache(cache)
             .addInterceptor(logging)
             // IMPORTANTE: Interceptor do WAF
             .addInterceptor { chain ->

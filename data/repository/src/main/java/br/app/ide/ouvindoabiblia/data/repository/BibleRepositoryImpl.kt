@@ -71,13 +71,23 @@ class BibleRepositoryImpl @Inject constructor(
      * O disparo 1x-por-load vem de o [sync] estar no corpo do flow{}: só roda na
      * coleta inicial do upstream. Combinado com stateIn(WhileSubscribed(5s)) na VM,
      * o stream é compartilhado e só reinicia após 5s sem coletores.
+     *
+     * BUG A (cold start lento): é CACHE-FIRST. Se o Room já tem dados, emite-os
+     * IMEDIATAMENTE (Success) e só então dispara o [sync] — que roda depois e apenas
+     * reescreve a UI se reescrever o Room (version-gated). Antes o primeiro Success
+     * ficava bloqueado atrás do [sync]: em rede fria isso eram 5-10s de Loading sobre
+     * um cache já pronto (medido: cache disponível em ~37ms, mas livros só emitidos em
+     * ~1550ms, todo o atraso dentro do sync). O caminho de cache vazio é preservado:
+     * emite Loading, aguarda o sync e, se o cache continuar vazio, vira Error terminal
+     * quando o sync falhou (1ª instalação offline) — nunca Loading eterno.
      */
     private fun <T> syncedListResource(
         cache: Flow<List<T>>,
         sync: suspend () -> Result<Unit>
     ): Flow<Resource<List<T>>> = flow {
         val current = cache.first()
-        if (current.isEmpty()) emit(Resource.Loading)
+        // Cache-first: com dados locais, mostra já; sem dados, Loading até o sync decidir.
+        if (current.isNotEmpty()) emit(Resource.Success(current)) else emit(Resource.Loading)
 
         val result = sync()
 
