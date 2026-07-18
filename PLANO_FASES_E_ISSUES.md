@@ -921,7 +921,15 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 - **Esforço:** P · **device?** sim (é polimento visual — screenshot antes/depois).
 - **Sinergia:** fazer junto com a 9.D (mesmo bloco de código, 1 validação visual só).
 
-### ISSUE 9.F — 🔲 BUG simples — Capas de livro 1:1 na tela Mais → "Direitos das capas e imagens"
+### ISSUE 9.F — ✅ FEITA (2026-07-18) — Capas de livro 1:1 na tela Mais → "Direitos das capas e imagens"
+
+- **Resultado:** `MoreSheetInfoBlock` ganhou `imageAspect` (default 1f — pessoas/fontes
+  inalteradas); call-site do `ASSET_LIST` passa 0.7f → thumb 44.8×64dp, capa inteira em
+  retrato. Validado no release (moto g53): sheet mostra Gênesis/Êxodo/Levítico/Deuteronômio/
+  Josué sem corte lateral, proporção medida ≈0.7.
+
+<!-- diagnóstico original abaixo -->
+### (diagnóstico original) ISSUE 9.F — BUG simples — Capas de livro 1:1 na tela Mais
 
 - **Reportado pelo dono (2026-07-18):** na sheet "Direitos das capas e imagens" (tela Mais), as
   miniaturas das capas dos livros aparecem **1:1**, mas capa de livro é **retrato** — o crop
@@ -1064,8 +1072,8 @@ fechou também o colateral da 6.G (timeout agora reseta `isSwitchingSource`). 9.
 vivo no device (meta.version bumpado; descrições no ar).
 `9.D ✅` e `9.E ✅` (2026-07-18, `e4a661e`; v2 da folga em `c3ef61d`) — progresso só-leitura no
 mini + corners concêntricos da capa (folga 4dp, raio 12dp). Validadas juntas no release.
-`9.F 🔲` — BUG: capas de livro 1:1 na sheet "Direitos das capas e imagens" (Mais); corrigir no
-`MoreSheetInfoBlock` com aspect por tipo (assets 0.7, pessoas 1:1).
+`9.F ✅` (2026-07-18) — capas em retrato (0.7) na sheet "Direitos das capas e imagens";
+pessoas/fontes seguem 1:1. Validada no release.
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
