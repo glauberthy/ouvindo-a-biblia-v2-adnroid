@@ -247,7 +247,9 @@ private fun MoreSectionSheetContent(
                             "Licença: ${asset.license}",
                             asset.notes
                         ),
-                        imageUrl = asset.imageUrl
+                        imageUrl = asset.imageUrl,
+                        // ISSUE 9.F: capa de livro é retrato — sem isso o crop 1:1 corta as laterais.
+                        imageAspect = 0.7f
                     )
                 }
             }
@@ -304,7 +306,10 @@ private fun MoreSheetInfoBlock(
     title: String,
     subtitle: String? = null,
     lines: List<String?>,
-    imageUrl: String? = null
+    imageUrl: String? = null,
+    // ISSUE 9.F: proporção do thumb (largura/altura). 1f p/ fotos de pessoas/fontes;
+    // 0.7f p/ capas de livro (retrato, mesma proporção do Home/mini player).
+    imageAspect: Float = 1f
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -313,7 +318,7 @@ private fun MoreSheetInfoBlock(
         if (!imageUrl.isNullOrBlank()) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(width = 64.dp * imageAspect, height = 64.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
                         color = RosyBeige.copy(alpha = 0.18f)
