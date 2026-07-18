@@ -845,7 +845,20 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 - **Validação:** `IsStudyMediaIdTest`; no release (moto g53): Estudo 1:1 inteiro (sem crop
   lateral), Bíblia mantém 7:10. **Esforço:** P.
 
-### ISSUE 9.C — 🔲 BUG — Seta "replay" na aula tocando não faz nada e TRAVA o player em "carregando"
+### ISSUE 9.C — ✅ FEITA (2026-07-18, commit `29831dd`) — Seta "replay" → pause/retoma (padrão de mercado)
+
+- **Decisão do dono:** seguir o padrão de mercado — item tocando mostra ícone de pause; toque
+  pausa/retoma. **Feito:** `LessonListItem` com `isCurrent` (borda/realce) separado de
+  `isPlaying` (Pause tocando / Play pausado); ramo same-study do `playStudyPlaylist` faz toggle
+  na mesma aula (e mantém o seek p/ aula diferente). Robustez: `finishSourceSwitch()` no
+  early-return + timeout do `tryBeginSourceSwitch` limpa também `uiState.isSwitchingSource`
+  (fecha o colateral da 6.G — nenhum comando no-op congela mais a UI).
+- **Validado no release (moto g53):** toggle pausa sem recarregar (posição preservada, retomou
+  de 2.9s), troca para outra aula segue com seek+play, controles nunca travam. De quebra,
+  validadas ao vivo as descrições da 9.A (dono bumpou o `meta.version` do estudos.json).
+
+<!-- diagnóstico original abaixo -->
+### (diagnóstico original) ISSUE 9.C — BUG — Seta "replay" na aula tocando não faz nada e TRAVA o player em "carregando"
 
 - **Reportado pelo dono (2026-07-18, visto no device):** com uma aula de Estudo tocando, o item
   dela na lista ganha borda e o ícone vira uma seta de "voltar ao início" (`Icons.Default.Replay`,
@@ -960,8 +973,9 @@ Cast entra quando você tiver uma TV pra testar.
 **FASE 9 (features de conteúdo):** `9.A ✅` (2026-07-18, `1af30dd`) — descrição por aula
 implementada+testada; visual no device destrava com o bump de `meta.version` do `estudos.json`.
 `9.B ✅` (2026-07-18, `4bf2c9c`) — capa 1:1 no player para Estudos (validada no release).
-`9.C 🔲` (2026-07-18) — BUG: seta "replay" da aula tocando é no-op e trava o player em
-"carregando" (engloba o achado colateral da 6.G: timeout não reseta `isSwitchingSource`).
+`9.C ✅` (2026-07-18, `29831dd`) — aula tocando = pause/retoma na lista (padrão de mercado);
+fechou também o colateral da 6.G (timeout agora reseta `isSwitchingSource`). 9.A validada ao
+vivo no device (meta.version bumpado; descrições no ar).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
