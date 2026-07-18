@@ -813,6 +813,51 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 
 ---
 
+## FASE 9 — Features de conteúdo (aberta 2026-07-18)
+
+### ISSUE 9.A — 🔲 Descrição por AULA de estudo (novo campo `description` no `estudos.json`)
+
+- **Contexto:** o servidor passou a mandar `description` dentro de cada item de `audios[]` no
+  `estudos.json` (texto longo, ex.: "Aula introdutória que estabelece os fundamentos…"). Hoje o
+  app só tem descrição no nível do **estudo** (`StudyDto.description` → `Study.description`,
+  exibida no header de `StudyDetailsScreen.kt:335`); no nível da **aula** o campo é ignorado no
+  parse e não existe em lugar nenhum da cadeia.
+- **Cadeia a tocar (na ordem):**
+  1. **`:data:remote`** — `StudyDto.kt`: `StudyAudioDto` ganha `val description: String? = null`
+     (**nullable com default** — JSON antigo/aulas sem o campo continuam parseando; kotlinx-ser
+     só exige o default).
+  2. **`:data:local`** — `StudyLessonEntity` ganha `val description: String? = null` →
+     **Room `version` 9→10** em `BibleDatabase.kt:28` + `MIGRATION_9_10`
+     (`ALTER TABLE study_lessons ADD COLUMN description TEXT`) registrada no
+     `DatabaseModule.kt:31` junto da `MIGRATION_8_9`. **NÃO usar destrutivo** — regra da 0.2
+     (preserva favoritos/retomada). Lembrar: KSP pode pedir `./gradlew clean`.
+  3. **`:data:local`** — `BibleDao.kt`: `updateStudyLessonMetadata` (`:326`) ganha o param
+     `description` e o SET correspondente; `refreshStudiesData` (`:251-254`) repassa. O caminho
+     de INSERT (aula nova) já cobre via entity. Sem isso, quem JÁ tem as aulas no Room nunca
+     recebe as descrições (o insert é IGNORE).
+  4. **`:data:repository`** — `domain/model/StudyModels.kt`: `Lesson` ganha
+     `description: String?`; `StudyMappers.kt` (`toDomain`) mapeia. Conferir o ponto do
+     `BibleRepositoryImpl.syncStudies` que converte DTO→entity (incluir o campo).
+  5. **`:app`** — `StudyDetailsScreen.kt`: exibir a descrição no item da aula. Sugestão de UX
+     (texto longo): 2–3 linhas com ellipsis + expandir no toque (padrão `maxLines` +
+     `animateContentSize`), corpo em `bodySmall`/`onSurfaceVariant`. Aula sem descrição
+     (null/blank) não reserva espaço.
+- **⚠️ Gate operacional (dono):** o sync de Estudos é **version-gated** — as descrições só
+  entram no Room quando `meta.version` do `estudos.json` for **bumpada**. Sem bump, nada muda
+  no app mesmo com o código pronto.
+- **Fora do escopo (anotar se quiser depois):** mostrar a descrição da aula no player
+  (`ChaptersSheet`/full player) e na tela de Favoritos.
+- **Critério de aceitação:** JSON novo parseia (com e sem `description`); migração 9→10 preserva
+  favoritos/retomada (teste espelhando o da 0.2); update de metadata grava descrição em aula já
+  existente após bump de version; `StudyDetailsScreen` mostra/expande a descrição; aula sem
+  descrição renderiza como hoje. Release: campo novo não tem superfície de R8 (serializer gerado
+  pelo plugin), mas validar o parse no smoke de release.
+- **Testes:** DTO parse (com/sem campo), mapper, `MigrationTest` 9→10, unit do
+  “null/blank não renderiza”.
+- **Esforço:** M · **Depende de:** bump de `meta.version` no servidor (dono) para validar ponta a ponta.
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
@@ -841,6 +886,9 @@ Cast entra quando você tiver uma TV pra testar.
 6.F fechada sem código (2026-07-16: nenhuma base DB<8 no mundo real). (6.A rebaixada para 7.E.)
 
 **FASE 7 (código morto):** `7.E ✅ → 7.C ✅ → 7.B ✅ → 7.A ✅ → 7.D ✅`. **FASE 7 CONCLUÍDA (2026-07-16).**
+
+**FASE 9 (features de conteúdo):** 🔲 ABERTA (2026-07-18) — `9.A` descrição por aula de estudo
+(campo novo `description` em `audios[]` do `estudos.json`; DTO→Room 9→10→domínio→UI).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
