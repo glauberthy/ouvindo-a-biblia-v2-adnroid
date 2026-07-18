@@ -856,6 +856,12 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 - **Validado no release (moto g53):** toggle pausa sem recarregar (posição preservada, retomou
   de 2.9s), troca para outra aula segue com seek+play, controles nunca travam. De quebra,
   validadas ao vivo as descrições da 9.A (dono bumpou o `meta.version` do estudos.json).
+- **↪️ Aplicada ao contexto de TEMA (2026-07-18, pedido do dono):** `MomentListItem` tinha a
+  mesma seta Replay, com agravante — `playThemePlaylist` NÃO tinha proteção same-theme, então
+  o toque no momento atual RECARREGAVA a playlist e reiniciava do zero. Fix espelhado: ícone
+  Pause/Play por `isCurrent`/`isPlaying`, ramo same-theme com toggle (mesmo momento) e seek
+  (outro momento, clipping preservado) + `finishSourceSwitch`. Validado no release: pausa
+  preserva posição (4.1s), retoma de onde parou (4.1→7.0s).
 
 ### ISSUE 9.D — ✅ FEITA (2026-07-18, commit `e4a661e`) — Barra de progresso SÓ-LEITURA no mini player
 
