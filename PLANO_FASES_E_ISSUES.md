@@ -1082,6 +1082,10 @@ mini + corners concêntricos da capa (folga 4dp, raio 12dp). Validadas juntas no
 pessoas/fontes seguem 1:1. Validada no release.
 Micro-ajustes ✅ (2026-07-18): 9.C estendida a Temas (`629c797`); imagem do card de Temas
 alinhada ao topo como em Estudos (style).
+`9.G ✅` (2026-07-18) — `StatusBarScrim` programático nos headers de Tema/Estudo substitui o
+degradê que era assado nas imagens do servidor (forte demais e replicado nos thumbs). Véu creme
+eased (0.85→0.35→0, status bar + 24dp) — ícones escuros legíveis sobre QUALQUER imagem; o dono
+pode produzir imagens LIMPAS daqui pra frente (ajuste fino mora só no componente).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
