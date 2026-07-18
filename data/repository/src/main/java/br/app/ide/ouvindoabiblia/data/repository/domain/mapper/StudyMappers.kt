@@ -12,7 +12,8 @@ internal fun StudyLessonEntity.toDomain(): Lesson = Lesson(
     title = title,
     url = url,
     duration = duration,
-    isFavorite = isFavorite
+    isFavorite = isFavorite,
+    description = description
 )
 
 internal fun StudyWithLessons.toDomain(): Study = Study(

@@ -1,5 +1,6 @@
 package br.app.ide.ouvindoabiblia.ui.studies
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,6 +38,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -237,6 +241,24 @@ fun LessonListItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = DeepBlueDark.copy(alpha = 0.8f)
                 )
+
+                // ISSUE 9.A: descrição da aula (texto longo do JSON) — recolhida em 2 linhas,
+                // expande/recolhe no toque sem disparar o onClick do Card (o clickable interno
+                // consome o gesto).
+                visibleLessonDescription(lesson.description)?.let { description ->
+                    var expanded by rememberSaveable(lesson.localId) { mutableStateOf(false) }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DeepBlueDark.copy(alpha = 0.7f),
+                        maxLines = if (expanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .clickable { expanded = !expanded }
+                            .animateContentSize()
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -378,6 +400,13 @@ private fun StudyMetaChip(
     }
 }
 
+/**
+ * ISSUE 9.A — descrição exibível de uma aula: trim + null se vazia/blank.
+ * Função pura (testável) usada pelo [LessonListItem]; null = não renderiza o bloco.
+ */
+fun visibleLessonDescription(description: String?): String? =
+    description?.trim()?.takeIf { it.isNotEmpty() }
+
 // --- PREVIEWS ---
 
 private fun previewStudyEntity(): Study {
@@ -400,7 +429,10 @@ private fun previewLessonsList(): List<Lesson> {
             title = "A Revelação de Jesus Cristo",
             url = "https://example.com/audio1.mp3",
             duration = 3450, // 57m 30s
-            isFavorite = false
+            isFavorite = false,
+            description = "Aula introdutória que estabelece os fundamentos corretos para " +
+                "interpretar o Apocalipse, enfatizando que se trata de uma revelação " +
+                "simbólica e não especulativa."
         ),
         Lesson(
             localId = 2,
@@ -409,7 +441,8 @@ private fun previewLessonsList(): List<Lesson> {
             title = "A Igreja em Éfeso",
             url = "https://example.com/audio2.mp3",
             duration = 2805, // 46m 45s
-            isFavorite = false
+            isFavorite = false,
+            description = null
         ),
         Lesson(
             localId = 3,
@@ -418,7 +451,8 @@ private fun previewLessonsList(): List<Lesson> {
             title = "A Igreja em Esmirna",
             url = "https://example.com/audio3.mp3",
             duration = 3120, // 52m 00s
-            isFavorite = false
+            isFavorite = false,
+            description = null
         )
     )
 }

@@ -25,7 +25,7 @@ import br.app.ide.ouvindoabiblia.data.local.entity.ThemeEntity
         StudyLessonEntity::class,
         MoreContentEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true // Exporta schema p/ migrações testáveis (DIAGNOSTICO_01 §4b)
 )
 abstract class BibleDatabase : RoomDatabase() {
@@ -48,6 +48,17 @@ abstract class BibleDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Schema idêntico ao da v8 — nada a alterar; dados preservados.
+            }
+        }
+
+        /**
+         * Migração 9 → 10 (ISSUE 9.A): descrição por aula de estudo.
+         * Coluna nullable sem default → aulas existentes ficam com NULL até o
+         * próximo sync com bump de version do estudos.json regravar os metadados.
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE study_lessons ADD COLUMN description TEXT")
             }
         }
     }

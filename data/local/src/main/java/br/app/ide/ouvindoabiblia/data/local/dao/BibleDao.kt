@@ -256,7 +256,8 @@ interface BibleDao {
                     remoteId = lesson.remoteId,
                     title = lesson.title,
                     url = lesson.url,
-                    duration = lesson.duration
+                    duration = lesson.duration,
+                    description = lesson.description
                 )
             }
         }
@@ -319,7 +320,8 @@ interface BibleDao {
     UPDATE study_lessons
     SET title = :title,
         url = :url,
-        duration = :duration
+        duration = :duration,
+        description = :description
     WHERE studyId = :studyId AND remoteId = :remoteId
 """
     )
@@ -328,7 +330,8 @@ interface BibleDao {
         remoteId: Int,
         title: String,
         url: String,
-        duration: Long
+        duration: Long,
+        description: String?
     )
 
 

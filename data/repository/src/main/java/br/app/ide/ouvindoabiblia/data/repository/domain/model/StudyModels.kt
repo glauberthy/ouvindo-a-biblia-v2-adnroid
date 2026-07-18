@@ -8,7 +8,8 @@ data class Lesson(
     val title: String,
     val url: String,
     val duration: Long,
-    val isFavorite: Boolean
+    val isFavorite: Boolean,
+    val description: String?
 )
 
 /** Estudo com suas aulas (modelo de domínio; substitui StudyWithLessons na UI). */

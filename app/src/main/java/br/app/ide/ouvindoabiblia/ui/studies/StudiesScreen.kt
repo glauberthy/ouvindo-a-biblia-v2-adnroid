@@ -416,7 +416,8 @@ private fun previewStudy(
                 title = "Capítulo 1",
                 url = "https://example.com/audio1.mp3",
                 duration = 5886,
-                isFavorite = false
+                isFavorite = false,
+                description = null
             ),
             Lesson(
                 localId = 2,
@@ -425,7 +426,8 @@ private fun previewStudy(
                 title = "Capítulo 2",
                 url = "https://example.com/audio2.mp3",
                 duration = 2400,
-                isFavorite = false
+                isFavorite = false,
+                description = null
             )
         )
     )

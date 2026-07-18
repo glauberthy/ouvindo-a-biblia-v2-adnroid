@@ -29,5 +29,6 @@ data class StudyAudioDto(
     val id: Int,
     val title: String,
     val url: String,
-    val duration: Long? = null // Opcional
+    val duration: Long? = null, // Opcional
+    val description: String? = null // Opcional: JSON antigo/aulas sem o campo seguem parseando
 )

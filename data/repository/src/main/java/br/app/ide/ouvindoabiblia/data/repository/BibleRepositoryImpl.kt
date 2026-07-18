@@ -343,7 +343,8 @@ class BibleRepositoryImpl @Inject constructor(
                                 studyId = studyDto.id,
                                 title = audioDto.title,
                                 url = audioDto.url,
-                                duration = audioDto.duration ?: 0L
+                                duration = audioDto.duration ?: 0L,
+                                description = audioDto.description
                             )
                         )
                     }

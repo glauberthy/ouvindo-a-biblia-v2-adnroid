@@ -28,7 +28,7 @@ object DatabaseModule {
             // Migrações explícitas preservam favoritos e a posição de retomada
             // (dados só-locais). Substitui o fallbackToDestructiveMigration()
             // que os apagava a cada bump de versão (DIAGNOSTICO_01 §4b).
-            .addMigrations(BibleDatabase.MIGRATION_8_9)
+            .addMigrations(BibleDatabase.MIGRATION_8_9, BibleDatabase.MIGRATION_9_10)
             // Downgrade (apenas cenário de dev) ainda pode recriar o banco.
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
