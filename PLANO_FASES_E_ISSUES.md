@@ -887,10 +887,13 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 
 ### ISSUE 9.E — ✅ FEITA (2026-07-18, commit `e4a661e`) — Corners concêntricos da capa no mini
 
-- **Resultado:** folga uniforme de 4dp (`imageStartX` 16→12dp) e raio da capa 12dp (16−4);
-  `imageCorner` virou constante 12dp (full já usava 12dp — o morph ficou até mais simples);
-  padding do texto do mini ajustado. Validada no release: capa de Estudo quadrada encaixada
-  com cantos paralelos aos da barra; Bíblia/Tema sem regressão.
+- **Resultado (v2, commit `c3ef61d`):** folga uniforme de 4dp e raio da capa 12dp (16−4);
+  `imageCorner` virou constante 12dp (full já usava 12dp); padding do texto ajustado.
+  **⚠️ Correção da v1 (pega pelo olho do dono):** `imageStartX` é relativo ao CONTEÚDO da
+  barra (o Surface já entra 8dp da tela) — a v1 usou 12dp e deixou ~10-12dp à esquerda vs 4dp
+  vertical ("capa muito distante"). Medido por scanline de pixels no device; v2 = 4dp.
+  Validada no release: estudo (quadrada) e Bíblia (retrato) com ~4dp nos 4 lados, cantos
+  concêntricos.
 
 <!-- plano original abaixo -->
 ### (plano original) ISSUE 9.E — Corners concêntricos da capa no mini player (capa de Estudo)
