@@ -92,6 +92,11 @@ reconfirmar a linha exata ao pegar cada issue.
   GET condicional 304 (commit `09f7094`); BUG B notificação-fantasma de sessão restaurada
   nunca tocada → gate em `onUpdateNotification` (commit `62e8e54`). Ambos validados no
   device em debug e no release ofuscado.
+- ✅ **Formulários do Play Console FEITOS (2026-07-18, pelo dono):** PUB-20 (política hospedada
+  e informada), PUB-21 (Data Safety — o que derrubou o app em mai/2024), PUB-22 (rating L),
+  PUB-24 (ficha, exceto `04_estudos`), PUB-25 e as 6 declarações de "Conteúdo do app"
+  ("Tudo em dia"). Detalhe na FASE 8. Restam: PUB-23 (vídeo FGS), novela da chave,
+  placeholders de Estudos e testes PUB-11/12/13/16 no release.
 
 ---
 
@@ -765,18 +770,18 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-16 · Android 8 (API 26)** *(Audit 02 T6)* — smoke em aparelho antigo: notificação+FGS sem `NoSuchMethodError`/`VerifyError`.
 
 ### 🔴 BLOQUEIA — Console / Documentos · 🧑 MANUAL (estado real confirmado pelo dono em 2026-07-18)
-- **PUB-20 · Política de Privacidade** · ✅ FEITA — hospedada em
+- **PUB-20 · Política de Privacidade** · ✅ FEITA (2026-07-18) — hospedada em
   `https://ouvindo-a-biblia.ide.app.br/politica.html` e informada no Console.
-- **PUB-21 · Data Safety form** · ✅ FEITA — "nenhuma coleta de dados", criptografado em trânsito.
+- **PUB-21 · Data Safety form** · ✅ FEITA (2026-07-18) — "nenhuma coleta de dados", criptografado em trânsito.
   *(Era o que derrubou o app em mai/2024 — resolvido.)*
-- **PUB-22 · Content Rating (IARC)** · ✅ FEITA — classificação "Livre"/L (herdada).
+- **PUB-22 · Content Rating (IARC)** · ✅ FEITA (2026-07-18) — classificação "Livre"/L (herdada).
 - **PUB-23 · Declaração de Foreground Service** · ⏳ PENDENTE — Android 14+: descrição + caso de uso +
   **vídeo demo** (tocar → apagar tela → áudio segue com controles na notificação). Código pronto;
   gravar o vídeo com o app assinado. **Obrigatório, sem atalho.**
-- **PUB-24 · Assets da ficha** · ✅ FEITA (textos + imagens no Console) — EXCETO o screenshot
+- **PUB-24 · Assets da ficha** · ✅ FEITA (2026-07-18; textos + imagens no Console) — EXCETO o screenshot
   `04_estudos`, bloqueado pelos placeholders de Estudos (ver 🟡 abaixo).
-- **PUB-25 · Declarar sem login/compras/anúncios** · ✅ FEITA — declarado no Console.
-- **Conteúdo do app (Console):** as 6 declarações concluídas — "Tudo em dia". ✅
+- **PUB-25 · Declarar sem login/compras/anúncios** · ✅ FEITA (2026-07-18) — declarado no Console.
+- **Conteúdo do app (Console):** ✅ FEITA (2026-07-18) — as 6 declarações concluídas ("Tudo em dia").
 
 ### 🔴 BLOQUEIA — "Novela da chave" (Play App Signing, app legado) · 🧑 · ⏳ PENDENTE
 - App legado sem App Signing + keystore antiga **1024-bit** (2013), obsoleta. Na tela
