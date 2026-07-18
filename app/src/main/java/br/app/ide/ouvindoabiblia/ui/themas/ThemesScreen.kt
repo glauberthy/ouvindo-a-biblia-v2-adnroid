@@ -190,14 +190,20 @@ fun ThemeListItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ThemeImage(theme)
+            // Imagem alinhada ao TOPO do bloco de texto (mesmo layout da listagem de
+            // Estudos: Row interno com alinhamento default Top); a seta continua
+            // centralizada pela Row externa.
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ThemeImage(theme)
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            ThemeTextContent(
-                theme = theme,
-                modifier = Modifier.weight(1f)
-            )
+                ThemeTextContent(
+                    theme = theme,
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
             Spacer(modifier = Modifier.width(8.dp))
 
