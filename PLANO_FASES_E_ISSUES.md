@@ -857,7 +857,15 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
   de 2.9s), troca para outra aula segue com seek+play, controles nunca travam. De quebra,
   validadas ao vivo as descrições da 9.A (dono bumpou o `meta.version` do estudos.json).
 
-### ISSUE 9.D — 🔲 Barra de progresso SÓ-LEITURA no mini player
+### ISSUE 9.D — ✅ FEITA (2026-07-18, commit `e4a661e`) — Barra de progresso SÓ-LEITURA no mini player
+
+- **Resultado:** linha de 2dp rente à borda inferior do mini bar, `Box` com
+  `fillMaxWidth(fraction)` (sem Slider, sem gesto); `miniProgressFraction` pura com a guarda da
+  1.B (`duration<=0` → 0f) + `MiniProgressFractionTest`; some via `miniAlpha`, pontas clipadas
+  pelo corner 16dp. Validada no release (linha na fração correta ~68% da posição real, ao vivo).
+
+<!-- plano original abaixo -->
+### (plano original) ISSUE 9.D — Barra de progresso SÓ-LEITURA no mini player
 
 - **Pedido do dono (2026-07-18):** mini player deve mostrar o progresso da faixa; **não pode ser
   ajustável** pelo usuário (seek só no full player).
@@ -877,7 +885,15 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
   transição mini↔full sem artefato visual.
 - **Esforço:** P · **device?** sim (visual + cold start).
 
-### ISSUE 9.E — 🔲 Corners concêntricos da capa no mini player (capa de Estudo)
+### ISSUE 9.E — ✅ FEITA (2026-07-18, commit `e4a661e`) — Corners concêntricos da capa no mini
+
+- **Resultado:** folga uniforme de 4dp (`imageStartX` 16→12dp) e raio da capa 12dp (16−4);
+  `imageCorner` virou constante 12dp (full já usava 12dp — o morph ficou até mais simples);
+  padding do texto do mini ajustado. Validada no release: capa de Estudo quadrada encaixada
+  com cantos paralelos aos da barra; Bíblia/Tema sem regressão.
+
+<!-- plano original abaixo -->
+### (plano original) ISSUE 9.E — Corners concêntricos da capa no mini player (capa de Estudo)
 
 - **Pedido/pergunta do dono (2026-07-18):** capa do estudo no mini com corner na "mesma
   proporção" do mini player e aproximada da esquerda, para os ângulos ficarem simétricos.
@@ -1021,8 +1037,8 @@ implementada+testada; visual no device destrava com o bump de `meta.version` do 
 `9.C ✅` (2026-07-18, `29831dd`) — aula tocando = pause/retoma na lista (padrão de mercado);
 fechou também o colateral da 6.G (timeout agora reseta `isSwitchingSource`). 9.A validada ao
 vivo no device (meta.version bumpado; descrições no ar).
-`9.D 🔲` — barra de progresso só-leitura no mini player. `9.E 🔲` — corners concêntricos da
-capa no mini (folga uniforme 4dp + raio 12dp). Fazer juntas (mesmo bloco de código).
+`9.D ✅` e `9.E ✅` (2026-07-18, `e4a661e`) — progresso só-leitura no mini + corners
+concêntricos da capa (folga 4dp, raio 12dp). Validadas juntas no release.
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
