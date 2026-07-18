@@ -845,6 +845,45 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 - **Validação:** `IsStudyMediaIdTest`; no release (moto g53): Estudo 1:1 inteiro (sem crop
   lateral), Bíblia mantém 7:10. **Esforço:** P.
 
+### ISSUE 9.C — 🔲 BUG — Seta "replay" na aula tocando não faz nada e TRAVA o player em "carregando"
+
+- **Reportado pelo dono (2026-07-18, visto no device):** com uma aula de Estudo tocando, o item
+  dela na lista ganha borda e o ícone vira uma seta de "voltar ao início" (`Icons.Default.Replay`,
+  contentDescription "Reiniciar Estudo", `StudyDetailsScreen.LessonListItem`). Ao tocar na seta:
+  o áudio **não** volta ao início e o mini/full player fica **preso em estado de carregando**
+  (controles desabilitados).
+- **Causa raiz (confirmada por leitura do código, cadeia completa):**
+  1. O toque chama `onPlayStudy` → `MainScreen` → `PlayerViewModel.playStudyById`, que faz
+     `tryBeginSourceSwitch()` **antes de tudo** → `uiState.isSwitchingSource = true` (UI
+     congela: `controlsEnabled = !isSwitchingSource`).
+  2. `playStudyPlaylist` cai na "PROTEÇÃO CONTRA RESTART": mesmo estudo + mesma aula + já
+     tocando → `play()` é no-op e **`return`** — o replay nunca foi implementado (só há
+     `seekToDefaultPosition` quando a aula é OUTRA). Por isso o áudio não volta.
+  3. **Ninguém chama `finishSourceSwitch()`** nesse caminho: o unlock normal depende de
+     `EVENT_PLAYBACK_STATE_CHANGED` (READY/IDLE/ENDED), que não dispara porque nada mudou; e o
+     timeout de 4s de `tryBeginSourceSwitch` reseta só o flag interno `isSourceSwitchInFlight`,
+     **não** o `uiState.isSwitchingSource` — exatamente o achado colateral da 6.G. UI presa até
+     trocar de faixa/matar o app.
+- **Avaliação de UX (pergunta do dono: "faz sentido essa seta?"):** **não faz.** Nenhum player
+  de referência (Spotify/podcasts) oferece "reiniciar do zero" na lista — o affordance padrão
+  para o item tocando é um **indicador de reprodução** (equalizer animado) e/ou toque =
+  **pausa/retoma**. Reiniciar do zero é ação destrutiva (perde a posição de uma aula de ~1h40)
+  a um toque de distância, e aqui nem sequer funciona.
+- **Correção recomendada (2 partes):**
+  1. **UX:** trocar `Replay` por indicador de "tocando" (ícone `Pause`/equalizer); toque no item
+     tocando = pausa/retoma (via toggle no controller). Elimina a promessa falsa de replay.
+  2. **Robustez (o achado 6.G junto):** no early-return da "PROTEÇÃO CONTRA RESTART" chamar
+     `finishSourceSwitch()`; e no timeout do `tryBeginSourceSwitch` resetar TAMBÉM
+     `uiState.isSwitchingSource` (hoje só reseta o flag interno). Assim qualquer comando que
+     vire no-op nunca mais deixa a UI presa.
+- **Arquivos:** `ui/studies/StudyDetailsScreen.kt` (`LessonListItem`, ícone/onClick),
+  `ui/player/PlayerViewModel.kt` (`playStudyById`, `playStudyPlaylist` ramo same-study,
+  `tryBeginSourceSwitch`/`finishSourceSwitch`). Reconfirmar linhas ao pegar.
+- **Critério de aceitação:** tocar no item da aula em reprodução pausa/retoma (sem recarregar);
+  nenhum caminho deixa `isSwitchingSource` preso (timeout limpa a UI); troca para OUTRA aula
+  segue funcionando (seek); Bíblia/Tema sem regressão.
+- **Esforço:** P/M · **device?** sim (reproduzir o travamento antes, confirmar destravado depois).
+
 <!-- plano original da 9.A abaixo -->
 ### (plano original) ISSUE 9.A — Descrição por AULA de estudo (novo campo `description` no `estudos.json`)
 
@@ -921,6 +960,8 @@ Cast entra quando você tiver uma TV pra testar.
 **FASE 9 (features de conteúdo):** `9.A ✅` (2026-07-18, `1af30dd`) — descrição por aula
 implementada+testada; visual no device destrava com o bump de `meta.version` do `estudos.json`.
 `9.B ✅` (2026-07-18, `4bf2c9c`) — capa 1:1 no player para Estudos (validada no release).
+`9.C 🔲` (2026-07-18) — BUG: seta "replay" da aula tocando é no-op e trava o player em
+"carregando" (engloba o achado colateral da 6.G: timeout não reseta `isSwitchingSource`).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
