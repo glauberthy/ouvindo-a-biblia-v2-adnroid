@@ -1,15 +1,15 @@
 # Política de Privacidade — Ouvindo a Bíblia
 
-> **RASCUNHO (PUB-20).** Redigido a partir do comportamento real do app (auditoria em
-> `docs/archive/AUDITORIA_04_PLAYSTORE.md`). Antes de publicar: (1) preencha os campos `[...]`;
-> (2) confirme o item "Logs do servidor" com quem administra `ouvindo-a-biblia.ide.app.br`;
-> (3) hospede numa URL pública e informe-a no Play Console (App content → Privacy policy).
-> Isto é um modelo, não aconselhamento jurídico.
+> **PUBLICADA (PUB-20 ✅).** Este arquivo espelha a versão em produção, hospedada em
+> `https://ouvindo-a-biblia.ide.app.br/politica.html` e informada no Play Console
+> (App content → Privacy policy). Extraída do HTML publicado em 2026-07-18; os e-mails
+> de contato estavam ofuscados pelo Cloudflare e foram decodificados. Se a página
+> mudar, atualizar este espelho.
 
-**Última atualização:** [DATA — ex.: 16 de julho de 2026]
+**Última atualização:** 16 de julho de 2026
 **Aplicativo:** Ouvindo a Bíblia (Android)
-**Desenvolvedor/Responsável:** [SEU NOME OU NOME DA ORGANIZAÇÃO]
-**Contato:** [E-MAIL DE CONTATO]
+**Desenvolvedor/Responsável:** IDETECH LTDA
+**Contato:** contato@ide.app.br
 
 ## 1. Resumo
 
@@ -30,14 +30,13 @@ Para baixar o conteúdo (textos e listas em formato JSON) e reproduzir os áudio
 requisições pela internet ao servidor `https://ouvindo-a-biblia.ide.app.br/` e aos endereços de
 áudio indicados por ele. Como em qualquer acesso à internet, essas requisições transmitem
 automaticamente o **endereço IP** do dispositivo e um identificador técnico do app
-(cabeçalho *User-Agent*). Esses dados são usados **exclusivamente** para atender à requisição
-(entregar o conteúdo/áudio) e **não são vinculados** à sua identidade.
+(cabeçalho *User-Agent*).
 
-> **[CONFIRMAR — Logs do servidor]** Se o servidor `ouvindo-a-biblia.ide.app.br` **não** registra
-> logs de acesso, mantenha a redação acima. Se **registra** logs (IP/data/hora, como é comum em
-> servidores web/CDN), acrescente: *"Nosso servidor pode manter registros de acesso (endereço IP,
-> data e hora) por [PERÍODO] para fins de segurança e operação, sem vinculá-los à identidade do
-> usuário."* — e reflita isso no formulário Data Safety.
+**Nós não coletamos, não armazenamos e não acessamos** esses dados. O provedor de
+infraestrutura (Cloudflare) pode processá-los automaticamente para entregar o conteúdo e para as
+próprias medidas de segurança e operação da rede (por exemplo, proteção contra abuso), conforme
+os termos e a política de privacidade desse provedor. Esses dados são usados apenas para atender
+à requisição e **não são vinculados** à sua identidade por nós.
 
 ## 4. Dados armazenados no seu dispositivo (não enviados)
 
@@ -78,4 +77,4 @@ Podemos atualizar esta política; a data de "Última atualização" no topo indi
 
 ## 10. Contato
 
-Dúvidas sobre privacidade: [E-MAIL DE CONTATO].
+Dúvidas sobre privacidade: contato@ide.app.br.
