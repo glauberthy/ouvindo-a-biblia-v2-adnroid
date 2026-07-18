@@ -921,6 +921,28 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 - **Esforço:** P · **device?** sim (é polimento visual — screenshot antes/depois).
 - **Sinergia:** fazer junto com a 9.D (mesmo bloco de código, 1 validação visual só).
 
+### ISSUE 9.F — 🔲 BUG simples — Capas de livro 1:1 na tela Mais → "Direitos das capas e imagens"
+
+- **Reportado pelo dono (2026-07-18):** na sheet "Direitos das capas e imagens" (tela Mais), as
+  miniaturas das capas dos livros aparecem **1:1**, mas capa de livro é **retrato** — o crop
+  quadrado corta as laterais (confirmado no device: Gênesis/Êxodo/Levítico cortados).
+- **Onde (renderer VIVO — atenção):** o item do menu abre um **ModalBottomSheet**
+  (`MoreScreen.kt:113`), não a rota `MoreSectionDetailsScreen` — o thumb é o
+  `MoreSheetInfoBlock` (`MoreScreen.kt:316`): `Box .size(64.dp) .clip(RoundedCornerShape(14.dp))`
+  + `AppAsyncImage fillMaxSize` (crop). (O `AssetCard` de `MoreSectionDetailsScreen.kt` NÃO é o
+  caminho usado por esse fluxo; não corrigir lá achando que resolveu.)
+- **Cuidado:** `MoreSheetInfoBlock` é compartilhado por 3 tipos — `ASSET_LIST` (capas, retrato),
+  `RIGHTS_LIST` (fontes) e `PEOPLE_LIST` (pessoas — 1:1 é o CERTO para foto de pessoa). A
+  correção deve parametrizar, não trocar global.
+- **Correção sugerida:** param `imageAspect: Float = 1f` no `MoreSheetInfoBlock`
+  (largura = 64.dp × aspect, altura fixa 64.dp); o call-site do `ASSET_LIST`
+  (`MoreScreen.kt:~250`) passa **0.7f** (mesma proporção de capa do Home/mini player).
+  Pessoas/fontes ficam 1:1 como hoje. Corner 14dp mantém (thumb pequeno, concentricidade
+  não se aplica — não há moldura externa encostada).
+- **Critério de aceitação:** na sheet de direitos, capas aparecem inteiras em retrato
+  (~45×64dp) sem corte lateral; seções de pessoas/curadoria/fontes inalteradas (1:1).
+- **Esforço:** P · **device?** sim (screenshot da sheet antes/depois).
+
 <!-- diagnóstico original abaixo -->
 ### (diagnóstico original) ISSUE 9.C — BUG — Seta "replay" na aula tocando não faz nada e TRAVA o player em "carregando"
 
@@ -1040,8 +1062,10 @@ implementada+testada; visual no device destrava com o bump de `meta.version` do 
 `9.C ✅` (2026-07-18, `29831dd`) — aula tocando = pause/retoma na lista (padrão de mercado);
 fechou também o colateral da 6.G (timeout agora reseta `isSwitchingSource`). 9.A validada ao
 vivo no device (meta.version bumpado; descrições no ar).
-`9.D ✅` e `9.E ✅` (2026-07-18, `e4a661e`) — progresso só-leitura no mini + corners
-concêntricos da capa (folga 4dp, raio 12dp). Validadas juntas no release.
+`9.D ✅` e `9.E ✅` (2026-07-18, `e4a661e`; v2 da folga em `c3ef61d`) — progresso só-leitura no
+mini + corners concêntricos da capa (folga 4dp, raio 12dp). Validadas juntas no release.
+`9.F 🔲` — BUG: capas de livro 1:1 na sheet "Direitos das capas e imagens" (Mais); corrigir no
+`MoreSheetInfoBlock` com aspect por tipo (assets 0.7, pessoas 1:1).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
