@@ -366,6 +366,29 @@ class PlayerViewModel @Inject constructor(
         val controller = mediaController ?: return
         if (!tryBeginSourceSwitch()) return
 
+        // ISSUE 9.C (contexto de Tema) — proteção contra reload, espelhando o ramo do Estudo:
+        // se o MESMO tema já está carregado, não recarrega a playlist (antes, cada toque no
+        // momento atual refazia setMediaItems e reiniciava o áudio do zero).
+        val isPlayingThemeType =
+            MediaContentId.parse(controller.currentMediaItem?.mediaId.orEmpty()) is MediaContentId.ThemeMoment
+        val isSameTheme =
+            controller.currentMediaItem?.mediaMetadata?.albumTitle?.toString() == themeTitle
+
+        if (isPlayingThemeType && isSameTheme && controller.playbackState != Player.STATE_IDLE) {
+            if (controller.currentMediaItemIndex != startIndex) {
+                // Mesmo tema, momento diferente: pula pra ele (o clipping do item é preservado).
+                controller.seekToDefaultPosition(startIndex)
+                if (!controller.isPlaying) controller.play()
+            } else {
+                // Toque no momento ATUAL = pausa/retoma (padrão de mercado).
+                if (controller.isPlaying) controller.pause() else controller.play()
+            }
+
+            // Nada será recarregado → nenhum evento de playback destrava o guard sozinho.
+            finishSourceSwitch()
+            return
+        }
+
         _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl, isStudyMode = false) }
 
         val themeMediaItems = moments.map { item ->

@@ -27,7 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -99,6 +99,7 @@ fun ThemeDetailsScreen(
                     theme = state.theme,
                     moments = state.moments,
                     playingIndex = playingIndex,
+                    isAudioPlaying = playerState.isPlaying,
                     bottomContentPadding = bottomContentPadding,
                     onBackClick = onBackClick,
                     onPlayTheme = onPlayTheme
@@ -113,6 +114,7 @@ private fun MomentsList(
     theme: Theme,
     moments: List<Moment>,
     playingIndex: Int,
+    isAudioPlaying: Boolean,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
     onPlayTheme: (List<Moment>, Int, String) -> Unit
@@ -145,12 +147,11 @@ private fun MomentsList(
 
         itemsIndexed(moments, key = { _, item -> item.id }) { index, momentAudio ->
             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                val isPlaying = index == playingIndex
-
                 MomentListItem(
                     index = index + 1,
                     item = momentAudio,
-                    isPlaying = isPlaying,
+                    isCurrent = index == playingIndex,
+                    isPlaying = isAudioPlaying,
                     onClick = { onPlayTheme(moments, index, theme.title) }
                 )
             }
@@ -162,7 +163,8 @@ private fun MomentsList(
 fun MomentListItem(
     index: Int,
     item: Moment,
-    isPlaying: Boolean,
+    isCurrent: Boolean,   // é o momento carregado no player (borda/realce)
+    isPlaying: Boolean,   // o áudio está tocando agora (pause vs play no ícone)
     onClick: () -> Unit
 ) {
     Card(
@@ -173,7 +175,7 @@ fun MomentListItem(
         // Fundo sempre branco
         colors = CardDefaults.cardColors(containerColor = Color.White),
         // Adiciona borda colorida apenas se estiver tocando
-        border = if (isPlaying) androidx.compose.foundation.BorderStroke(2.dp, Accent) else null,
+        border = if (isCurrent) androidx.compose.foundation.BorderStroke(2.dp, Accent) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -188,14 +190,14 @@ fun MomentListItem(
                     .size(36.dp)
                     .clip(CircleShape)
                     // Cor de fundo do número muda se estiver tocando
-                    .background(if (isPlaying) Accent else DeepBlueDark),
+                    .background(if (isCurrent) Accent else DeepBlueDark),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
                     // Cor do texto do número
-                    color = if (isPlaying) DeepBlueDark else Color.White,
+                    color = if (isCurrent) DeepBlueDark else Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -228,16 +230,14 @@ fun MomentListItem(
                     .size(48.dp)
                     .clip(CircleShape)
                     // Cor de fundo do Play muda se estiver tocando
-                    .background(if (isPlaying) Accent else DeepBlueDark.copy(alpha = 0.05f)),
+                    .background(if (isCurrent) Accent else DeepBlueDark.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
+                // ISSUE 9.C (contexto de Tema): padrão de mercado — momento atual tocando
+                // mostra PAUSE (toque pausa); pausado/outro momento mostram PLAY.
                 Icon(
-                    imageVector = if (isPlaying) {
-                        Icons.Default.Replay
-                    } else {
-                        Icons.Default.PlayArrow
-                    },
-                    contentDescription = if (isPlaying) "Reiniciar Versículo" else "Ouvir Versículo",
+                    imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isCurrent && isPlaying) "Pausar Versículo" else "Ouvir Versículo",
                     tint = DeepBlueDark
                 )
             }
@@ -365,6 +365,7 @@ private fun ThemeDetailsContent(
     theme: Theme,
     moments: List<Moment>,
     playingIndex: Int,
+    isAudioPlaying: Boolean,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
     onPlayTheme: (List<Moment>, Int, String) -> Unit
@@ -380,6 +381,7 @@ private fun ThemeDetailsContent(
             theme = theme,
             moments = moments,
             playingIndex = playingIndex,
+            isAudioPlaying = isAudioPlaying,
             bottomContentPadding = bottomContentPadding,
             onBackClick = onBackClick,
             onPlayTheme = onPlayTheme
@@ -433,6 +435,7 @@ private fun PreviewMomentListItem() {
             MomentListItem(
                 index = 1,
                 item = previewMomentsList().first(),
+                isCurrent = false,
                 isPlaying = false,
                 onClick = {}
             )
@@ -454,6 +457,7 @@ private fun PreviewThemeDetailsContent() {
             theme = previewThemeEntity(),
             moments = previewMomentsList(),
             playingIndex = 1,
+            isAudioPlaying = true,
             bottomContentPadding = 72.dp, // <-- SIMULA O PLAYER ABERTO
             onBackClick = {},
             onPlayTheme = { _, _, _ -> }
