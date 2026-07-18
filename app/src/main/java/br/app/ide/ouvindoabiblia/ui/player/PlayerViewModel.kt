@@ -261,6 +261,9 @@ class PlayerViewModel @Inject constructor(
                                 title = lastState.title,
                                 subtitle = lastState.subtitle.ifEmpty { "Continuar Ouvindo" },
                                 imageUrl = lastState.imageUrl ?: "",
+                                // ISSUE 9.B: capa 1:1 correta já no mini player restaurado,
+                                // antes de o controller conectar.
+                                isStudyMode = isStudyMediaId(lastState.mediaId),
                                 isPlaying = false, // Cold start é sempre pausado
                                 currentPosition = lastState.positionMs,
                                 // ISSUE 1.B: se a duração salva for desconhecida (0), NÃO usar 1L.
@@ -360,7 +363,7 @@ class PlayerViewModel @Inject constructor(
         val controller = mediaController ?: return
         if (!tryBeginSourceSwitch()) return
 
-        _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl) }
+        _uiState.update { it.copy(title = themeTitle, imageUrl = themeCoverUrl, isStudyMode = false) }
 
         val themeMediaItems = moments.map { item ->
             val moment = item
@@ -435,7 +438,7 @@ class PlayerViewModel @Inject constructor(
                 chapters = chapters
             )
 
-            _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl) }
+            _uiState.update { it.copy(title = bookTitle, imageUrl = coverUrl, isStudyMode = false) }
 
             ensureServiceStarted()
             controller.setMediaItems(playlist, initialIndex, 0L)
@@ -668,6 +671,7 @@ class PlayerViewModel @Inject constructor(
             val currentItem = player.currentMediaItem
             val meta = player.mediaMetadata
             val isTheme = MediaContentId.parse(currentItem?.mediaId.orEmpty()) is MediaContentId.ThemeMoment
+            val isStudy = isStudyMediaId(currentItem?.mediaId)
 
             // ISSUE 6.G: NÃO derivamos currentIsFavorite aqui. Este resync roda a cada evento do
             // player e lê o metadata do controller, que fica ANTIGO enquanto o replaceMediaItem do
@@ -692,7 +696,8 @@ class PlayerViewModel @Inject constructor(
                 playbackSpeed = player.playbackParameters.speed,
                 chapters = extractChaptersFromPlayer(player),
                 timeline = extractTimelineFromPlayer(player),
-                isThemeMode = isTheme
+                isThemeMode = isTheme,
+                isStudyMode = isStudy
                 // currentIsFavorite intencionalmente NÃO alterado aqui (ISSUE 6.G, ver acima).
             )
         }
@@ -994,7 +999,7 @@ class PlayerViewModel @Inject constructor(
         }
         // -------------------------------------------------------------
 
-        _uiState.update { it.copy(title = studyTitle, imageUrl = studyCoverUrl) }
+        _uiState.update { it.copy(title = studyTitle, imageUrl = studyCoverUrl, isStudyMode = true) }
 
         val studyMediaItems = lessons.map { lesson ->
             MediaItem.Builder()

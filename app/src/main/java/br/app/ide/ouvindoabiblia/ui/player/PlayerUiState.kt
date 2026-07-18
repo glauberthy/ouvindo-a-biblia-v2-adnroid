@@ -47,6 +47,13 @@ internal fun timelineItemFor(
     }
 }
 
+/**
+ * ISSUE 9.B — o item atual é uma aula de Estudo? Deriva do [MediaContentId] (mesma
+ * fonte do isThemeMode). Usado pela capa do player: Estudos têm arte 1:1; o resto, 7:10.
+ */
+fun isStudyMediaId(mediaId: String?): Boolean =
+    MediaContentId.parse(mediaId.orEmpty()) is MediaContentId.Study
+
 data class PlayerUiState(
     val title: String = "",
     val subtitle: String = "",
@@ -63,6 +70,8 @@ data class PlayerUiState(
     // Projeção de exibição para a folha de capítulos (Bíblia: números; Estudo: títulos).
     val timeline: List<PlayerTimelineItem> = emptyList(),
     val isThemeMode: Boolean = false,
+    // ISSUE 9.B: capa do player em 1:1 quando o conteúdo é Estudo (arte quadrada).
+    val isStudyMode: Boolean = false,
     val currentIsFavorite: Boolean = false,
     val isSwitchingSource: Boolean = false,
     // ISSUE PUB-02: erro de reprodução (URL 404/rede fora após os retries do ExoPlayer).

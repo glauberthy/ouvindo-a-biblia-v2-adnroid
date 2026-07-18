@@ -1,6 +1,7 @@
 package br.app.ide.ouvindoabiblia.ui.player
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +73,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 @Composable
 fun SharedPlayerScreen(
@@ -117,10 +119,18 @@ fun SharedPlayerScreen(
         val screenWidth = this.maxWidth
 
         // --- GEOMETRIA ---
+        // ISSUE 9.B: proporção da capa por tipo de conteúdo — Estudos usam arte quadrada
+        // (1:1); Bíblia/Temas, retrato (7:10). Animada para a troca de fonte não "pular",
+        // e com a largura compensada para a capa ocupar a MESMA área visual nos dois
+        // formatos (largura² · aspecto = const → quadrada fica ~78% da tela, retrato 65%).
+        val coverAspect by animateFloatAsState(
+            targetValue = if (uiState.isStudyMode) 1f else 0.7f,
+            label = "coverAspect"
+        )
         val miniHeight = 56.dp
-        val miniWidth = miniHeight * 0.7f
-        val fullWidth = screenWidth * 0.65f
-        val fullHeight = fullWidth / 0.7f
+        val miniWidth = miniHeight * coverAspect
+        val fullWidth = screenWidth * (0.65f * sqrt(coverAspect / 0.7f))
+        val fullHeight = fullWidth / coverAspect
 
         val currentWidth = lerp(miniWidth, fullWidth, expandProgress)
         val currentHeight = lerp(miniHeight, fullHeight, expandProgress)
