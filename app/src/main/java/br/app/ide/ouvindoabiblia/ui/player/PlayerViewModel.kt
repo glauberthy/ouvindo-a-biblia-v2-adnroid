@@ -188,7 +188,10 @@ class PlayerViewModel @Inject constructor(
         sourceSwitchUnlockJob?.cancel()
         sourceSwitchUnlockJob = viewModelScope.launch {
             delay(timeoutMs)
-            isSourceSwitchInFlight = false
+            // ISSUE 9.C (colateral da 6.G): o timeout precisa liberar TAMBÉM a UI.
+            // Antes só resetava o flag interno e uiState.isSwitchingSource ficava
+            // preso — controles desabilitados até uma troca de faixa "destravar".
+            finishSourceSwitch()
         }
         return true
     }
@@ -989,12 +992,20 @@ class PlayerViewModel @Inject constructor(
             controller.currentMediaItem?.mediaMetadata?.albumTitle?.toString() == studyTitle
 
         if (isPlayingStudyType && isSameStudy && controller.playbackState != Player.STATE_IDLE) {
-            // Se for o mesmo Estudo, mas clicou em uma Aula diferente
             if (controller.currentMediaItemIndex != startIndex) {
-                controller.seekToDefaultPosition(startIndex) // Pula pra aula certa
+                // Mesmo Estudo, aula diferente: pula pra ela (sem recarregar a playlist).
+                controller.seekToDefaultPosition(startIndex)
+                if (!controller.isPlaying) controller.play()
+            } else {
+                // ISSUE 9.C: toque na aula ATUAL = pausa/retoma (padrão de mercado).
+                // O antigo "replay" era no-op: este ramo nunca reiniciava a aula.
+                if (controller.isPlaying) controller.pause() else controller.play()
             }
-            if (!controller.isPlaying) controller.play() // Despausa se estiver pausado
 
+            // ISSUE 9.C: nada será recarregado, então nenhum evento de playback vai
+            // destravar o guard — sem esta chamada, isSwitchingSource ficava preso e a
+            // UI congelava em "carregando" (era o bug da seta de replay).
+            finishSourceSwitch()
             return // Cancela o recarregamento da playlist!
         }
         // -------------------------------------------------------------

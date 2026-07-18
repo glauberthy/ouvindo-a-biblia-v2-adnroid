@@ -28,7 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -104,6 +104,7 @@ fun StudyDetailsScreen(
                 StudyDetailsContent(
                     study = state.study,
                     playingIndex = playingIndex,
+                    isAudioPlaying = playerState.isPlaying,
                     bottomContentPadding = bottomContentPadding,
                     onBackClick = onBackClick,
                     onPlayStudy = onPlayStudy
@@ -117,6 +118,7 @@ fun StudyDetailsScreen(
 private fun StudyDetailsContent(
     study: Study,
     playingIndex: Int,
+    isAudioPlaying: Boolean,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
     onPlayStudy: (String, String, List<Lesson>, Int) -> Unit
@@ -130,6 +132,7 @@ private fun StudyDetailsContent(
             study = study,
             lessons = study.lessons,
             playingIndex = playingIndex,
+            isAudioPlaying = isAudioPlaying,
             bottomContentPadding = bottomContentPadding,
             onBackClick = onBackClick,
             onPlayStudy = onPlayStudy
@@ -142,6 +145,7 @@ private fun LessonsList(
     study: Study,
     lessons: List<Lesson>,
     playingIndex: Int,
+    isAudioPlaying: Boolean,
     bottomContentPadding: Dp,
     onBackClick: () -> Unit,
     onPlayStudy: (String, String, List<Lesson>, Int) -> Unit
@@ -171,12 +175,11 @@ private fun LessonsList(
 
         itemsIndexed(lessons, key = { _, item -> item.localId }) { index, lesson ->
             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                val isPlaying = index == playingIndex
-
                 LessonListItem(
                     index = index + 1,
                     lesson = lesson,
-                    isPlaying = isPlaying,
+                    isCurrent = index == playingIndex,
+                    isPlaying = isAudioPlaying,
                     onClick = { onPlayStudy(study.title, study.imageUrl, lessons, index) }
                 )
             }
@@ -188,7 +191,8 @@ private fun LessonsList(
 fun LessonListItem(
     index: Int,
     lesson: Lesson,
-    isPlaying: Boolean,
+    isCurrent: Boolean,   // é a aula carregada no player (borda/realce)
+    isPlaying: Boolean,   // o áudio está tocando agora (pause vs play no ícone)
     onClick: () -> Unit
 ) {
     Card(
@@ -197,7 +201,7 @@ fun LessonListItem(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = if (isPlaying) BorderStroke(2.dp, Accent) else null,
+        border = if (isCurrent) BorderStroke(2.dp, Accent) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -210,13 +214,13 @@ fun LessonListItem(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isPlaying) Accent else DeepBlueDark),
+                    .background(if (isCurrent) Accent else DeepBlueDark),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (isPlaying) DeepBlueDark else Color.White,
+                    color = if (isCurrent) DeepBlueDark else Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -267,12 +271,15 @@ fun LessonListItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (isPlaying) Accent else DeepBlueDark.copy(alpha = 0.05f)),
+                    .background(if (isCurrent) Accent else DeepBlueDark.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Default.Replay else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Reiniciar Estudo" else "Ouvir Estudo",
+                    // ISSUE 9.C: padrão de mercado — aula atual tocando mostra PAUSE
+                    // (toque pausa); atual pausada ou outra aula mostram PLAY (toque
+                    // retoma/troca). O antigo Replay prometia "reiniciar" e era no-op.
+                    imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isCurrent && isPlaying) "Pausar aula" else "Ouvir aula",
                     tint = DeepBlueDark
                 )
             }
@@ -494,6 +501,7 @@ private fun PreviewLessonListItem() {
             LessonListItem(
                 index = 1,
                 lesson = previewLessonsList().first(),
+                isCurrent = false,
                 isPlaying = false,
                 onClick = {}
             )
@@ -514,6 +522,7 @@ private fun PreviewStudyDetailsContent() {
         StudyDetailsContent(
             study = previewStudyWithLessons(),
             playingIndex = 1,
+            isAudioPlaying = true,
             bottomContentPadding = 72.dp, // Simula o player aberto
             onBackClick = {},
             onPlayStudy = { _, _, _, _ -> }
