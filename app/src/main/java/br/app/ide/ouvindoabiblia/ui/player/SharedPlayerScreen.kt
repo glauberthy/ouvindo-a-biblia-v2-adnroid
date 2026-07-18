@@ -136,11 +136,12 @@ fun SharedPlayerScreen(
         val currentWidth = lerp(miniWidth, fullWidth, expandProgress)
         val currentHeight = lerp(miniHeight, fullHeight, expandProgress)
 
-        // ISSUE 9.E: corners concêntricos no mini — a barra tem raio 16dp e side padding de
-        // 8dp (MainScreen), então folga uniforme de 4dp nos 4 lados exige a capa em x=12dp
-        // (8+4) e raio interno = 16−4 = 12dp (regra: raio interno = raio externo − folga).
-        // O y=4dp já dava a folga vertical (barra 64dp − capa 56dp).
-        val imageStartX = 12.dp
+        // ISSUE 9.E: corners concêntricos no mini — folga uniforme de 4dp nos 4 lados e raio
+        // interno = 16−4 = 12dp (regra: raio interno = raio externo − folga). ATENÇÃO: este X
+        // é relativo ao CONTEÚDO da barra (o Surface do MainScreen já entra 8dp da tela), então
+        // folga de 4dp = 4dp aqui, não 12dp (1ª versão errou isso e ficava assimétrico com o
+        // y=4dp — medido em device: ~10dp à esquerda vs 4dp vertical).
+        val imageStartX = 4.dp
         val imageEndX = (screenWidth - fullWidth) / 2
         val currentX = lerp(imageStartX, imageEndX, expandProgress)
 
@@ -453,7 +454,7 @@ fun SharedPlayerScreen(
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
-                        .padding(start = 12.dp + miniWidth + 12.dp, end = 8.dp),
+                        .padding(start = 4.dp + miniWidth + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(
