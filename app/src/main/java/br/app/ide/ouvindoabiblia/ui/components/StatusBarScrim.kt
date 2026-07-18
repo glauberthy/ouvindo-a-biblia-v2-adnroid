@@ -24,20 +24,20 @@ import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
  * imagens ficam limpas (sem mancha nos thumbs/cards) e o ajuste fino mora aqui, num
  * lugar só, valendo para QUALQUER imagem.
  *
- * Curva: smoothstep (7 stops) do pico 0.80 até 0 — easing contínuo, sem as "dobras"
- * visíveis de um gradiente de poucos stops lineares. Com alpha 0.80 sobre imagem
- * PRETA, o fundo atrás dos ícones fica com luminância ~185 (creme) — ícones escuros
- * sempre legíveis; sobre imagem clara o véu praticamente desaparece.
+ * Curva: smootherstep (quíntica, 11 stops) do pico 0.72 até 0 — ainda mais plana nas
+ * pontas que a smoothstep, sem as "dobras" de um gradiente de poucos stops lineares.
+ * Com alpha 0.72 sobre imagem PRETA, o fundo atrás dos ícones fica com luminância
+ * ~168 (creme) — ícones escuros legíveis; sobre imagem clara o véu desaparece.
  */
 @Composable
 fun StatusBarScrim(modifier: Modifier = Modifier) {
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    // alpha(t) = PICO × (1 − smoothstep(t)) — derivada zero nas duas pontas, então o
-    // véu "nasce" e "morre" sem degrau perceptível.
+    // alpha(t) = PICO × (1 − smootherstep(t)) — 1ª e 2ª derivadas zero nas pontas,
+    // então o véu "nasce" e "morre" sem nenhum degrau perceptível.
     val stops = (0..STOP_COUNT).map { i ->
         val t = i / STOP_COUNT.toFloat()
-        val eased = t * t * (3f - 2f * t) // smoothstep
+        val eased = t * t * t * (t * (t * 6f - 15f) + 10f) // smootherstep
         t to CreamBackground.copy(alpha = PEAK_ALPHA * (1f - eased))
     }.toTypedArray()
 
@@ -49,6 +49,6 @@ fun StatusBarScrim(modifier: Modifier = Modifier) {
     )
 }
 
-private const val PEAK_ALPHA = 0.80f
-private const val STOP_COUNT = 6
-private val FADE_TAIL = 36.dp
+private const val PEAK_ALPHA = 0.72f
+private const val STOP_COUNT = 10
+private val FADE_TAIL = 56.dp
