@@ -832,7 +832,20 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
   bumps de schema NÃO precisam de migração (o device de dev limpa dados). A 9→10 fica porque já
   estava pronta/validada e sustenta o `MigrationTest`.
 
-<!-- plano original abaixo -->
+### ISSUE 9.B — ✅ FEITA (2026-07-18, commit `4bf2c9c`) — Capa 1:1 no player para Estudos
+
+- **Pedido do dono:** no full player, Estudo deve exibir a capa em 1:1 (arte quadrada), não 7:10.
+- **Feito:** `PlayerUiState.isStudyMode` derivado do `MediaContentId` (helper puro
+  `isStudyMediaId`, mesmo padrão do `isThemeMode`), escrito em `syncStateWithController`, no
+  restore do cold start (mini restaurado já nasce com a forma certa) e nos 3 plays otimistas.
+  Geometria da capa em `SharedPlayerScreen` com `coverAspect` **animado**
+  (`animateFloatAsState`: troca de fonte faz morph, não salto) e **largura compensada** para
+  área visual constante (quadrada ≈78% da tela, retrato 65%); o mini player acompanha
+  (56dp quadrado) e o conteúdo abaixo reposiciona sozinho (já derivava de `fullHeight`).
+- **Validação:** `IsStudyMediaIdTest`; no release (moto g53): Estudo 1:1 inteiro (sem crop
+  lateral), Bíblia mantém 7:10. **Esforço:** P.
+
+<!-- plano original da 9.A abaixo -->
 ### (plano original) ISSUE 9.A — Descrição por AULA de estudo (novo campo `description` no `estudos.json`)
 
 - **Contexto:** o servidor passou a mandar `description` dentro de cada item de `audios[]` no
@@ -905,8 +918,9 @@ Cast entra quando você tiver uma TV pra testar.
 
 **FASE 7 (código morto):** `7.E ✅ → 7.C ✅ → 7.B ✅ → 7.A ✅ → 7.D ✅`. **FASE 7 CONCLUÍDA (2026-07-16).**
 
-**FASE 9 (features de conteúdo):** `9.A ✅` (2026-07-18, commit `1af30dd`) — descrição por aula
+**FASE 9 (features de conteúdo):** `9.A ✅` (2026-07-18, `1af30dd`) — descrição por aula
 implementada+testada; visual no device destrava com o bump de `meta.version` do `estudos.json`.
+`9.B ✅` (2026-07-18, `4bf2c9c`) — capa 1:1 no player para Estudos (validada no release).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
