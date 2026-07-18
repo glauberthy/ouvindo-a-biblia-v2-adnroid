@@ -790,10 +790,11 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
   AAB novo (chave 2048-bit, PUB-01 ✅) + um **APK assinado com a chave LEGADA de 2013**
   (o dono tem as duas). É o passo mais incerto da publicação. **Plano B aceito:** app novo.
 
-### 🟡 CORRIGIR ANTES — Conteúdo no servidor · 🧑 · ⏳ PENDENTE
-- **Placeholders de Estudos:** `estudos.json` usa imagens de `randomuser.me` (e host quebrado) —
-  usuários finais veriam os placeholders no app publicado. Trocar por imagens reais no servidor;
-  depois **recapturar o screenshot `04_estudos`** e subir na ficha.
+### 🟡 CORRIGIR ANTES — Conteúdo no servidor · 🧑 · 🔶 QUASE
+- **Placeholders de Estudos:** ✅ RESOLVIDO no servidor (confirmado no device em 2026-07-18: capas
+  reais de "Estudos Expositivos em Apocalipse" e "Quarentena em Jó" no `estudos.json`).
+  Falta: **recapturar o screenshot `04_estudos`** e subir na ficha (sugestão: depois do bump de
+  `meta.version` da 9.A, para a captura já sair com as descrições das aulas).
 
 ### 🟢 PODE ESPERAR — backlog pós-launch (não bloqueia)
 - **PUB-30** 🤖 Stripar `Log` no release (`-assumenosideeffects`) / rebaixar `Log.i` de lifecycle. *(Audit 03 §5)*
@@ -815,7 +816,24 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 
 ## FASE 9 — Features de conteúdo (aberta 2026-07-18)
 
-### ISSUE 9.A — 🔲 Descrição por AULA de estudo (novo campo `description` no `estudos.json`)
+### ISSUE 9.A — ✅ FEITA (2026-07-18, commit `1af30dd`) — Descrição por AULA de estudo
+
+- **Resultado:** cadeia completa implementada conforme o plano abaixo (DTO nullable → entity +
+  Room 9→10 c/ `MIGRATION_9_10` → `updateStudyLessonMetadata` → domínio/mapper → `LessonListItem`
+  recolhida em 2 linhas + expand no toque; null/blank não renderiza). Testes: `StudyDtoParseTest`,
+  `MigrationTest` 9→10, `StudyLessonRefreshTest` (update preenche description preservando favorito),
+  `VisibleLessonDescriptionTest`. Instrumentados verdes no moto g53; release instalado por cima
+  migrou 9→10 sobre dados reais sem crash.
+- **⏳ Validação visual pendente do GATE:** o device já tinha sincronizado a `0.0.21` com o app
+  antigo → o version-gate pula o sync e as descrições ficam NULL. Falta o dono **bumpar o
+  `meta.version` do `estudos.json`** (ex.: 0.0.22); na visita seguinte à aba Estudos o update
+  preenche e a UI mostra (caminho provado por teste).
+- **Nota de política (dono, 2026-07-18):** enquanto o app não estiver na loja/testadores, novos
+  bumps de schema NÃO precisam de migração (o device de dev limpa dados). A 9→10 fica porque já
+  estava pronta/validada e sustenta o `MigrationTest`.
+
+<!-- plano original abaixo -->
+### (plano original) ISSUE 9.A — Descrição por AULA de estudo (novo campo `description` no `estudos.json`)
 
 - **Contexto:** o servidor passou a mandar `description` dentro de cada item de `audios[]` no
   `estudos.json` (texto longo, ex.: "Aula introdutória que estabelece os fundamentos…"). Hoje o
@@ -887,8 +905,8 @@ Cast entra quando você tiver uma TV pra testar.
 
 **FASE 7 (código morto):** `7.E ✅ → 7.C ✅ → 7.B ✅ → 7.A ✅ → 7.D ✅`. **FASE 7 CONCLUÍDA (2026-07-16).**
 
-**FASE 9 (features de conteúdo):** 🔲 ABERTA (2026-07-18) — `9.A` descrição por aula de estudo
-(campo novo `description` em `audios[]` do `estudos.json`; DTO→Room 9→10→domínio→UI).
+**FASE 9 (features de conteúdo):** `9.A ✅` (2026-07-18, commit `1af30dd`) — descrição por aula
+implementada+testada; visual no device destrava com o bump de `meta.version` do `estudos.json`.
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
