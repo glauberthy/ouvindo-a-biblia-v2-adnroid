@@ -82,13 +82,16 @@ reconfirmar a linha exata ao pegar cada issue.
     (singleton com UA+cache). Achado: extração já funcionava (CDN não exige UA); ganho = cache/perf.
   - ✅ **6.D/6.E** (BAIXA, FEITAS 2026-07-15) — Home vazio→Error com Retry (era Loading eterno);
     `syncMoreContent` com version-gating via `dao.get()?.version`.
-  - 🔲 **6.F** (RISCO) — risco condicional de migração Room < 8 (só investigação).
+  - ✅ **6.F** (FECHADA 2026-07-16, sem código) — nenhuma base Room < 8 no mundo real (ver seção).
   - ✅ **6.G** (MÉDIA, user-facing, FEITA 2026-07-15) — coração de favorito. Eram 2 bugs (metadata do
     controller como falsa fonte de verdade): (1) `syncStateWithController` revertia o otimista;
     (2) `toggleFavorite` lia `oldStatus` do metadata → nunca desfavoritava. Fix: `currentIsFavorite`
     (DB-backed) vira a fonte única. Validado no device (favorita/desfavorita alternando).
-  - 🔲 **FASE 7** — código morto confirmado por grep (clipping da Bíblia, `repeatMode`, shuffle,
-    `artist`, destinos de navegação órfãos, queries de DAO e DTO não usados).
+  - ✅ **FASE 7 CONCLUÍDA (2026-07-16)** — código morto removido (7.A–7.E; ver seções).
+- 🆕 **2 bugs de uso real corrigidos (2026-07-17):** BUG A cold start lento → cache-first +
+  GET condicional 304 (commit `09f7094`); BUG B notificação-fantasma de sessão restaurada
+  nunca tocada → gate em `onUpdateNotification` (commit `62e8e54`). Ambos validados no
+  device em debug e no release ofuscado.
 
 ---
 
@@ -761,21 +764,30 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-15 · StrictMode / ANR** *(Audit 02 T5)* — debug + `adb logcat | grep StrictMode`; sem I/O na main; sem ANR.
 - **PUB-16 · Android 8 (API 26)** *(Audit 02 T6)* — smoke em aparelho antigo: notificação+FGS sem `NoSuchMethodError`/`VerifyError`.
 
-### 🔴 BLOQUEIA — Console / Documentos · 🧑 MANUAL (Claude Code não faz; começar já, em paralelo)
-- **PUB-20 · Política de Privacidade** *(Audit 04 §1)* — obrigatória mesmo sem coleta. 📝 RASCUNHO
-  PRONTO em `docs/POLITICA_DE_PRIVACIDADE.md` (fiel ao app; placeholders `[...]`). Falta o dono:
-  preencher, confirmar "logs do servidor", hospedar URL e informar no Console. Pode linkar na tela
-  "Mais" via JSON (sem código).
-- **PUB-21 · Data Safety form** *(Audit 04 §2)* — provável "nenhum dado coletado" (só IP+UA);
-  **confirmar se o servidor grava logs de IP**; marcar "criptografado em trânsito: sim".
-- **PUB-22 · Content Rating (IARC)** *(Audit 04 §3)* — questionário → provável "Livre".
-- **PUB-23 · Declaração de Foreground Service** *(Audit 04 §4)* — Android 14+: descrição + caso de uso +
-  **vídeo demo** (tocar → apagar tela → áudio segue). Código pronto; vídeo gravado com o app assinado.
-- **PUB-24 · Assets da ficha** *(Audit 04 §5)* — 📝 TEXTOS RASCUNHADOS em `docs/FICHA_PLAY_STORE.md`
-  (título, descrição curta/longa, categoria, tags, content rating). Falta o dono: produzir os
-  **assets gráficos** (ícone 512², feature graphic 1024×500, screenshots de celular) e revisar/colar
-  os textos no Console + e-mail de contato.
-- **PUB-25 · Declarar sem login/compras/anúncios** *(Audit 04 §6)* — N/A no código; só marcar "não".
+### 🔴 BLOQUEIA — Console / Documentos · 🧑 MANUAL (estado real confirmado pelo dono em 2026-07-18)
+- **PUB-20 · Política de Privacidade** · ✅ FEITA — hospedada em
+  `https://ouvindo-a-biblia.ide.app.br/politica.html` e informada no Console.
+- **PUB-21 · Data Safety form** · ✅ FEITA — "nenhuma coleta de dados", criptografado em trânsito.
+  *(Era o que derrubou o app em mai/2024 — resolvido.)*
+- **PUB-22 · Content Rating (IARC)** · ✅ FEITA — classificação "Livre"/L (herdada).
+- **PUB-23 · Declaração de Foreground Service** · ⏳ PENDENTE — Android 14+: descrição + caso de uso +
+  **vídeo demo** (tocar → apagar tela → áudio segue com controles na notificação). Código pronto;
+  gravar o vídeo com o app assinado. **Obrigatório, sem atalho.**
+- **PUB-24 · Assets da ficha** · ✅ FEITA (textos + imagens no Console) — EXCETO o screenshot
+  `04_estudos`, bloqueado pelos placeholders de Estudos (ver 🟡 abaixo).
+- **PUB-25 · Declarar sem login/compras/anúncios** · ✅ FEITA — declarado no Console.
+- **Conteúdo do app (Console):** as 6 declarações concluídas — "Tudo em dia". ✅
+
+### 🔴 BLOQUEIA — "Novela da chave" (Play App Signing, app legado) · 🧑 · ⏳ PENDENTE
+- App legado sem App Signing + keystore antiga **1024-bit** (2013), obsoleta. Na tela
+  "Assinatura de apps" do Console, caminho: **"usar nova chave (versões duplas)"** — exige o
+  AAB novo (chave 2048-bit, PUB-01 ✅) + um **APK assinado com a chave LEGADA de 2013**
+  (o dono tem as duas). É o passo mais incerto da publicação. **Plano B aceito:** app novo.
+
+### 🟡 CORRIGIR ANTES — Conteúdo no servidor · 🧑 · ⏳ PENDENTE
+- **Placeholders de Estudos:** `estudos.json` usa imagens de `randomuser.me` (e host quebrado) —
+  usuários finais veriam os placeholders no app publicado. Trocar por imagens reais no servidor;
+  depois **recapturar o screenshot `04_estudos`** e subir na ficha.
 
 ### 🟢 PODE ESPERAR — backlog pós-launch (não bloqueia)
 - **PUB-30** 🤖 Stripar `Log` no release (`-assumenosideeffects`) / rebaixar `Log.i` de lifecycle. *(Audit 03 §5)*
@@ -786,8 +798,11 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-35** 🤖 "Optimize Imports" antes do tag de release. *(Audit 03 §1)*
 - **Operacional:** incrementar `versionCode` a cada upload. *(Audit 01 §5)*
 
-**Go/No-Go:** GO quando todos os 🔴 (PUB-01, PUB-20..25) e 🟡 (PUB-02/03/04, PUB-10..16) estiverem
-✅ ou aceitos. Os 🟢 ficam para depois. Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
+**Go/No-Go (estado real 2026-07-18):** código ✅ pronto e assinado; formulários do Console ✅
+feitos. O que separa de publicar: (1) **vídeo do FGS** (PUB-23), (2) **novela da chave**
+(Play App Signing legado), (3) **placeholders de Estudos** no servidor + recaptura do
+`04_estudos`, (4) repassar no release assinado os testes **PUB-11/12/13/16** (11/12/13 já
+validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 
 ---
 
@@ -820,9 +835,11 @@ Cast entra quando você tiver uma TV pra testar.
 
 **FASE 7 (código morto):** `7.E ✅ → 7.C ✅ → 7.B ✅ → 7.A ✅ → 7.D ✅`. **FASE 7 CONCLUÍDA (2026-07-16).**
 
-**FASE 8 (publicação Play Store):** 🔲 ABERTA (2026-07-16) — `PUB-01` (assinatura) → `PUB-02/03/04`
-(código) → `PUB-10..16` (testes no release); em paralelo `PUB-20..25` (Console/manual). Go/No-Go e
-detalhes na seção FASE 8 acima e em `docs/archive/CHECKLIST_PUBLICACAO.md`.
+**FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
+quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
+**PUB-23** (vídeo FGS), **novela da chave** (Play App Signing legado 1024-bit → dupla assinatura),
+placeholders de Estudos no servidor (+ recaptura `04_estudos`) e testes no release
+**PUB-11/12/13/16**. Detalhes na seção FASE 8 acima.
 
 **FASES 0→7 CONCLUÍDAS; FASE 8 (publicação) ABERTA.** Backlog residual só-quando-religar: Cast (§6.1-6.4, abaixo),
 persistência estilo-Spotify (conflita c/ 4.A), validar Auto em DHU, busca por voz no Auto, 35 typos
