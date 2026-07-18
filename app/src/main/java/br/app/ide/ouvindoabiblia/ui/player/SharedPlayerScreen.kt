@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -135,7 +136,11 @@ fun SharedPlayerScreen(
         val currentWidth = lerp(miniWidth, fullWidth, expandProgress)
         val currentHeight = lerp(miniHeight, fullHeight, expandProgress)
 
-        val imageStartX = 16.dp
+        // ISSUE 9.E: corners concêntricos no mini — a barra tem raio 16dp e side padding de
+        // 8dp (MainScreen), então folga uniforme de 4dp nos 4 lados exige a capa em x=12dp
+        // (8+4) e raio interno = 16−4 = 12dp (regra: raio interno = raio externo − folga).
+        // O y=4dp já dava a folga vertical (barra 64dp − capa 56dp).
+        val imageStartX = 12.dp
         val imageEndX = (screenWidth - fullWidth) / 2
         val currentX = lerp(imageStartX, imageEndX, expandProgress)
 
@@ -143,7 +148,8 @@ fun SharedPlayerScreen(
         val imageEndY = 100.dp
         val currentY = lerp(imageStartY, imageEndY, expandProgress)
 
-        val imageCorner = lerp(4.dp, 12.dp, expandProgress)
+        // 12dp no mini (9.E) e 12dp no full — o antigo lerp(4→12) virou constante.
+        val imageCorner = 12.dp
         val imageShadow = lerp(2.dp, 16.dp, expandProgress)
 
         // Cores
@@ -447,7 +453,7 @@ fun SharedPlayerScreen(
                         .fillMaxWidth()
                         .height(64.dp)
                         .alpha(miniAlpha)
-                        .padding(start = 16.dp + miniWidth + 12.dp, end = 8.dp),
+                        .padding(start = 12.dp + miniWidth + 12.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(
@@ -518,6 +524,28 @@ fun SharedPlayerScreen(
                             tint = miniContentColor
                         )
                     }
+                }
+
+                // ISSUE 9.D: progresso SÓ-LEITURA no mini player — linha fina rente à borda
+                // inferior da barra (padrão Spotify/YT Music). Sem gesto algum: seek é só no
+                // full player. O Surface do MainScreen (RoundedCornerShape 16dp) clipa as
+                // pontas; some junto com o mini via miniAlpha.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .alpha(miniAlpha)
+                        .background(miniContentColor.copy(alpha = 0.15f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(
+                                miniProgressFraction(uiState.currentPosition, uiState.duration)
+                            )
+                            .background(miniContentColor.copy(alpha = 0.85f))
+                    )
                 }
             }
         }
@@ -596,6 +624,15 @@ fun SharedPlayerScreen(
  */
 internal fun sliderProgressValueMs(currentPositionMs: Long, durationMs: Long): Float =
     if (durationMs > 0) currentPositionMs.toFloat() else 0f
+
+/**
+ * Fração (0f..1f) do progresso exibido no mini player (ISSUE 9.D, só-leitura).
+ * Mesma guarda da 1.B: duração desconhecida (<= 0) → 0f — nunca a barra cheia
+ * falsa do cold start.
+ */
+internal fun miniProgressFraction(currentPositionMs: Long, durationMs: Long): Float =
+    if (durationMs <= 0L) 0f
+    else (currentPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
 
 @Composable
 fun PlayerProgressBar(
