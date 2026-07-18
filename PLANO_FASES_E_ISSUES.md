@@ -775,9 +775,10 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-21 · Data Safety form** · ✅ FEITA (2026-07-18) — "nenhuma coleta de dados", criptografado em trânsito.
   *(Era o que derrubou o app em mai/2024 — resolvido.)*
 - **PUB-22 · Content Rating (IARC)** · ✅ FEITA (2026-07-18) — classificação "Livre"/L (herdada).
-- **PUB-23 · Declaração de Foreground Service** · ⏳ PENDENTE — Android 14+: descrição + caso de uso +
-  **vídeo demo** (tocar → apagar tela → áudio segue com controles na notificação). Código pronto;
-  gravar o vídeo com o app assinado. **Obrigatório, sem atalho.**
+- **PUB-23 · Declaração de Foreground Service** · 🔶 VÍDEO GRAVADO (2026-07-18) — o dono gravou
+  manualmente (com som e tela apagada; a via `adb screenrecord` foi tentada e descartada: não
+  capta áudio e para quando a tela apaga). Falta: enviar descrição + caso de uso + o vídeo no
+  Console. Código pronto.
 - **PUB-24 · Assets da ficha** · ✅ FEITA (2026-07-18; textos + imagens no Console) — EXCETO o screenshot
   `04_estudos`, bloqueado pelos placeholders de Estudos (ver 🟡 abaixo).
 - **PUB-25 · Declarar sem login/compras/anúncios** · ✅ FEITA (2026-07-18) — declarado no Console.
@@ -804,7 +805,8 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **Operacional:** incrementar `versionCode` a cada upload. *(Audit 01 §5)*
 
 **Go/No-Go (estado real 2026-07-18):** código ✅ pronto e assinado; formulários do Console ✅
-feitos. O que separa de publicar: (1) **vídeo do FGS** (PUB-23), (2) **novela da chave**
+feitos. O que separa de publicar: (1) **enviar a declaração FGS + vídeo no Console** (PUB-23;
+vídeo já gravado manualmente em 2026-07-18), (2) **novela da chave**
 (Play App Signing legado), (3) **placeholders de Estudos** no servidor + recaptura do
 `04_estudos`, (4) repassar no release assinado os testes **PUB-11/12/13/16** (11/12/13 já
 validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
