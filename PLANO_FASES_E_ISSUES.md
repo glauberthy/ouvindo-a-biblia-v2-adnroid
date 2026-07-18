@@ -1080,6 +1080,8 @@ vivo no device (meta.version bumpado; descrições no ar).
 mini + corners concêntricos da capa (folga 4dp, raio 12dp). Validadas juntas no release.
 `9.F ✅` (2026-07-18) — capas em retrato (0.7) na sheet "Direitos das capas e imagens";
 pessoas/fontes seguem 1:1. Validada no release.
+Micro-ajustes ✅ (2026-07-18): 9.C estendida a Temas (`629c797`); imagem do card de Temas
+alinhada ao topo como em Estudos (style).
 
 **FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
