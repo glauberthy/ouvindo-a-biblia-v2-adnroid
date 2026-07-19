@@ -24,11 +24,11 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "ag.uny.ouvindoabiblia"
+        applicationId = "br.app.ide.ouvindoabiblia"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "3.0"
+        versionCode = 1
+        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
