@@ -27,41 +27,95 @@ private val LightColors = lightColorScheme(
     background = CreamBackground,   // O fundo Creme (Isabella)
     onBackground = DeepBlueDark,    // Texto sobre o fundo
 
-    surface = CreamBackground,      // Superfícies (Cards, BottomBar no modo padrão)
+    surface = CardSurface,          // Superfície de card (quase branco, acima do creme)
     onSurface = DeepBlueDark,
 
     surfaceVariant = Color(0xFFEBE0DB), // Um pouco mais escuro que o creme para variações
-    onSurfaceVariant = SlateBlue,       // Texto secundário
+    onSurfaceVariant = SlateBlue,       // Texto de apoio (6,79:1 no creme — passa AA)
+
+    outline = RosyBeige,            // Bordas sutis dos cards
 
     error = ErrorRed
 )
 
-// 2. Esquema de cores ESCURO (Azul Profundo Sofisticado)
+// 2. Esquema de cores ESCURO
+//
+// Antes este esquema usava surface == background (card sem separação do fundo) e
+// SlateBlue como card, o que clareava demais. Agora usa a paleta Dark* do Color.kt,
+// com contraste medido — ver comentários lá.
 private val DarkColors = darkColorScheme(
-    primary = CreamBackground,      // Texto principal (Creme sobre escuro)
-    onPrimary = DeepBlueDark,
+    primary = DarkTextPrimary,
+    onPrimary = DarkBackground,
 
     primaryContainer = SlateBlue,
-    onPrimaryContainer = CreamBackground,
+    onPrimaryContainer = DarkTextPrimary,
 
-    secondary = RosyBeige,
-    onSecondary = DeepBlueDark,
+    secondary = DarkTextSecondary,
+    onSecondary = DarkBackground,
 
-    background = DeepBlueDark,      // O fundo Azul Profundo
-    onBackground = CreamBackground,
+    tertiary = DarkOutline,
 
-    surface = DeepBlueDark,         // Superfícies alinhadas ao fundo
-    onSurface = CreamBackground,
+    background = DarkBackground,
+    onBackground = DarkTextPrimary,
 
-    surfaceVariant = SlateBlue,     // Cards mais claros que o fundo
-    onSurfaceVariant = LavenderGray, // Texto secundário (Lavanda)
+    surface = DarkCardSurface,
+    onSurface = DarkTextPrimary,
+
+    surfaceVariant = DarkCardSurface,
+    onSurfaceVariant = DarkTextSecondary,
+
+    outline = DarkOutline,
 
     error = ErrorRed
 )
+
+/**
+ * Camada semântica de cor.
+ *
+ * As telas foram escritas referenciando cores concretas (`CreamBackground`,
+ * `DeepBlueDark`, …), que são `val` de topo e portanto não reagem ao tema — é por isso
+ * que o modo escuro não funcionava, mesmo com [DarkColors] existindo. Estes getters são
+ * `@Composable`, então resolvem do esquema ativo em tempo de composição.
+ *
+ * Regra ao migrar uma tela: use estes tokens para o que é PÁGINA (fundo, card, texto,
+ * borda) e os tokens de marca ([BrandNavy]/[OnBrandNavy]) para o que é escuro nos dois
+ * temas (bottom bar e player). Trocar um pelo outro inverte a tela.
+ */
+object AppColors {
+    /** Fundo da página. */
+    val background: Color
+        @Composable get() = MaterialTheme.colorScheme.background
+
+    /** Superfície de card/sheet sobre o fundo. */
+    val card: Color
+        @Composable get() = MaterialTheme.colorScheme.surface
+
+    /** Texto e ícones principais sobre fundo/card. */
+    val textPrimary: Color
+        @Composable get() = MaterialTheme.colorScheme.onBackground
+
+    /** Texto de apoio (descrições, legendas). */
+    val textSecondary: Color
+        @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+    /** Bordas e divisores sutis. */
+    val outline: Color
+        @Composable get() = MaterialTheme.colorScheme.outline
+}
+
+/**
+ * Interruptor do tema escuro.
+ *
+ * Fica **desligado** até TODAS as telas lerem cor via [AppColors]/tokens de marca. Um app
+ * meio-escuro e meio-creme é pior para o usuário do que um app só-claro — e hoje a maior
+ * parte das telas ainda referencia as cores claras direto. Ligar antes de concluir a
+ * migração entrega telas invertidas.
+ */
+const val DARK_THEME_ENABLED = false
 
 @Composable
 fun OuvindoABibliaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = DARK_THEME_ENABLED && isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     // Seleção do esquema de cores

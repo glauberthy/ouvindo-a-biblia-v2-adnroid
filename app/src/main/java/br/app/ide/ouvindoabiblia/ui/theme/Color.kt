@@ -15,6 +15,30 @@ val ErrorRed = Color(0xFFEF5466)        // Cor de erro
 // como Color(0xFFFFFCFA) em 5 telas — mudar a identidade exigia editar 5 arquivos.
 val CardSurface = Color(0xFFFFFCFA)
 
+// ---------------------------------------------------------------------------
+// Paleta ESCURA
+//
+// Não é cinza/preto genérico: mantém a identidade quente do app (papel antigo +
+// azul profundo + ouro). Preto puro é evitado de propósito, como o M3 recomenda.
+// Contraste medido (WCAG): texto primário 14,3:1 no fundo e 12,9:1 no card; texto
+// secundário 6,98:1; ouro 10,7:1 — todos acima do mínimo de 4,5:1 para texto.
+// ---------------------------------------------------------------------------
+val DarkBackground = Color(0xFF17161F)   // Fundo: quase-preto levemente azulado/quente
+val DarkCardSurface = Color(0xFF221F2C)  // Card: um degrau acima do fundo
+val DarkTextPrimary = Color(0xFFEDE4DE)  // Creme esmaecido (não branco puro)
+val DarkTextSecondary = Color(0xFFB3A7B1) // Lavanda clara
+val DarkOutline = Color(0xFF423C50)      // Bordas sutis
+
+// ---------------------------------------------------------------------------
+// Cores de MARCA — invariantes ao tema
+//
+// A barra de navegação e o player são escuros nos DOIS temas, por design. Se essas
+// superfícies lessem o color scheme, elas clareariam no tema escuro e inverteriam a
+// identidade do app. Por isso têm token próprio, fora do esquema de cores.
+// ---------------------------------------------------------------------------
+val BrandNavy = Color(0xFF22223B)      // Fundo da bottom bar e do player
+val OnBrandNavy = Color(0xFFF2E9E4)    // Texto/ícones sobre o BrandNavy
+
 val Accent = Color(0xFFE9C46A)        // Ouro Saffron
 val Accent2 = Color(0xFFEF5466)
 //val Accent = Color(0xFF81B29A)        // Menta Luminosa

@@ -32,9 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 
 /**
  * Sublista de "Direitos e licenças" — privacidade, créditos de áudio/imagens e licenças
@@ -76,7 +75,7 @@ fun MoreRightsGroupRoute(
                 ModalBottomSheet(
                     onDismissRequest = { selectedMenuItem = null },
                     sheetState = sheetState,
-                    containerColor = CreamBackground
+                    containerColor = AppColors.background
                 ) {
                     MoreSectionSheetContent(
                         item = item,
@@ -108,7 +107,7 @@ private fun MoreRightsGroupBody(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(AppColors.background),
         contentPadding = PaddingValues(
             top = 24.dp,
             bottom = resolvedBottomPadding
@@ -128,7 +127,7 @@ private fun MoreRightsGroupBody(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
-                        tint = DeepBlueDark
+                        tint = AppColors.textPrimary
                     )
                 }
 

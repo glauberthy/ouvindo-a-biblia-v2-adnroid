@@ -67,14 +67,9 @@ import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.components.RichTextContent
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
-import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,7 +115,7 @@ fun MoreScreen(
                 ModalBottomSheet(
                     onDismissRequest = { selectedMenuItem = null },
                     sheetState = sheetState,
-                    containerColor = CreamBackground
+                    containerColor = AppColors.background
                 ) {
                     MoreSectionSheetContent(
                         item = item,
@@ -160,7 +155,7 @@ internal fun MoreSectionSheetContent(
 //                            .padding(top = 4.dp, bottom = 12.dp)
 //                            .size(width = 42.dp, height = 4.dp)
 //                            .background(
-//                                color = RosyBeige.copy(alpha = 0.8f),
+//                                color = AppColors.outline.copy(alpha = 0.8f),
 //                                shape = RoundedCornerShape(50)
 //                            )
 //                    )
@@ -170,7 +165,7 @@ internal fun MoreSectionSheetContent(
                     text = item.title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark
+                    color = AppColors.textPrimary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -178,14 +173,14 @@ internal fun MoreSectionSheetContent(
                 Text(
                     text = item.description,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = SlateBlue,
+                    color = AppColors.textSecondary,
                     lineHeight = 24.sp
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
                 HorizontalDivider(
-                    color = RosyBeige.copy(alpha = 0.45f),
+                    color = AppColors.outline.copy(alpha = 0.45f),
                     thickness = 1.dp
                 )
             }
@@ -200,10 +195,10 @@ internal fun MoreSectionSheetContent(
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                             lineHeight = 28.sp
                         ),
-                        textColor = DeepBlueDark,
+                        textColor = AppColors.textPrimary,
                         paragraphSpacing = 16.dp,
                         quoteBarColor = Accent.copy(alpha = 0.45f),
-                        quoteTextColor = DeepBlueDark,
+                        quoteTextColor = AppColors.textPrimary,
                         quoteBackgroundColor = Accent.copy(alpha = 0.16f)
                     )
                 }
@@ -216,7 +211,7 @@ internal fun MoreSectionSheetContent(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = SlateBlue,
+                            color = AppColors.textSecondary,
                             lineHeight = 22.sp
                         )
                     }
@@ -300,7 +295,7 @@ internal fun MoreSectionSheetContent(
                     Text(
                         text = "Conteúdo não disponível para esta seção.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = LavenderGray
+                        color = AppColors.textSecondary
                     )
                 }
             }
@@ -328,7 +323,7 @@ private fun MoreSheetInfoBlock(
                     .size(width = 64.dp * imageAspect, height = 64.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        color = RosyBeige.copy(alpha = 0.18f)
+                        color = AppColors.outline.copy(alpha = 0.18f)
                     )
             ) {
                 AppAsyncImage(
@@ -348,7 +343,7 @@ private fun MoreSheetInfoBlock(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = DeepBlueDark
+                color = AppColors.textPrimary
             )
 
             subtitle?.takeIf { it.isNotBlank() }?.let {
@@ -356,7 +351,7 @@ private fun MoreSheetInfoBlock(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = SlateBlue,
+                    color = AppColors.textSecondary,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -366,7 +361,7 @@ private fun MoreSheetInfoBlock(
                 Text(
                     text = line,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderGray
+                    color = AppColors.textSecondary
                 )
             }
         }
@@ -394,7 +389,7 @@ private fun MoreContentBody(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(AppColors.background),
         contentPadding = PaddingValues(
             top = 24.dp,
             bottom = 0.dp
@@ -462,9 +457,9 @@ internal fun MoreScreenTitle(
             MoreTitleLevel.SUB -> MaterialTheme.typography.headlineSmall
         },
         fontWeight = FontWeight.Bold,
-        color = DeepBlueDark,
+        color = AppColors.textPrimary,
         modifier = modifier
-            .background(CreamBackground)
+            .background(AppColors.background)
             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
     )
 }
@@ -499,7 +494,7 @@ private fun MoreFooterVersionSection(
         Text(
             text = "Versão do app $appVersion",
             style = MaterialTheme.typography.bodySmall,
-            color = SlateBlue
+            color = AppColors.textSecondary
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -507,7 +502,7 @@ private fun MoreFooterVersionSection(
         Text(
             text = "Conteúdo $contentVersion · $contentLastUpdated",
             style = MaterialTheme.typography.bodySmall,
-            color = LavenderGray
+            color = AppColors.textSecondary
         )
     }
 }
@@ -522,12 +517,12 @@ internal fun MoreSectionCard(
             .fillMaxWidth()
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = CardSurface
+            containerColor = AppColors.card
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.55f)
+            color = AppColors.outline.copy(alpha = 0.55f)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,
@@ -553,7 +548,7 @@ internal fun MoreSectionCard(
                     Icon(
                         imageVector = item.icon,
                         contentDescription = null,
-                        tint = DeepBlueDark,
+                        tint = AppColors.textPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -567,7 +562,7 @@ internal fun MoreSectionCard(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = DeepBlueDark,
+                    color = AppColors.textPrimary,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -576,7 +571,7 @@ internal fun MoreSectionCard(
                 Text(
                     text = item.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = LavenderGray
+                    color = AppColors.textSecondary
                 )
             }
 
@@ -585,7 +580,7 @@ internal fun MoreSectionCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Abrir",
-                tint = RosyBeige.copy(alpha = 0.9f),
+                tint = AppColors.outline.copy(alpha = 0.9f),
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
                     .size(20.dp)
@@ -798,7 +793,7 @@ private fun PreviewMoreSectionCard() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CreamBackground)
+                .background(AppColors.background)
                 .padding(20.dp)
         ) {
             MoreSectionCard(
@@ -821,7 +816,7 @@ private fun PreviewMoreFooterVersionSection() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CreamBackground)
+                .background(AppColors.background)
         ) {
             MoreFooterVersionSection(
                 appVersion = "1.0 (1)",
