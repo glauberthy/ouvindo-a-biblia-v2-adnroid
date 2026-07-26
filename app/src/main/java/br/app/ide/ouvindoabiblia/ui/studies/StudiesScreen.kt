@@ -62,6 +62,7 @@ import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
@@ -192,7 +193,7 @@ private fun StudyListItem(
                 indication = ripple()
             ) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFCFA)
+            containerColor = CardSurface
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(

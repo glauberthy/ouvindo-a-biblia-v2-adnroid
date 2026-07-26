@@ -67,6 +67,7 @@ import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.Accent2
+import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
@@ -617,7 +618,7 @@ private fun FavoritesGroupCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFCFA)
+            containerColor = CardSurface
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(

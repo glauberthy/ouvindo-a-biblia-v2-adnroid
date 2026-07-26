@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.ErrorRed
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +103,10 @@ fun SleepTimerBottomSheet(
                     val textColor = if (isSelected) {
                         accentColor
                     } else if (isDisableOption) {
-                        Color(0xFFEF5350)
+                        // ErrorRed do tema: aqui havia 0xFFEF5350, um vermelho
+                        // quase-igual ao token (0xFFEF5466) — divergência invisível
+                        // que faz a paleta escorregar.
+                        ErrorRed
                     } else {
                         Color.White
                     }
