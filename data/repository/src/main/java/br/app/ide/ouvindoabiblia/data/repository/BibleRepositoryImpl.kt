@@ -95,8 +95,10 @@ class BibleRepositoryImpl @Inject constructor(
             cache.map { list ->
                 when {
                     list.isNotEmpty() -> Resource.Success(list)
+                    // Mensagem humana por causa (ver syncErrorMessage): o localizedMessage
+                    // cru expunha "HTTP 429 Too Many Requests" e afins ao usuário.
                     result.isFailure -> Resource.Error(
-                        result.exceptionOrNull()?.localizedMessage ?: "Erro ao carregar"
+                        syncErrorMessage(result.exceptionOrNull())
                     )
                     else -> Resource.Success(list) // vazio legítimo: a VM decide (Empty/mensagem)
                 }
@@ -434,7 +436,7 @@ class BibleRepositoryImpl @Inject constructor(
                 when {
                     content != null -> Resource.Success(content)
                     result.isFailure -> Resource.Error(
-                        result.exceptionOrNull()?.localizedMessage ?: "Erro ao carregar conteúdo"
+                        syncErrorMessage(result.exceptionOrNull())
                     )
                     // ISSUE PUB-04: sync OK mas sem conteúdo (edge raro: cache decodifica p/ null) é
                     // TERMINAL, não transitório. Antes virava Loading eterno sem saída; agora Error

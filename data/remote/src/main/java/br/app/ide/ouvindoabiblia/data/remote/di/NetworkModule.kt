@@ -17,6 +17,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 import javax.inject.Singleton
 
 @Module
@@ -24,6 +25,13 @@ import javax.inject.Singleton
 object NetworkModule {
 
     private const val BASE_URL = "https://ouvindo-a-biblia.ide.app.br/"
+
+    private const val HTTP_TOO_MANY_REQUESTS = 429
+    private const val MAX_429_RETRIES = 3
+
+    // Teto do Retry-After: com o app cache-first, esperar muito no sync rende menos que
+    // falhar e deixar o próximo load tentar de novo.
+    private const val MAX_429_BACKOFF_MS = 5_000L
 
     @Provides
     @Singleton
@@ -69,6 +77,37 @@ object NetworkModule {
                     .header("User-Agent", "BibliaFaladaApp")
                     .build()
                 chain.proceed(request)
+            }
+            // O mesmo WAF que rate-limita as capas (ver o interceptor irmão no CoilModule)
+            // também pode rate-limitar os JSONs — os dois usam OkHttp, mas são clientes
+            // separados de propósito (o cache de 10MB aqui é dimensionado para JSON, não
+            // para imagens), então o tratamento é duplicado em vez de compartilhado.
+            // Sem isto, um 429 no sync falhava de primeira. O impacto era pequeno porque
+            // o repositório é cache-first, mas na 1ª instalação (cache vazio) o usuário
+            // ficava na tela de erro tendo de tocar "Tentar novamente" na mão.
+            // Roda na thread de I/O do OkHttp, então o Thread.sleep é aceitável.
+            .addInterceptor { chain ->
+                val request = chain.request()
+                var response = chain.proceed(request)
+                var attempt = 0
+                while (response.code == HTTP_TOO_MANY_REQUESTS && attempt < MAX_429_RETRIES) {
+                    val retryAfterMs = response.header("Retry-After")
+                        ?.toLongOrNull()
+                        ?.times(1_000L)
+                        ?.coerceAtMost(MAX_429_BACKOFF_MS)
+                    response.close()
+                    val backoff = retryAfterMs
+                        ?: (500L * (attempt + 1) + Random.nextLong(0, 400))
+                    try {
+                        Thread.sleep(backoff)
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                    attempt++
+                    response = chain.proceed(request)
+                }
+                response
             }
             // Reduzindo timeout para falhar rápido se a internet estiver ruim
             .connectTimeout(15, TimeUnit.SECONDS)
