@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle.Companion.Italic
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -53,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.BuildConfig
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Asset
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Contact
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Library
@@ -68,6 +68,7 @@ import br.app.ide.ouvindoabiblia.ui.components.RichTextContent
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
@@ -80,7 +81,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 @Composable
 fun MoreScreen(
     bottomContentPadding: Dp = 0.dp,
-    onSectionClick: (String) -> Unit = {},
+    onRightsGroupClick: () -> Unit = {},
     viewModel: MoreViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -100,9 +101,15 @@ fun MoreScreen(
                 content = uiState.content,
                 bottomContentPadding = bottomContentPadding,
                 onSectionClick = { itemId ->
-                    val item = moreMenuItems.firstOrNull { it.id == itemId }
-                    if (item != null) {
-                        selectedMenuItem = item
+                    // A entrada do grupo não tem conteúdo próprio: ela navega para a
+                    // sublista. As demais abrem o conteúdo da seção no bottom sheet.
+                    if (itemId == MoreMenuIds.RIGHTS_GROUP) {
+                        onRightsGroupClick()
+                    } else {
+                        val item = moreMenuItems.firstOrNull { it.id == itemId }
+                        if (item != null) {
+                            selectedMenuItem = item
+                        }
                     }
                 }
             )
@@ -126,7 +133,7 @@ fun MoreScreen(
 }
 
 @Composable
-private fun MoreSectionSheetContent(
+internal fun MoreSectionSheetContent(
     item: MoreMenuItemUi,
     section: MoreSection?
 ) {
@@ -395,18 +402,16 @@ private fun MoreContentBody(
         verticalArrangement = Arrangement.spacedBy(sectionSpacing)
     ) {
         item {
-            MoreHeroSection(
+            MoreScreenTitle(
+                title = "Mais",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = statusBarPadding + 8.dp),
-                appName = "Ouvindo a Bíblia",
-                verseText = "\"Bem-aventurado aquele que lê, e os que ouvem as palavras da profecia e guardam as coisas nela escritas...\"",
-                verseReference = "Apocalipse 1:3"
+                    .padding(top = statusBarPadding + 8.dp)
             )
         }
 
         items(
-            items = moreMenuItems,
+            items = moreRootMenuItems,
             key = { it.id }
         ) { item ->
             Box(
@@ -421,109 +426,94 @@ private fun MoreContentBody(
 
         item {
             MoreFooterVersionSection(
-                version = content.version,
-                lastUpdated = content.lastUpdated,
-                bottomInset = resolvedBottomPadding
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                contentVersion = content.version,
+                contentLastUpdated = content.lastUpdated,
+                bottomInset = resolvedBottomPadding,
+                horizontalPadding = horizontalScreenPadding
             )
         }
     }
 }
 
+/**
+ * Título de tela. Antes aqui vinha "Ouvindo a Bíblia" (idêntico ao header da Home) mais
+ * um versículo, o que ocupava o topo de uma tela utilitária e não dizia ao usuário onde
+ * ele estava. O nome do app fica na Home; aqui o título nomeia a tela.
+ *
+ * O papel tipográfico segue a hierarquia do M3 para top app bars:
+ *  - [MoreTitleLevel.ROOT] = large top app bar → destino de aba (irmão de Home/Temas/…);
+ *  - [MoreTitleLevel.SUB]  = medium top app bar → subtela com seta de voltar, o mesmo
+ *    `headlineSmall` que ThemeDetailsScreen e StudyDetailsScreen já usam.
+ * Sem essa distinção uma subtela aparece com o mesmo peso de uma aba principal.
+ */
+internal enum class MoreTitleLevel { ROOT, SUB }
+
 @Composable
-private fun MoreHeroSection(
+internal fun MoreScreenTitle(
+    title: String,
     modifier: Modifier = Modifier,
-    appName: String,
-    verseText: String,
-    verseReference: String
+    level: MoreTitleLevel = MoreTitleLevel.ROOT
 ) {
-    Column(
+    Text(
+        text = title,
+        style = when (level) {
+            MoreTitleLevel.ROOT -> MaterialTheme.typography.headlineLarge
+            MoreTitleLevel.SUB -> MaterialTheme.typography.headlineSmall
+        },
+        fontWeight = FontWeight.Bold,
+        color = DeepBlueDark,
         modifier = modifier
-            .fillMaxWidth()
             .background(CreamBackground)
-            .padding(
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 20.dp
-            )
-    ) {
-        Text(
-            text = appName,
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = DeepBlueDark,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = verseText,
-            fontStyle = Italic,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Normal,
-            lineHeight = 23.sp,
-            color = DeepBlueDark
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = verseReference,
-            style = MaterialTheme.typography.bodyMedium,
-            color = SlateBlue,
-            fontWeight = FontWeight.Bold
-        )
-    }
+            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+    )
 }
 
+/**
+ * Rodapé de versão — informação de referência, não seção navegável, então é discreto:
+ * texto pequeno, cor secundária, sem heading em bold competindo com os cards.
+ *
+ * Distingue duas versões que antes eram confundidas numa só: a do APP (a que o usuário
+ * compara com a Play Store e a que o suporte precisa) e a do CONTEÚDO baixado do
+ * servidor, útil para diagnosticar sync. Antes o campo "Versão" mostrava só a do
+ * conteúdo, que nunca acompanha o build publicado.
+ */
 @Composable
 private fun MoreFooterVersionSection(
-    version: String,
-    lastUpdated: String,
-    bottomInset: Dp
+    appVersion: String,
+    contentVersion: String,
+    contentLastUpdated: String,
+    bottomInset: Dp,
+    horizontalPadding: Dp
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(LavenderGray.copy(alpha = 0.12f))
             .padding(
-                top = 14.dp,
+                start = horizontalPadding,
+                end = horizontalPadding,
+                top = 20.dp,
                 bottom = bottomInset
             )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 35.dp, end = 16.dp)
-        ) {
-            Text(
-                text = "Versão",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = DeepBlueDark
-            )
+        Text(
+            text = "Versão do app $appVersion",
+            style = MaterialTheme.typography.bodySmall,
+            color = SlateBlue
+        )
 
-            Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
-            Text(
-                text = version,
-                style = MaterialTheme.typography.bodyLarge,
-                color = SlateBlue
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = "($lastUpdated)",
-                style = MaterialTheme.typography.bodySmall,
-                color = LavenderGray
-            )
-        }
+        Text(
+            text = "Conteúdo $contentVersion · $contentLastUpdated",
+            style = MaterialTheme.typography.bodySmall,
+            color = LavenderGray
+        )
     }
 }
 
 @Composable
-private fun MoreSectionCard(
+internal fun MoreSectionCard(
     item: MoreMenuItemUi,
     onClick: () -> Unit
 ) {
@@ -532,7 +522,7 @@ private fun MoreSectionCard(
             .fillMaxWidth()
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFCFA)
+            containerColor = CardSurface
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
@@ -834,9 +824,11 @@ private fun PreviewMoreFooterVersionSection() {
                 .background(CreamBackground)
         ) {
             MoreFooterVersionSection(
-                version = "1.0.0",
-                lastUpdated = "06/04/2026",
-                bottomInset = 0.dp
+                appVersion = "1.0 (1)",
+                contentVersion = "1.0.14",
+                contentLastUpdated = "2026-07-18",
+                bottomInset = 0.dp,
+                horizontalPadding = 16.dp
             )
         }
     }

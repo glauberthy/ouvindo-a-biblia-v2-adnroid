@@ -31,6 +31,10 @@ sealed interface Screen {
         val sectionId: String
     ) : Screen
 
+    // Sublista "Direitos e licenças" da tela Mais.
+    @Serializable
+    data object MoreRights : Screen
+
     // Telas de Detalhe
     @Serializable
     data class ThemeDetails(

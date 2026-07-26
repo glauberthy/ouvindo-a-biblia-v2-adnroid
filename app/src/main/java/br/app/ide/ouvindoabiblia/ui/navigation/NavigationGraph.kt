@@ -13,6 +13,7 @@ import androidx.navigation.toRoute
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.ui.favorites.FavoritesScreen
 import br.app.ide.ouvindoabiblia.ui.home.HomeScreen
+import br.app.ide.ouvindoabiblia.ui.more.MoreRightsGroupRoute
 import br.app.ide.ouvindoabiblia.ui.more.MoreScreen
 import br.app.ide.ouvindoabiblia.ui.more.MoreSectionDetailsRoute
 import br.app.ide.ouvindoabiblia.ui.studies.StudiesScreen
@@ -112,9 +113,17 @@ fun NavigationGraph(
         composable<Screen.More> {
             MoreScreen(
                 bottomContentPadding = bottomContentPadding,
-                onSectionClick = { sectionId ->
-                    navController.navigate(Screen.MoreSection(sectionId))
+                onRightsGroupClick = {
+                    navController.navigate(Screen.MoreRights)
                 }
+            )
+        }
+
+        // --- MAIS > DIREITOS E LICENÇAS (sublista) ---
+        composable<Screen.MoreRights> {
+            MoreRightsGroupRoute(
+                bottomContentPadding = bottomContentPadding,
+                onBackClick = { navController.popBackStack() }
             )
         }
 

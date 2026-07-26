@@ -72,6 +72,9 @@ android {
 
     buildFeatures {
         compose = true
+        // O rodapé da tela Mais mostra a versão do APP (BuildConfig.VERSION_NAME/VERSION_CODE).
+        // O AGP 8 não gera o BuildConfig por padrão, então precisa ser habilitado aqui.
+        buildConfig = true
     }
 }
 

@@ -255,6 +255,12 @@ fun MainScreen(
                                         navDestination.hasRoute(Screen.Estudos::class) ||
                                                 navDestination.hasRoute(Screen.StudyDetails::class)
 
+                                    // Sem isto a aba "Mais" perde o estado selecionado
+                                    // dentro da sublista de direitos (mesmo BUG 1).
+                                    is Screen.More ->
+                                        navDestination.hasRoute(Screen.More::class) ||
+                                                navDestination.hasRoute(Screen.MoreRights::class)
+
                                     else ->
                                         navDestination.hasRoute(item.screen::class)
                                 }
