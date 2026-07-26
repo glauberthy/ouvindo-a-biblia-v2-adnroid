@@ -9,8 +9,11 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import br.app.ide.ouvindoabiblia.cast.CastConfig
@@ -18,7 +21,10 @@ import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
+import br.app.ide.ouvindoabiblia.playback.MAX_CAUSE_DEPTH
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
+import br.app.ide.ouvindoabiblia.playback.classifyPlaybackError
+import br.app.ide.ouvindoabiblia.playback.playbackErrorText
 import br.app.ide.ouvindoabiblia.service.PlaybackService
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadOptions
@@ -653,19 +659,44 @@ class PlayerViewModel @Inject constructor(
 
     // --- SINCRONIZAÇÃO DE ESTADO ---
 
+    /**
+     * Mensagem por CAUSA do erro. A classificação vive em [classifyPlaybackError]
+     * (travada por teste); aqui só extraímos os sinais do PlaybackException.
+     */
+    private fun playbackErrorMessage(error: PlaybackException?): String {
+        val kind = classifyPlaybackError(
+            typedHttpCode = typedHttpCodeOf(error),
+            messageChain = listOfNotNull(error?.message, error?.cause?.message)
+                .joinToString(" "),
+            isConnectionError =
+                error?.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                        error?.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+            isFileNotFound = error?.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+        )
+        return playbackErrorText(kind)
+    }
+
+    /** Só resolve quando o erro NÃO cruzou IPC; pós-Binder o tipo da causa se perde. */
+    private fun typedHttpCodeOf(error: PlaybackException?): Int? {
+        var cause: Throwable? = error
+        var depth = 0
+        while (cause != null && depth++ < MAX_CAUSE_DEPTH) {
+            if (cause is InvalidResponseCodeException) return cause.responseCode
+            cause = cause.cause
+        }
+        return null
+    }
+
     private fun setupPlayerListener() {
         mediaController?.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
                 if (events.contains(Player.EVENT_PLAYER_ERROR)) {
                     finishSourceSwitch()
-                    // ISSUE PUB-02: o ExoPlayer já tentou 3x (DefaultLoadErrorHandlingPolicy) antes
-                    // de emitir o erro. Aqui só damos feedback ao usuário — a UI mostra um Toast e
-                    // chama consumePlaybackError(). Mensagem genérica (não expõe o stacktrace).
+                    // ISSUE PUB-02: o ExoPlayer já re-tentou (ver a política em MediaModule)
+                    // antes de emitir o erro. Aqui só damos feedback — a UI mostra um Toast e
+                    // chama consumePlaybackError(). Nunca expõe stacktrace.
                     _uiState.update {
-                        it.copy(
-                            playbackError =
-                                "Não foi possível reproduzir. Verifique sua conexão e tente novamente."
-                        )
+                        it.copy(playbackError = playbackErrorMessage(player.playerError))
                     }
                 }
 
@@ -1105,3 +1136,5 @@ class PlayerViewModel @Inject constructor(
         }
     }
 }
+
+

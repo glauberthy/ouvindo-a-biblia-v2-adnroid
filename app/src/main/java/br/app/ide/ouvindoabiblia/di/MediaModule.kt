@@ -3,19 +3,23 @@ package br.app.ide.ouvindoabiblia.di
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.C
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import br.app.ide.ouvindoabiblia.playback.AUDIO_NO_RETRY
+import br.app.ide.ouvindoabiblia.playback.audioRetryBaseDelayMs
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlin.random.Random
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -76,12 +80,19 @@ object MediaModule {
             override fun getRetryDelayMsFor(
                 loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo
             ): Long {
-                val attempt = loadErrorInfo.errorCount.coerceAtMost(3)
-                return when (attempt) {
-                    1 -> 1_000L
-                    2 -> 2_000L
-                    else -> 4_000L
-                }
+                val http = loadErrorInfo.exception as? InvalidResponseCodeException
+                val base = audioRetryBaseDelayMs(
+                    httpCode = http?.responseCode,
+                    attempt = loadErrorInfo.errorCount,
+                    retryAfterSeconds = http?.headerFields
+                        ?.get("Retry-After")
+                        ?.firstOrNull()
+                        ?.toLongOrNull()
+                )
+                if (base == AUDIO_NO_RETRY) return C.TIME_UNSET
+                // Jitter para as re-tentativas de vários requests não baterem no mesmo
+                // instante e provocarem um novo 429 em bloco.
+                return base + Random.nextLong(0, 800)
             }
         }
 
