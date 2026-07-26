@@ -507,7 +507,17 @@ fun LazyListScope.renderStudyFavorites(
                             text = studyTitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = AppColors.textPrimary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            // 2 linhas é TETO, não truncamento por estética: título em 2
+                            // linhas (~48dp) + autor (~20dp) ainda cabe na altura da capa
+                            // (75dp), que é quem define a altura do card — então a 2ª linha
+                            // é de graça e não desalinha a lista. Truncar em 1 linha só
+                            // perderia informação ("Ester - Vida Cristã em Cultura Pagã",
+                            // 35 caracteres, é o único dos 4 estudos que passa de uma).
+                            // O teto existe para um título futuro de 3+ linhas não estourar
+                            // a capa.
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         Text(
