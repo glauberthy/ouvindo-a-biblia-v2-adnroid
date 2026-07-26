@@ -35,6 +35,11 @@ private val LightColors = lightColorScheme(
 
     outline = RosyBeige,            // Bordas sutis dos cards
 
+    // Selo que precisa CONTRASTAR com a superfície atual (círculo do número nas listas
+    // de Tema/Estudo): escuro no tema claro, claro no tema escuro.
+    inverseSurface = DeepBlueDark,
+    inverseOnSurface = CreamBackground,
+
     error = ErrorRed
 )
 
@@ -65,6 +70,9 @@ private val DarkColors = darkColorScheme(
     onSurfaceVariant = DarkTextSecondary,
 
     outline = DarkOutline,
+
+    inverseSurface = DarkTextPrimary,
+    inverseOnSurface = DarkBackground,
 
     error = ErrorRed
 )
@@ -101,6 +109,18 @@ object AppColors {
     /** Bordas e divisores sutis. */
     val outline: Color
         @Composable get() = MaterialTheme.colorScheme.outline
+
+    /**
+     * Preenchimento de selo que precisa CONTRASTAR com a superfície (círculo do número
+     * nas listas de Tema/Estudo). Inverte com o tema, por isso não é [textPrimary]:
+     * usar a cor de texto aqui deixava círculo claro com número claro no tema escuro.
+     */
+    val badge: Color
+        @Composable get() = MaterialTheme.colorScheme.inverseSurface
+
+    /** Conteúdo sobre [badge]. */
+    val onBadge: Color
+        @Composable get() = MaterialTheme.colorScheme.inverseOnSurface
 }
 
 /**

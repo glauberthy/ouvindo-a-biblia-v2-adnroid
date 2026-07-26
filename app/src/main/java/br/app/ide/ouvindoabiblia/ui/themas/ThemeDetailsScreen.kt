@@ -60,6 +60,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.OnAccent
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,14 +188,14 @@ fun MomentListItem(
                     .size(36.dp)
                     .clip(CircleShape)
                     // Cor de fundo do número muda se estiver tocando
-                    .background(if (isCurrent) Accent else AppColors.textPrimary),
+                    .background(if (isCurrent) Accent else AppColors.badge),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
                     // Cor do texto do número
-                    color = if (isCurrent) AppColors.textPrimary else Color.White,
+                    color = if (isCurrent) OnAccent else AppColors.onBadge,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -235,7 +236,7 @@ fun MomentListItem(
                 Icon(
                     imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isCurrent && isPlaying) "Pausar Versículo" else "Ouvir Versículo",
-                    tint = AppColors.textPrimary
+                    tint = if (isCurrent) OnAccent else AppColors.textPrimary
                 )
             }
         }

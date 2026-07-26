@@ -60,6 +60,7 @@ import br.app.ide.ouvindoabiblia.data.repository.domain.model.Person
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.RightsSource
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.OnAccent
 
 @Composable
 fun MoreSectionDetailsScreen(
@@ -215,7 +216,7 @@ private fun MoreSectionHeader(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = AppColors.textPrimary,
+                        tint = OnAccent,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -400,7 +401,7 @@ private fun LibraryCard(
                     Icon(
                         imageVector = Icons.Filled.Code,
                         contentDescription = null,
-                        tint = AppColors.textPrimary,
+                        tint = OnAccent,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -474,7 +475,7 @@ private fun PersonLikeHeader(
                     Icon(
                         imageVector = placeholderIcon,
                         contentDescription = null,
-                        tint = AppColors.textPrimary,
+                        tint = OnAccent,
                         modifier = Modifier.size(24.dp)
                     )
                 }

@@ -63,6 +63,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.OnAccent
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 
 @Composable
@@ -211,13 +212,13 @@ fun LessonListItem(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isCurrent) Accent else AppColors.textPrimary),
+                    .background(if (isCurrent) Accent else AppColors.badge),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (isCurrent) AppColors.textPrimary else Color.White,
+                    color = if (isCurrent) OnAccent else AppColors.onBadge,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -281,7 +282,7 @@ fun LessonListItem(
                     // retoma/troca). O antigo Replay prometia "reiniciar" e era no-op.
                     imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isCurrent && isPlaying) "Pausar aula" else "Ouvir aula",
-                    tint = AppColors.textPrimary
+                    tint = if (isCurrent) OnAccent else AppColors.textPrimary
                 )
             }
         }

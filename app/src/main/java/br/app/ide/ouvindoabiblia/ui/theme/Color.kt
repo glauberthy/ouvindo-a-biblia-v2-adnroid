@@ -47,6 +47,11 @@ val BadgeOldTestament = Color(0xFF6E5C57)  // Marrom-rosado (Antigo)
 val BadgeNewTestament = Color(0xFF4A4E69)  // Azul-ardósia (Novo)
 
 val Accent = Color(0xFFE9C46A)        // Ouro Saffron
+
+// Conteúdo (ícone/texto) sobre o [Accent]. O dourado é invariante ao tema, então o que
+// fica sobre ele também tem que ser: usar a cor de texto do tema deixava ícone claro
+// sobre ouro no tema escuro (1,33:1, invisível). Este dá 9,24:1.
+val OnAccent = Color(0xFF22223B)
 val Accent2 = Color(0xFFEF5466)
 //val Accent = Color(0xFF81B29A)        // Menta Luminosa
 //val Accent = Color(0xFFF4A261)        // Coral Suave

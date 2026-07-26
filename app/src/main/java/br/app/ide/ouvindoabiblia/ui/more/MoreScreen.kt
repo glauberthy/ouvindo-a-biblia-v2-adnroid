@@ -69,6 +69,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
+import br.app.ide.ouvindoabiblia.ui.theme.OnAccent
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
 
 
@@ -548,7 +549,7 @@ internal fun MoreSectionCard(
                     Icon(
                         imageVector = item.icon,
                         contentDescription = null,
-                        tint = AppColors.textPrimary,
+                        tint = OnAccent,
                         modifier = Modifier.size(18.dp)
                     )
                 }
