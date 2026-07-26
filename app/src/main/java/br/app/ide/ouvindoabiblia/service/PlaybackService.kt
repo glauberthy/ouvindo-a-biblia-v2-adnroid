@@ -45,7 +45,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.Executors
 import javax.inject.Inject
 
@@ -116,6 +118,10 @@ class PlaybackService : MediaLibraryService() {
         // Intervalo do save periódico de posição (ISSUE 1.A). A tolerância de perda
         // em caso de kill do processo é ≤ este valor.
         private const val PERIODIC_SAVE_INTERVAL_MS = 15_000L
+
+        // Teto para o save síncrono do encerramento (swipe). É um único upsert no
+        // Room; o limite existe só para não transformar um disco lento em ANR.
+        private const val SHUTDOWN_SAVE_TIMEOUT_MS = 1_500L
 
         // Contadores observáveis de ciclo de vida — usados pelo teste instrumentado
         // que trava a regressão do 5.1 (serviço sobrevive ao unbind; player só é
@@ -199,17 +205,69 @@ class PlaybackService : MediaLibraryService() {
     }
 
 
+    /**
+     * Estado do player capturado de forma SÍNCRONA. Necessário porque no caminho de
+     * encerramento (onTaskRemoved) o player é liberado imediatamente depois — ler
+     * `player.currentPosition` já dentro da coroutine de IO daria posição de player
+     * liberado.
+     */
+    private data class PlaybackSnapshot(
+        val mediaId: String,
+        val positionMs: Long,
+        val durationMs: Long,
+        val title: String,
+        val subtitle: String,
+        val imageUrl: String?,
+        val audioUrl: String
+    )
+
+    private suspend fun persist(snapshot: PlaybackSnapshot) {
+        repository.savePlaybackState(
+            mediaId = snapshot.mediaId,
+            positionMs = snapshot.positionMs,
+            duration = snapshot.durationMs,
+            title = snapshot.title,
+            subtitle = snapshot.subtitle,
+            imageUrl = snapshot.imageUrl,
+            audioUrl = snapshot.audioUrl
+        )
+    }
+
+    /**
+     * Salva a posição BLOQUEANDO a main thread, para o caminho de encerramento.
+     *
+     * O [saveCurrentState] normal grava no `serviceScope`, que o [onDestroy] cancela
+     * (`serviceJob.cancel()`). Como o swipe faz `stopSelf()` na sequência, aquele
+     * write seria cancelado antes de commitar no Room e a retomada voltaria ao início
+     * do capítulo. Aqui é um único upsert, com teto de tempo para não arriscar ANR.
+     */
+    private fun saveCurrentStateBlocking() {
+        val snapshot = capturePlaybackSnapshot() ?: return
+        val saved = runBlocking {
+            withTimeoutOrNull(SHUTDOWN_SAVE_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) { persist(snapshot) }
+                true
+            }
+        }
+        if (saved == null) Log.w(TAG, "saveCurrentStateBlocking: timeout ao salvar no encerramento")
+    }
+
     private fun saveCurrentState() {
-        val currentMediaItem = player.currentMediaItem ?: return
+        val snapshot = capturePlaybackSnapshot() ?: return
+        serviceScope.launch(Dispatchers.IO) { persist(snapshot) }
+    }
+
+    private fun capturePlaybackSnapshot(): PlaybackSnapshot? {
+        val currentMediaItem = player.currentMediaItem ?: return null
         val mediaId = currentMediaItem.mediaId
         // Só Bíblia e Estudo são persistidos como retomada. Tema (moment) é ignorado
         // de propósito; id malformado é logado e ignorado (ISSUE 2.A/2.C).
         when (MediaContentId.parse(mediaId)) {
             is MediaContentId.Bible, is MediaContentId.Study -> Unit
-            is MediaContentId.ThemeMoment -> return
+            is MediaContentId.ThemeMoment -> return null
             null -> {
                 Log.w(TAG, "saveCurrentState: mediaId não persistível/malformado, ignorando: $mediaId")
-                return
+                return null
             }
         }
         // ISSUE 2.D (guarda explícita): num item recortado, player.currentPosition é
@@ -219,23 +277,20 @@ class PlaybackService : MediaLibraryService() {
         // que não é persistido — a guarda protege esse caso e qualquer recorte futuro.
         if (currentMediaItem.clippingConfiguration != MediaItem.ClippingConfiguration.UNSET) {
             Log.w(TAG, "saveCurrentState: posição de item recortado não persistida (2.D): $mediaId")
-            return
+            return null
         }
-        val position = player.currentPosition
         val duration = player.duration
         val meta = currentMediaItem.mediaMetadata
 
-        serviceScope.launch(Dispatchers.IO) {
-            repository.savePlaybackState(
-                mediaId = mediaId,
-                positionMs = position,
-                duration = if (duration > 0) duration else 0L,
-                title = meta.title?.toString() ?: "",
-                subtitle = meta.subtitle?.toString() ?: "",
-                imageUrl = meta.artworkUri?.toString(),
-                audioUrl = currentMediaItem.requestMetadata.mediaUri?.toString() ?: ""
-            )
-        }
+        return PlaybackSnapshot(
+            mediaId = mediaId,
+            positionMs = player.currentPosition,
+            durationMs = if (duration > 0) duration else 0L,
+            title = meta.title?.toString() ?: "",
+            subtitle = meta.subtitle?.toString() ?: "",
+            imageUrl = meta.artworkUri?.toString(),
+            audioUrl = currentMediaItem.requestMetadata.mediaUri?.toString() ?: ""
+        )
     }
 
     // --- LÓGICA DE RESTORE CORRIGIDA E CENTRALIZADA ---
@@ -453,37 +508,45 @@ class PlaybackService : MediaLibraryService() {
         mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // Modelo persistente (Opção A): ao remover dos recentes NÃO liberamos o
-        // player nem encerramos o serviço — nem tocando, nem pausado.
-        //  - Tocando: o áudio continua e a notificação permanece (foreground).
-        //  - Pausado: a notificação permanece (dismissível) e o usuário pode dar
-        //    play pela notificação/headset ou dispensá-la manualmente com swipe.
-        //
-        // IMPORTANTE: NÃO chamamos super.onTaskRemoved(). O default do
-        // MediaSessionService faz `if (!isPlaybackOngoing() || !isAnySessionPlaying())
-        // pauseAllPlayersAndStopSelf()` — ou seja, quando PAUSADO ele dá stopSelf(),
-        // o serviço morre e a notificação some (efetivamente a Opção B). Pular o super
-        // é seguro: Service.onTaskRemoved (a base) é no-op. O player é liberado
-        // exclusivamente no onDestroy real do serviço (DIAGNOSTICO_02 §5.1/§5.2/§5.3).
-        // saveCurrentState() já trata currentMediaItem nulo e ignora Tema (moment).
-        saveCurrentState()
+        val wasPlaying = player.isPlaying
 
-        // BUG B (defesa extra): se nunca houve playback neste processo E não está tocando,
-        // não há sessão ativa a preservar (5.1 não se aplica) — encerra o serviço e remove
-        // qualquer notificação remanescente. No caso reproduzido (só-restaurado, serviço
-        // apenas bound) onTaskRemoved nem dispara, então o gate real está em
-        // onUpdateNotification; esta guarda cobre bordas (ex.: serviço já started sem play).
-        if (!player.isPlaying && !hasStartedPlaybackThisProcess) {
-            Log.i(LC_TAG, "onTaskRemoved isPlaying=false hasStarted=false -> DECISAO=encerrar (stopSelf)")
-            mediaSession?.run {
-                player.release()
-                release()
-                mediaSession = null
-            }
-            stopSelf()
+        // DECISÃO DE PRODUTO (substitui a Opção A para o caso TOCANDO): remover o app
+        // dos recentes é intenção EXPLÍCITA de fechar, então o áudio para e o serviço
+        // encerra — como o Spotify. Antes o áudio continuava tocando indefinidamente
+        // depois do swipe, sem nenhuma forma de o usuário parar a não ser pela
+        // notificação. Mantido da Opção A: no caso PAUSADO-após-tocar a notificação
+        // (dismissível) sobrevive, para retomar por ela/headset — ver ISSUE 4.A.
+        //
+        // NÃO chamamos super.onTaskRemoved(): o default do MediaSessionService faz
+        // `if (!isPlaybackOngoing() || !isAnySessionPlaying()) pauseAllPlayersAndStopSelf()`,
+        // isto é, encerra só quando NÃO está tocando — exatamente o caso oposto ao que
+        // precisamos cobrir aqui. Pular o super é seguro: Service.onTaskRemoved é no-op.
+        val decision = decideOnTaskRemoval(wasPlaying, hasStartedPlaybackThisProcess)
+        if (decision == TaskRemovalDecision.KEEP_PAUSED_NOTIFICATION) {
+            Log.i(LC_TAG, "onTaskRemoved isPlaying=false hasStarted=true -> DECISAO=manter notificação pausada (4.A)")
+            saveCurrentState()
             return
         }
-        Log.i(LC_TAG, "onTaskRemoved isPlaying=${player.isPlaying} hasStarted=$hasStartedPlaybackThisProcess -> DECISAO=manter (5.1)")
+
+        Log.i(LC_TAG, "onTaskRemoved isPlaying=$wasPlaying hasStarted=$hasStartedPlaybackThisProcess -> DECISAO=encerrar (swipe = fechar)")
+
+        // 1) Para o áudio imediatamente e persiste a posição de forma SÍNCRONA: o
+        //    stopSelf() abaixo leva ao onDestroy, que cancela o serviceJob — um save
+        //    assíncrono aqui seria cancelado antes de commitar (retomada voltaria ao
+        //    início do capítulo). capturePlaybackSnapshot trata item nulo e ignora Tema.
+        player.pause()
+        stopPeriodicSave()
+        saveCurrentStateBlocking()
+
+        // 2) Libera sessão + player (ponto único de release fora do onDestroy; zerar
+        //    mediaSession evita o double-release, §5.3) e remove a notificação.
+        mediaSession?.run {
+            player.release()
+            release()
+            mediaSession = null
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     @OptIn(UnstableApi::class)

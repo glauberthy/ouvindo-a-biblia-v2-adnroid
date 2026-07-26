@@ -30,6 +30,41 @@ Note: all modules use `compileSdk = 36` and the app `targetSdk = 36` (unified). 
 
 Release build: `assembleRelease`/`bundleRelease` are signed via `signingConfigs.release`, which reads `keystore.properties` (repo root, git-ignored; see `keystore.properties.example`). Without that file the release builds unsigned but doesn't break `assembleDebug`.
 
+## Rodando no emulador
+
+O SDK está em `~/Android/Sdk`, mas `ANDROID_HOME`/PATH **não** estão exportados no shell (daí `adb: command not found`). Exporte antes de qualquer coisa:
+
+```bash
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+```
+
+O AVD de teste já existe — **`OuvindoBiblia_API36`** (Pixel 8, API 36.1 `google_apis_playstore` x86_64, RAM 4 GB / heap 512 MB / data 8 GB, `gpu=host`). KVM está habilitado e o usuário está no grupo `kvm`; boot completo em ~30 s.
+
+```bash
+emulator -avd OuvindoBiblia_API36 -gpu host -no-boot-anim &   # subir
+adb wait-for-device                                            # esperar
+./gradlew installDebug                                         # compilar + instalar
+adb -s emulator-5554 shell am start -n br.app.ide.ouvindoabiblia/br.app.ide.ouvindoabiblia.MainActivity
+adb -s emulator-5554 exec-out screencap -p > /tmp/tela.png     # screenshot
+```
+
+Se o AVD for perdido, recriar com (a imagem já está baixada, não precisa de rede):
+
+```bash
+avdmanager create avd -n OuvindoBiblia_API36 -d pixel_8 \
+  -k "system-images;android-36.1;google_apis_playstore;x86_64"
+# depois ajustar ~/.android/avd/OuvindoBiblia_API36.avd/config.ini:
+# hw.ramSize=4096  vm.heapSize=512  disk.dataPartition.size=8G  hw.gpu.enabled=yes  hw.gpu.mode=host  hw.keyboard=yes
+```
+
+Duas armadilhas:
+
+- **Sempre passe `-s <serial>` para o `adb`.** Costuma haver um celular físico (moto g53 5G, API 34) pareado por ADB/WiFi ao mesmo tempo; sem `-s` o adb responde `error: more than one device/emulator`. Ter os dois é útil: API 34 real + API 36 emulada em paralelo.
+- **Não abra o app com `monkey -c android.intent.category.LAUNCHER`.** O debug build inclui LeakCanary, que registra a própria `LeakLauncherActivity` como launcher, e o monkey abre ela em vez da `MainActivity`. Use o `am start` com componente explícito acima.
+
+A imagem é `google_apis_playstore`, ou seja **sem `adb root`** — para inspecionar o Room use `adb -s emulator-5554 shell run-as br.app.ide.ouvindoabiblia ...` (funciona porque o debug build é `debuggable`).
+
 ## Module architecture
 
 Gradle multi-module, dependencies flow one direction only (`app` → `repository` → {`local`, `remote`}):
@@ -58,7 +93,8 @@ This is the most intricate part — read `PlaybackService.kt` and `PlayerViewMod
   - A "book folder" play request arrives with a browsable item whose id is `"{bookId}|{chapterIndex}"`; `onSetMediaItems` expands it into the full chapter playlist server-side.
 - **Resume / persistence:** playback position is auto-saved to Room (`PlaybackStateEntity`) on media transitions and pause (`setupAutoSaveListener` → `saveCurrentState`). On service create, `restoreLastSession` rebuilds the playlist from the saved state but does **not** auto-play. `buildPlaylistFromState` reconstructs `MediaItem`s for Bible/Study from the repository. Theme moments are excluded from saving.
 - **`shouldBlockDatabaseResumption` (5s window):** guards against a saved session "resurrecting" over a fresh explicit play command during the transition window. `markExplicitPlaybackRequest` is called on every explicit `onSetMediaItems`. Be careful not to break this when editing playback start logic.
-- **Lifecycle ("Clean Exit"):** `onTaskRemoved` currently saves state then stops/releases the player and `stopSelf()`s. The roadmap in `README.md` describes moving to a Spotify-like persistent/`onPlaybackResumption` model — `onPlaybackResumption` is already partially implemented.
+- **Lifecycle / swipe nos recentes:** the service survives the `MainActivity` being destroyed and the app going to background (it's started + foreground while playing), but **not** task removal. `onTaskRemoved` decides via the pure function `decideOnTaskRemoval` (`service/TaskRemovalPolicy.kt`, locked by `TaskRemovalPolicyTest`): **playing → stop** (save position synchronously, pause, release player + session, `stopForeground(STOP_FOREGROUND_REMOVE)`, `stopSelf()`); **paused after having played → keep** the dismissible notification (ISSUE 4.A); **restored-but-never-played → stop** (BUG B, no orphan notification). It deliberately does **not** call `super.onTaskRemoved()` — Media3's default only stops when *not* playing, the opposite of what's needed. `onPlaybackResumption` is partially implemented.
+- The shutdown path must save the position with `saveCurrentStateBlocking()`, not `saveCurrentState()`: the latter writes on `serviceScope`, which `onDestroy` cancels (`serviceJob.cancel()`), so a `stopSelf()` right after would drop the write and resume would jump back to the start of the chapter.
 
 ## UI conventions
 

@@ -17,9 +17,9 @@ O `PlaybackService` (`MediaLibraryService`) roda como **serviço persistente** n
 
 - O `ExoPlayer` **pertence ao serviço** (não é mais `@Singleton`); é liberado uma única vez no `onDestroy` real.
 - Ao começar a tocar, o serviço é promovido a **started + foreground** (`startForegroundService`), então **sobrevive** ao app ir para segundo plano ou à `MainActivity` ser destruída — o áudio continua e a notificação permanece.
-- `onTaskRemoved` apenas **persiste o estado** (não para nem libera o player).
+- **Remover o app dos recentes (swipe) ENCERRA o playback quando está tocando**: `onTaskRemoved` persiste a posição de forma síncrona, pausa, libera player + sessão, remove a notificação e dá `stopSelf()`. Swipe é intenção explícita de fechar (comportamento tipo Spotify). Se estiver **pausado** após ter tocado, a notificação (dismissível) permanece para retomar por ela/headset — ISSUE 4.A.
 - A posição de reprodução é salva no Room (`PlaybackStateEntity`) e restaurada no `onCreate` **sem auto-play**.
 
 Detalhes e itens ainda abertos do player (Cast, save periódico, notificação no estado pausado, `onPlaybackResumption`) estão em `DIAGNOSTICO_02_PLAYER.md` e `ROADMAP.md`.
 
-> Nota: a estratégia anterior de "Clean Exit" (encerrar o serviço no swipe) foi **substituída** pelo modelo persistente acima.
+> Nota: "persistente" aqui significa que o serviço sobrevive à destruição da `MainActivity` e ao app em segundo plano — **não** ao swipe nos recentes. A versão anterior mantinha o áudio tocando após o swipe; isso foi corrigido (a decisão está travada por `TaskRemovalPolicyTest`).

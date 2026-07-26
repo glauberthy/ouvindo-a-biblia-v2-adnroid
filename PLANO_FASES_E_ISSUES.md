@@ -335,6 +335,16 @@ Objetivo: parar a corrosão estrutural. Não urgente, mas paga juros.
   libera os recursos nativos), mas não há mais caminho que garanta `onDestroy` no task
   removal. Alinhado ao roadmap persistente.
 - **Critério de aceitação:** atendido (notificação permanece + dismissível `flags=0x8`).
+- **⚠️ REVISADA (2026-07-26) — só o caso PAUSADO continua valendo.** O caso **TOCANDO** foi
+  invertido por decisão do dono: manter o serviço vivo fazia o áudio **continuar tocando
+  indefinidamente após o swipe**, sem o usuário ter como parar a não ser pela notificação.
+  Hoje `onTaskRemoved` com `isPlaying=true` **encerra** (pausa, salva síncrono, libera
+  player+sessão, `stopForeground(STOP_FOREGROUND_REMOVE)`, `stopSelf()`). A tabela de
+  decisão saiu do meio do método para a função pura `decideOnTaskRemoval`
+  (`service/TaskRemovalPolicy.kt`), travada por `TaskRemovalPolicyTest` (4 casos).
+  Validado no emulador API 36: sem player de áudio ativo, sem notificação, sem
+  `ServiceRecord`, e posição persistida (o save do encerramento é **bloqueante**, porque o
+  `serviceScope` morre no `onDestroy`). Não mexer no ramo pausado, que é o desta issue.
 
 ### 🔭 Roadmap separado — persistência "estilo-Spotify" (CONFLITA com 4.A)
 
