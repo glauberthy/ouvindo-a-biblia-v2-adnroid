@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -66,7 +65,6 @@ import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
-import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.Accent2
 import br.app.ide.ouvindoabiblia.ui.theme.BadgeNewTestament
 import br.app.ide.ouvindoabiblia.ui.theme.BadgeOldTestament
@@ -424,6 +422,10 @@ fun LazyListScope.renderBibleFavorites(
                             )
                         }
 
+                        // Respiro entre o selo e o título: sem isto o acento do "Ê" de
+                        // "Êxodo" quase toca o selo.
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
                             text = info.bookName,
                             style = MaterialTheme.typography.titleLarge,
@@ -479,20 +481,23 @@ fun LazyListScope.renderStudyFavorites(
             FavoritesGroupCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
 
+                    // Mesmo tamanho e mesmo recorte da aba Estudos (75dp,
+                    // RoundedCornerShape(16.dp)) — era o único lugar do app com capa
+                    // circular. Duas razões para sair do círculo:
+                    //  - o recorte cortava as PONTAS da arte, e é ali que essas capas põem
+                    //    o nome do expositor e o logo (ficavam ilegíveis);
+                    //  - o "anel" dourado não era uma borda desenhada: era o fundo Accent
+                    //    do Surface aparecendo pela folga de padding(3.dp).
                     Surface(
                         modifier = Modifier.size(75.dp),
-                        shape = CircleShape,
-                        color = Accent,
+                        shape = RoundedCornerShape(16.dp),
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp
                     ) {
                         AppAsyncImage(
                             imageUrl = info.studyCoverUrl,
                             contentDescription = studyTitle,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(3.dp)
-                                .clip(CircleShape),
+                            modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -571,7 +576,11 @@ fun StudyLessonFavoriteItem(
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.textPrimary,
                 modifier = Modifier.padding(start = 12.dp),
-                maxLines = 1 // Evita que o texto quebre a linha e empurre o coração
+                maxLines = 1, // Evita que o texto quebre a linha e empurre o coração
+                // Sem elipse o título cortava no meio da palavra ("O Maior De Todos Do
+                // Oriente (Jó"), o que parece texto perdido em vez de texto abreviado.
+                // Só aparece aqui: na aba Livros a linha é sempre "Capítulo N".
+                overflow = TextOverflow.Ellipsis
             )
         }
         // O IconButton fica no tamanho padrão (48dp): forçar Modifier.size(24.dp) aqui
