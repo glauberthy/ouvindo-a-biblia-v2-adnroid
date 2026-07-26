@@ -96,6 +96,26 @@ object MediaModule {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setSeekBackIncrementMs(10_000)
             .setSeekForwardIncrementMs(30_000)
+            // "Anterior" SEMPRE volta um item da playlist.
+            //
+            // O default do ExoPlayer é maxSeekToPreviousPosition = 3000ms, e o
+            // seekToPrevious() faz:
+            //   if (temAnterior && posicaoAtual <= maxSeekToPreviousPosition)
+            //       seekToPreviousMediaItem() else seekToCurrentItem(0)
+            // Ou seja, passando de 3s no capítulo o botão REINICIA o capítulo atual em
+            // vez de voltar — que é o que o usuário sente como "voltou alguns segundos".
+            // Só afetava botões de MEDIA BUTTON (Bluetooth, fone, notificação, Auto),
+            // porque o botão da UI chama seekToPreviousMediaItem() direto
+            // (PlayerViewModel.skipToPreviousChapter) — então a mesma ação se comportava
+            // de dois jeitos diferentes.
+            //
+            // Com o teto no máximo, a condição é sempre verdadeira quando existe item
+            // anterior, e os dois caminhos passam a concordar. A convenção de "reiniciar
+            // a faixa atual" faz sentido em música de 3 minutos; aqui os itens são
+            // capítulos longos, e para reiniciar já existe o seekBack de 10s e a barra
+            // de progresso. No primeiro item da fila (sem anterior) ele continua
+            // reiniciando, que é o comportamento esperado.
+            .setMaxSeekToPreviousPositionMs(Long.MAX_VALUE)
             .build()
     }
 }
