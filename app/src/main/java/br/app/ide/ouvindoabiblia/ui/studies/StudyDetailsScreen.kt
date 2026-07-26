@@ -260,7 +260,11 @@ fun LessonListItem(
                         maxLines = if (expanded) Int.MAX_VALUE else 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
+                            // O padding vem DEPOIS do clickable, então entra na área de
+                            // toque: o texto (bodySmall, 2 linhas ≈ 34dp) sozinho ficava
+                            // abaixo do alvo mínimo de 48dp.
                             .clickable { expanded = !expanded }
+                            .padding(vertical = 8.dp)
                             .animateContentSize()
                     )
                 }

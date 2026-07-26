@@ -305,7 +305,9 @@ fun ChapterListItem(number: Int, onClick: () -> Unit, onRemove: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 12.dp, horizontal = 4.dp),
+            // vertical 4dp (era 12): com o IconButton de volta aos 48dp, isto mantém a
+            // linha em ~56dp, que é a altura de list item de uma linha do M3.
+            .padding(vertical = 4.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -323,10 +325,13 @@ fun ChapterListItem(number: Int, onClick: () -> Unit, onRemove: () -> Unit) {
                 modifier = Modifier.padding(start = 12.dp)
             )
         }
-        IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+        // O IconButton fica no tamanho padrão (48dp): forçar Modifier.size(24.dp) aqui
+        // deixava a ação DESTRUTIVA (desfavoritar) com metade do alvo mínimo de toque.
+        // O tamanho visual do coração continua 20dp, no Icon de dentro.
+        IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Rounded.Favorite,
-                contentDescription = null,
+                contentDescription = "Remover dos favoritos",
                 tint = Accent2,
                 modifier = Modifier.size(20.dp)
             )
@@ -549,7 +554,9 @@ fun StudyLessonFavoriteItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onPlay() }
-            .padding(vertical = 12.dp, horizontal = 4.dp),
+            // vertical 4dp (era 12): com o IconButton de volta aos 48dp, isto mantém a
+            // linha em ~56dp, que é a altura de list item de uma linha do M3.
+            .padding(vertical = 4.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -568,10 +575,13 @@ fun StudyLessonFavoriteItem(
                 maxLines = 1 // Evita que o texto quebre a linha e empurre o coração
             )
         }
-        IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+        // O IconButton fica no tamanho padrão (48dp): forçar Modifier.size(24.dp) aqui
+        // deixava a ação DESTRUTIVA (desfavoritar) com metade do alvo mínimo de toque.
+        // O tamanho visual do coração continua 20dp, no Icon de dentro.
+        IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Rounded.Favorite,
-                contentDescription = null,
+                contentDescription = "Remover dos favoritos",
                 tint = Accent2,
                 modifier = Modifier.size(20.dp)
             )
