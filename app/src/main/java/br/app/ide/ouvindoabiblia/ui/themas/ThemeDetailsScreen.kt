@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
@@ -59,12 +60,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +84,7 @@ fun ThemeDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
     ) {
         when (val state = uiState) {
             is ThemeDetailsUiState.Loading -> LoadingScreen()
@@ -174,7 +170,7 @@ fun MomentListItem(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         // Fundo sempre branco
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = AppColors.card),
         // Adiciona borda colorida apenas se estiver tocando
         border = if (isCurrent) androidx.compose.foundation.BorderStroke(2.dp, Accent) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -191,14 +187,14 @@ fun MomentListItem(
                     .size(36.dp)
                     .clip(CircleShape)
                     // Cor de fundo do número muda se estiver tocando
-                    .background(if (isCurrent) Accent else DeepBlueDark),
+                    .background(if (isCurrent) Accent else AppColors.textPrimary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
                     // Cor do texto do número
-                    color = if (isCurrent) DeepBlueDark else Color.White,
+                    color = if (isCurrent) AppColors.textPrimary else Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -212,12 +208,12 @@ fun MomentListItem(
                     text = item.reference,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark
+                    color = AppColors.textPrimary
                 )
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = DeepBlueDark.copy(alpha = 0.8f),
+                    color = AppColors.textPrimary.copy(alpha = 0.8f),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -231,7 +227,7 @@ fun MomentListItem(
                     .size(48.dp)
                     .clip(CircleShape)
                     // Cor de fundo do Play muda se estiver tocando
-                    .background(if (isCurrent) Accent else DeepBlueDark.copy(alpha = 0.05f)),
+                    .background(if (isCurrent) Accent else AppColors.textPrimary.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 // ISSUE 9.C (contexto de Tema): padrão de mercado — momento atual tocando
@@ -239,7 +235,7 @@ fun MomentListItem(
                 Icon(
                     imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isCurrent && isPlaying) "Pausar Versículo" else "Ouvir Versículo",
-                    tint = DeepBlueDark
+                    tint = AppColors.textPrimary
                 )
             }
         }
@@ -292,7 +288,7 @@ private fun ThemeDetailsHeader(
                     .size(40.dp)
                     .align(Alignment.TopStart),
                 shape = CircleShape,
-                color = CreamBackground.copy(alpha = 0.92f),
+                color = AppColors.background.copy(alpha = 0.92f),
                 tonalElevation = 0.dp,
                 shadowElevation = 2.dp
             ) {
@@ -300,7 +296,7 @@ private fun ThemeDetailsHeader(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
-                        tint = DeepBlueDark
+                        tint = AppColors.textPrimary
                     )
                 }
             }
@@ -313,7 +309,7 @@ private fun ThemeDetailsHeader(
                 text = theme.title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = DeepBlueDark
+                color = AppColors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -322,7 +318,7 @@ private fun ThemeDetailsHeader(
                 text = theme.description,
                 style = MaterialTheme.typography.bodyLarge,
                 lineHeight = 22.sp,
-                color = LavenderGray
+                color = AppColors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -345,11 +341,11 @@ private fun ThemeMetaChip(
 ) {
     Card(
         modifier = modifier.heightIn(min = 28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = AppColors.card),
         shape = RoundedCornerShape(999.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.72f)
+            color = AppColors.outline.copy(alpha = 0.72f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -357,7 +353,7 @@ private fun ThemeMetaChip(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
-            color = SlateBlue,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Clip
@@ -379,7 +375,7 @@ private fun ThemeDetailsContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
     ) {
 
         MomentsList(
@@ -434,7 +430,7 @@ private fun PreviewMomentListItem() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CreamBackground)
+                .background(AppColors.background)
                 .padding(16.dp)
         ) {
             MomentListItem(

@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import br.app.ide.ouvindoabiblia.ui.player.PlayerTimelineItem
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.BrandNavy
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +54,7 @@ fun ChaptersSheet(
     val numbered = items.firstOrNull()?.numbered != false
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val sheetColor = DeepBlueDark
+    val sheetColor = BrandNavy
     val contentColor = Color.White
 
     ModalBottomSheet(

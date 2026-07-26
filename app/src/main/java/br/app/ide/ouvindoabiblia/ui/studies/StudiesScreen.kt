@@ -56,19 +56,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
-import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun StudiesScreen(
@@ -106,7 +101,7 @@ private fun StudiesContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
     ) {
 
         val horizontalScreenPadding = 16.dp
@@ -141,12 +136,12 @@ private fun StudiesContent(
                         text = "Estudos Bíblicos",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = DeepBlueDark
+                        color = AppColors.textPrimary
                     )
                     Text(
                         text = "Séries de exposições em áudio",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = SlateBlue
+                        color = AppColors.textSecondary
                     )
                 }
             }
@@ -193,12 +188,12 @@ private fun StudyListItem(
                 indication = ripple()
             ) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = CardSurface
+            containerColor = AppColors.card
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.55f)
+            color = AppColors.outline.copy(alpha = 0.55f)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,
@@ -245,7 +240,7 @@ private fun StudyListItem(
                             text = study.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = DeepBlueDark,
+                            color = AppColors.textPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             lineHeight = 22.sp
@@ -257,7 +252,7 @@ private fun StudyListItem(
                             text = study.author,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.W400,
-                            color = SlateBlue,
+                            color = AppColors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -265,7 +260,7 @@ private fun StudyListItem(
                         Text(
                             text = study.description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = LavenderGray,
+                            color = AppColors.textSecondary,
                             maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
                             lineHeight = 20.sp
@@ -288,7 +283,7 @@ private fun StudyListItem(
 //                Text(
 //                    text = study.study.description,
 //                    style = MaterialTheme.typography.bodyMedium,
-//                    color = LavenderGray,
+//                    color = AppColors.textSecondary,
 //                    maxLines = 3,
 //                    overflow = TextOverflow.Ellipsis,
 //                    lineHeight = 18.sp
@@ -300,7 +295,7 @@ private fun StudyListItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = "Abrir estudo",
-                tint = RosyBeige.copy(alpha = 0.85f),
+                tint = AppColors.outline.copy(alpha = 0.85f),
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -318,7 +313,7 @@ private fun StudyMetaChip(
         color = Accent.copy(alpha = 0.90f),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.72f)
+            color = AppColors.outline.copy(alpha = 0.72f)
         ),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
@@ -330,7 +325,7 @@ private fun StudyMetaChip(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelSmall,
-                color = SlateBlue,
+                color = AppColors.textSecondary,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 softWrap = false,
@@ -362,7 +357,7 @@ private fun EmptyStudiesScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -371,7 +366,7 @@ private fun EmptyStudiesScreen() {
             imageVector = Icons.AutoMirrored.Rounded.LibraryBooks,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = RosyBeige
+            tint = AppColors.outline
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -379,7 +374,7 @@ private fun EmptyStudiesScreen() {
         Text(
             text = "Nenhum estudo disponível",
             style = MaterialTheme.typography.titleMedium,
-            color = SlateBlue,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Bold
         )
 
@@ -387,7 +382,7 @@ private fun EmptyStudiesScreen() {
 
         Text(
             text = "Quando novos estudos estiverem disponíveis,\neles aparecerão aqui para você ouvir.",
-            color = LavenderGray,
+            color = AppColors.textSecondary,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -468,7 +463,7 @@ private fun PreviewStudyListItem() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CreamBackground)
+                .background(AppColors.background)
                 .padding(20.dp)
         ) {
             StudyListItem(

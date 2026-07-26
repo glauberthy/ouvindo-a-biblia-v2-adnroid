@@ -39,6 +39,13 @@ val DarkOutline = Color(0xFF423C50)      // Bordas sutis
 val BrandNavy = Color(0xFF22223B)      // Fundo da bottom bar e do player
 val OnBrandNavy = Color(0xFFF2E9E4)    // Texto/ícones sobre o BrandNavy
 
+// Selos AT/NT (Favoritos). São rótulos semânticos, não superfície de página, por isso
+// não seguem o tema. Antes usavam RosyBeige e LavenderGray, que davam 2,10:1 e 3,19:1
+// com o texto branco — o mínimo é 4,5:1. Estes dão 6,30:1 e 8,12:1, e continuam se
+// distinguindo por matiz (quente x frio) além do próprio rótulo.
+val BadgeOldTestament = Color(0xFF6E5C57)  // Marrom-rosado (Antigo)
+val BadgeNewTestament = Color(0xFF4A4E69)  // Azul-ardósia (Novo)
+
 val Accent = Color(0xFFE9C46A)        // Ouro Saffron
 val Accent2 = Color(0xFFEF5466)
 //val Accent = Color(0xFF81B29A)        // Menta Luminosa

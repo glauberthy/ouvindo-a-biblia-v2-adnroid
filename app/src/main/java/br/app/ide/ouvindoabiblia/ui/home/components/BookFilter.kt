@@ -21,10 +21,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import androidx.compose.ui.unit.sp
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun BookFilterBar(
@@ -39,7 +37,7 @@ fun BookFilterBar(
             .height(50.dp) // Altura confortável para o toque
             .border(
                 width = 1.dp,
-                color = SlateBlue.copy(alpha = 0.3f), // Borda sutil
+                color = AppColors.textSecondary.copy(alpha = 0.3f), // Borda sutil
                 shape = RoundedCornerShape(50) // Totalmente redondo
             )
             .clip(RoundedCornerShape(50))
@@ -87,13 +85,13 @@ fun FilterSegment(
 ) {
     // Animação suave de cor ao trocar
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) DeepBlueDark else Color.Transparent,
+        targetValue = if (isSelected) AppColors.textPrimary else Color.Transparent,
         animationSpec = tween(300),
         label = "BgColor"
     )
 
     val textColor by animateColorAsState(
-        targetValue = if (isSelected) CreamBackground else SlateBlue,
+        targetValue = if (isSelected) AppColors.background else AppColors.textSecondary,
         animationSpec = tween(300),
         label = "TextColor"
     )
@@ -120,6 +118,6 @@ fun VerticalDivider() {
         modifier = Modifier
             .width(1.dp)
             .fillMaxHeight(0.6f) // O divisor não vai até a borda (estético)
-            .background(SlateBlue.copy(alpha = 0.2f))
+            .background(AppColors.textSecondary.copy(alpha = 0.2f))
     )
 }

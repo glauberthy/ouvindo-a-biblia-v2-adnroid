@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 
 /**
  * Scrim de proteção da status bar sobre imagens edge-to-edge (headers de Tema/Estudo).
@@ -33,12 +33,17 @@ import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
 fun StatusBarScrim(modifier: Modifier = Modifier) {
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
+    // Acompanha o fundo da página: no tema claro o véu é creme e protege ícones
+    // ESCUROS; no escuro ele precisa ser escuro, porque lá os ícones da status bar
+    // são claros. Fixo em creme, sobrava uma faixa clara no topo do tema escuro.
+    val scrimColor = AppColors.background
+
     // alpha(t) = PICO × (1 − smootherstep(t)) — 1ª e 2ª derivadas zero nas pontas,
     // então o véu "nasce" e "morre" sem nenhum degrau perceptível.
     val stops = (0..STOP_COUNT).map { i ->
         val t = i / STOP_COUNT.toFloat()
         val eased = t * t * t * (t * (t * 6f - 15f) + 10f) // smootherstep
-        t to CreamBackground.copy(alpha = PEAK_ALPHA * (1f - eased))
+        t to scrimColor.copy(alpha = PEAK_ALPHA * (1f - eased))
     }.toTypedArray()
 
     Box(

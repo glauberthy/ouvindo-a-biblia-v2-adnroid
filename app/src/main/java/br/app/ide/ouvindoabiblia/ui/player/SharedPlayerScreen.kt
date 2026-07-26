@@ -70,7 +70,7 @@ import br.app.ide.ouvindoabiblia.ui.player.components.ChaptersSheet
 import br.app.ide.ouvindoabiblia.ui.player.components.SleepTimerBottomSheet
 import br.app.ide.ouvindoabiblia.ui.player.components.SpeedBottomSheet
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.BrandNavy
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import coil.compose.AsyncImage
 import java.util.concurrent.TimeUnit
@@ -169,7 +169,7 @@ fun SharedPlayerScreen(
                 .background(
                     Brush.verticalGradient(
                         // DeepBlueDark: era o mesmo 0xFF22223B repetido à mão aqui.
-                        colors = listOf(backgroundColor, DeepBlueDark)
+                        colors = listOf(backgroundColor, BrandNavy)
                     )
                 )
         )

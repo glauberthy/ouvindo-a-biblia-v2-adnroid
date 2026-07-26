@@ -30,7 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
+import br.app.ide.ouvindoabiblia.ui.theme.BrandNavy
 import br.app.ide.ouvindoabiblia.ui.theme.ErrorRed
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +53,7 @@ fun SleepTimerBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = DeepBlueDark,
+        containerColor = BrandNavy,
         dragHandle = {
             Box(
                 modifier = Modifier

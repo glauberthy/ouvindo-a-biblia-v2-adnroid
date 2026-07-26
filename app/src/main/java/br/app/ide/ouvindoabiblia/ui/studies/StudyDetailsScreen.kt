@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Study
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
@@ -62,12 +63,7 @@ import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun StudyDetailsScreen(
@@ -91,7 +87,7 @@ fun StudyDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
     ) {
         when (val state = uiState) {
             is StudyDetailsUiState.Loading -> LoadingScreen()
@@ -127,7 +123,7 @@ private fun StudyDetailsContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
     ) {
         LessonsList(
             study = study,
@@ -201,7 +197,7 @@ fun LessonListItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = AppColors.card),
         border = if (isCurrent) BorderStroke(2.dp, Accent) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -215,13 +211,13 @@ fun LessonListItem(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isCurrent) Accent else DeepBlueDark),
+                    .background(if (isCurrent) Accent else AppColors.textPrimary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (isCurrent) DeepBlueDark else Color.White,
+                    color = if (isCurrent) AppColors.textPrimary else Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -233,7 +229,7 @@ fun LessonListItem(
                     text = lesson.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark,
+                    color = AppColors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -244,7 +240,7 @@ fun LessonListItem(
                 Text(
                     text = "${minutes}m ${seconds.toString().padStart(2, '0')}s",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = DeepBlueDark.copy(alpha = 0.8f)
+                    color = AppColors.textPrimary.copy(alpha = 0.8f)
                 )
 
                 // ISSUE 9.A: descrição da aula (texto longo do JSON) — recolhida em 2 linhas,
@@ -256,7 +252,7 @@ fun LessonListItem(
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = DeepBlueDark.copy(alpha = 0.7f),
+                        color = AppColors.textPrimary.copy(alpha = 0.7f),
                         maxLines = if (expanded) Int.MAX_VALUE else 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
@@ -276,7 +272,7 @@ fun LessonListItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (isCurrent) Accent else DeepBlueDark.copy(alpha = 0.05f)),
+                    .background(if (isCurrent) Accent else AppColors.textPrimary.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -285,7 +281,7 @@ fun LessonListItem(
                     // retoma/troca). O antigo Replay prometia "reiniciar" e era no-op.
                     imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isCurrent && isPlaying) "Pausar aula" else "Ouvir aula",
-                    tint = DeepBlueDark
+                    tint = AppColors.textPrimary
                 )
             }
         }
@@ -335,7 +331,7 @@ private fun StudyDetailsHeader(
                     .size(40.dp)
                     .align(Alignment.TopStart),
                 shape = CircleShape,
-                color = CreamBackground.copy(alpha = 0.92f),
+                color = AppColors.background.copy(alpha = 0.92f),
                 tonalElevation = 0.dp,
                 shadowElevation = 2.dp
             ) {
@@ -343,7 +339,7 @@ private fun StudyDetailsHeader(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
-                        tint = DeepBlueDark
+                        tint = AppColors.textPrimary
                     )
                 }
             }
@@ -356,14 +352,14 @@ private fun StudyDetailsHeader(
                 text = study.title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = DeepBlueDark
+                color = AppColors.textPrimary
             )
 
             Text(
                 text = study.author,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
-                color = SlateBlue,
+                color = AppColors.textSecondary,
                 modifier = Modifier.padding(top = 4.dp)
             )
 
@@ -373,7 +369,7 @@ private fun StudyDetailsHeader(
                 text = study.description,
                 style = MaterialTheme.typography.bodyLarge,
                 lineHeight = 22.sp,
-                color = LavenderGray
+                color = AppColors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -396,11 +392,11 @@ private fun StudyMetaChip(
 ) {
     Card(
         modifier = modifier.heightIn(min = 28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = AppColors.card),
         shape = RoundedCornerShape(999.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.72f)
+            color = AppColors.outline.copy(alpha = 0.72f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -408,7 +404,7 @@ private fun StudyMetaChip(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
-            color = SlateBlue,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Clip
@@ -504,7 +500,7 @@ private fun PreviewLessonListItem() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CreamBackground)
+                .background(AppColors.background)
                 .padding(16.dp)
         ) {
             LessonListItem(

@@ -52,17 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
-import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun ThemesScreen(
@@ -103,12 +98,12 @@ private fun ThemesContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground)
+            .background(AppColors.background)
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(CreamBackground),
+                .background(AppColors.background),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
@@ -123,12 +118,12 @@ private fun ThemesContent(
                         text = "Temas Bíblicos",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = DeepBlueDark
+                        color = AppColors.textPrimary
                     )
                     Text(
                         text = "Passagens selecionadas por assunto",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = SlateBlue
+                        color = AppColors.textSecondary
                     )
                 }
             }
@@ -173,12 +168,12 @@ fun ThemeListItem(
                 indication = ripple()
             ) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = CardSurface
+            containerColor = AppColors.card
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.55f)
+            color = AppColors.outline.copy(alpha = 0.55f)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,
@@ -211,7 +206,7 @@ fun ThemeListItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = "Abrir tema",
-                tint = RosyBeige.copy(alpha = 0.85f),
+                tint = AppColors.outline.copy(alpha = 0.85f),
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -254,7 +249,7 @@ private fun ThemeTextContent(
             text = theme.title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = DeepBlueDark,
+            color = AppColors.textPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             lineHeight = 22.sp
@@ -265,7 +260,7 @@ private fun ThemeTextContent(
         Text(
             text = theme.description,
             style = MaterialTheme.typography.bodyMedium,
-            color = LavenderGray,
+            color = AppColors.textSecondary,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             lineHeight = 20.sp
@@ -320,7 +315,7 @@ private fun PreviewThemeListItem() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CreamBackground)
+                .background(AppColors.background)
                 .padding(20.dp)
         ) {
             ThemeListItem(

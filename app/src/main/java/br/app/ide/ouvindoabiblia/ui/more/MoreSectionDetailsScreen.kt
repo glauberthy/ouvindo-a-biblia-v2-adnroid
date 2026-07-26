@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Asset
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Library
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.MoreSection
@@ -59,12 +60,6 @@ import br.app.ide.ouvindoabiblia.data.repository.domain.model.Person
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.RightsSource
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
-import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 
 @Composable
 fun MoreSectionDetailsScreen(
@@ -84,7 +79,7 @@ fun MoreSectionDetailsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(AppColors.background),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -108,7 +103,7 @@ fun MoreSectionDetailsScreen(
                         Text(
                             text = section.content.text.orEmpty(),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = DeepBlueDark,
+                            color = AppColors.textPrimary,
                             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
                         )
                     }
@@ -122,7 +117,7 @@ fun MoreSectionDetailsScreen(
                             Text(
                                 text = description,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = LavenderGray
+                                color = AppColors.textSecondary
                             )
                         }
                     }
@@ -191,7 +186,7 @@ private fun MoreSectionHeader(
         Surface(
             modifier = Modifier.size(40.dp),
             shape = CircleShape,
-            color = CreamBackground.copy(alpha = 0.92f),
+            color = AppColors.background.copy(alpha = 0.92f),
             tonalElevation = 0.dp,
             shadowElevation = 2.dp
         ) {
@@ -199,7 +194,7 @@ private fun MoreSectionHeader(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Voltar",
-                    tint = DeepBlueDark
+                    tint = AppColors.textPrimary
                 )
             }
         }
@@ -220,7 +215,7 @@ private fun MoreSectionHeader(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = DeepBlueDark,
+                        tint = AppColors.textPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -231,7 +226,7 @@ private fun MoreSectionHeader(
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = DeepBlueDark,
+                color = AppColors.textPrimary,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -245,12 +240,12 @@ private fun InfoCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = CardSurface
+            containerColor = AppColors.card
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.55f)
+            color = AppColors.outline.copy(alpha = 0.55f)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,
@@ -282,7 +277,7 @@ private fun RightsSourceCard(
         Text(
             text = source.description,
             style = MaterialTheme.typography.bodyMedium,
-            color = DeepBlueDark
+            color = AppColors.textPrimary
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -329,7 +324,7 @@ private fun AssetCard(
             text = asset.title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = DeepBlueDark
+            color = AppColors.textPrimary
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -343,7 +338,7 @@ private fun AssetCard(
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodyMedium,
-                color = LavenderGray
+                color = AppColors.textSecondary
             )
         }
 
@@ -370,7 +365,7 @@ private fun PersonCard(
         Text(
             text = person.description,
             style = MaterialTheme.typography.bodyMedium,
-            color = DeepBlueDark
+            color = AppColors.textPrimary
         )
 
         person.website?.takeIf { it.isNotBlank() }?.let {
@@ -405,7 +400,7 @@ private fun LibraryCard(
                     Icon(
                         imageVector = Icons.Filled.Code,
                         contentDescription = null,
-                        tint = DeepBlueDark,
+                        tint = AppColors.textPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -420,12 +415,12 @@ private fun LibraryCard(
                     text = library.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = DeepBlueDark
+                    color = AppColors.textPrimary
                 )
                 Text(
                     text = "Versão ${library.version}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = SlateBlue
+                    color = AppColors.textSecondary
                 )
             }
         }
@@ -479,7 +474,7 @@ private fun PersonLikeHeader(
                     Icon(
                         imageVector = placeholderIcon,
                         contentDescription = null,
-                        tint = DeepBlueDark,
+                        tint = AppColors.textPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -495,12 +490,12 @@ private fun PersonLikeHeader(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = DeepBlueDark
+                color = AppColors.textPrimary
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = SlateBlue
+                color = AppColors.textSecondary
             )
         }
     }
@@ -515,14 +510,14 @@ private fun MetaLine(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = SlateBlue,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = DeepBlueDark
+            color = AppColors.textPrimary
         )
     }
 }
@@ -539,7 +534,7 @@ private fun LinkLine(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = SlateBlue,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium
         )
 
@@ -551,7 +546,7 @@ private fun LinkLine(
             Icon(
                 imageVector = Icons.Filled.Link,
                 contentDescription = null,
-                tint = RosyBeige,
+                tint = AppColors.outline,
                 modifier = Modifier.size(16.dp)
             )
 
@@ -560,7 +555,7 @@ private fun LinkLine(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
-                color = DeepBlueDark,
+                color = AppColors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

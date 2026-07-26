@@ -25,12 +25,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.ui.home.components.BookFilterBar
 import br.app.ide.ouvindoabiblia.ui.home.components.BookGridItem
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +78,7 @@ private fun HomeContent(
         columns = GridCells.Fixed(3),
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(AppColors.background),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -127,7 +126,7 @@ private fun HomeHeader() {
         text = "Ouvindo a Bíblia",
         style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
-        color = DeepBlueDark,
+        color = AppColors.textPrimary,
         modifier = Modifier.padding(bottom = 8.dp)
     )
 }

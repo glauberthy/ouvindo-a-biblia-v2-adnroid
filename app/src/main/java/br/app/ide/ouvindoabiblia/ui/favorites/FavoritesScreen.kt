@@ -62,17 +62,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.FavoriteLesson
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.theme.Accent
 import br.app.ide.ouvindoabiblia.ui.theme.Accent2
-import br.app.ide.ouvindoabiblia.ui.theme.CardSurface
-import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
-import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
-import br.app.ide.ouvindoabiblia.ui.theme.RosyBeige
-import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
+import br.app.ide.ouvindoabiblia.ui.theme.BadgeNewTestament
+import br.app.ide.ouvindoabiblia.ui.theme.BadgeOldTestament
 
 @Composable
 fun FavoritesScreen(
@@ -121,7 +118,7 @@ fun FavoritesScreenContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(AppColors.background),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -140,14 +137,14 @@ fun FavoritesScreenContent(
                 Text(
                     text = "Meus Favoritos",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = DeepBlueDark,
+                    color = AppColors.textPrimary,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = SlateBlue,
+                    color = AppColors.textSecondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -169,7 +166,7 @@ fun FavoritesScreenContent(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = DeepBlueDark)
+                    CircularProgressIndicator(color = AppColors.textPrimary)
                 }
             }
 
@@ -184,7 +181,7 @@ fun FavoritesScreenContent(
                     Text(
                         text = uiState.message,
                         style = MaterialTheme.typography.titleMedium,
-                        color = SlateBlue,
+                        color = AppColors.textSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -229,7 +226,7 @@ fun FavoritesSegmentedSelector(
             .height(50.dp)
             .border(
                 width = 1.dp,
-                color = SlateBlue.copy(alpha = 0.3f),
+                color = AppColors.textSecondary.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(50)
             )
             .clip(RoundedCornerShape(50))
@@ -262,13 +259,13 @@ private fun FavoriteFilterSegment(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) DeepBlueDark else Color.Transparent,
+        targetValue = if (isSelected) AppColors.textPrimary else Color.Transparent,
         animationSpec = tween(300),
         label = "FavoriteFilterBg"
     )
 
     val textColor by animateColorAsState(
-        targetValue = if (isSelected) CreamBackground else SlateBlue,
+        targetValue = if (isSelected) AppColors.background else AppColors.textSecondary,
         animationSpec = tween(300),
         label = "FavoriteFilterText"
     )
@@ -295,7 +292,7 @@ private fun FavoriteVerticalDivider() {
         modifier = Modifier
             .width(1.dp)
             .fillMaxHeight(0.6f)
-            .background(SlateBlue.copy(alpha = 0.2f))
+            .background(AppColors.textSecondary.copy(alpha = 0.2f))
     )
 }
 
@@ -316,12 +313,12 @@ fun ChapterListItem(number: Int, onClick: () -> Unit, onRemove: () -> Unit) {
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = SlateBlue // Ícone discreto
+                tint = AppColors.textSecondary // Ícone discreto
             )
             Text(
                 text = "Capítulo $number",
                 style = MaterialTheme.typography.bodyLarge,
-                color = DeepBlueDark,
+                color = AppColors.textPrimary,
                 modifier = Modifier.padding(start = 12.dp)
             )
         }
@@ -351,7 +348,7 @@ fun FavoritesTabSelector(
     SecondaryTabRow(
         selectedTabIndex = selectedTab,
         containerColor = Color.Transparent,
-        contentColor = DeepBlueDark,
+        contentColor = AppColors.textPrimary,
         divider = {},
         indicator = {
             TabRowDefaults.SecondaryIndicator(
@@ -359,7 +356,7 @@ fun FavoritesTabSelector(
                     selectedTabIndex = selectedTab,
                     matchContentSize = true
                 ),
-                color = DeepBlueDark,
+                color = AppColors.textPrimary,
                 height = 3.dp
             )
         }
@@ -370,8 +367,8 @@ fun FavoritesTabSelector(
             Tab(
                 selected = isSelected,
                 onClick = { onTabSelected(index) },
-                selectedContentColor = DeepBlueDark,
-                unselectedContentColor = SlateBlue.copy(alpha = 0.72f),
+                selectedContentColor = AppColors.textPrimary,
+                unselectedContentColor = AppColors.textSecondary.copy(alpha = 0.72f),
                 text = {
                     Text(
                         text = title,
@@ -408,12 +405,14 @@ fun LazyListScope.renderBibleFavorites(
                             .width(60.dp)
                             .height(90.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(RosyBeige)
+                            .background(AppColors.outline)
                     )
 
                     Column(modifier = Modifier.padding(start = 16.dp)) {
                         Surface(
-                            color = if (info.testament == "at") RosyBeige else LavenderGray,
+                            // Tokens próprios (invariantes ao tema): AppColors.outline/AppColors.textSecondary
+                            // davam 2,10:1 e 3,19:1 com o texto branco por cima.
+                            color = if (info.testament == "at") BadgeOldTestament else BadgeNewTestament,
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
@@ -429,13 +428,13 @@ fun LazyListScope.renderBibleFavorites(
                             text = info.bookName,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            color = DeepBlueDark
+                            color = AppColors.textPrimary
                         )
 
                         Text(
                             text = "${info.totalChapters} capítulos",
                             style = MaterialTheme.typography.bodySmall,
-                            color = SlateBlue.copy(alpha = 0.7f)
+                            color = AppColors.textSecondary.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -443,7 +442,7 @@ fun LazyListScope.renderBibleFavorites(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 HorizontalDivider(
-                    color = RosyBeige.copy(alpha = 0.35f)
+                    color = AppColors.outline.copy(alpha = 0.35f)
                 )
 
                 chapters.forEach { item ->
@@ -502,7 +501,7 @@ fun LazyListScope.renderStudyFavorites(
                         Text(
                             text = studyTitle,
                             style = MaterialTheme.typography.titleMedium,
-                            color = DeepBlueDark,
+                            color = AppColors.textPrimary,
                             fontWeight = FontWeight.Bold
                         )
 
@@ -510,7 +509,7 @@ fun LazyListScope.renderStudyFavorites(
                             text = info.studyAuthor,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.W400,
-                            color = SlateBlue,
+                            color = AppColors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -521,7 +520,7 @@ fun LazyListScope.renderStudyFavorites(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 HorizontalDivider(
-                    color = RosyBeige.copy(alpha = 0.35f)
+                    color = AppColors.outline.copy(alpha = 0.35f)
                 )
 
                 lessons.forEachIndexed { index, item ->
@@ -565,12 +564,12 @@ fun StudyLessonFavoriteItem(
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = SlateBlue
+                tint = AppColors.textSecondary
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = DeepBlueDark,
+                color = AppColors.textPrimary,
                 modifier = Modifier.padding(start = 12.dp),
                 maxLines = 1 // Evita que o texto quebre a linha e empurre o coração
             )
@@ -601,19 +600,19 @@ fun EmptyFavorites(itemType: String) { // Agora aceita o tipo de item
             imageVector = Icons.Rounded.Favorite,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = RosyBeige
+            tint = AppColors.outline
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Sua lista de $itemType está vazia", // Texto dinâmico
             style = MaterialTheme.typography.titleMedium,
-            color = SlateBlue,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Text(
             text = "Marque itens como favoritos para\nouvi-los novamente com facilidade.",
-            color = LavenderGray,
+            color = AppColors.textSecondary,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -628,12 +627,12 @@ private fun FavoritesGroupCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = CardSurface
+            containerColor = AppColors.card
         ),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = RosyBeige.copy(alpha = 0.55f)
+            color = AppColors.outline.copy(alpha = 0.55f)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,

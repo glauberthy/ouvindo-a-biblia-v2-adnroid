@@ -27,9 +27,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
 import br.app.ide.ouvindoabiblia.ui.home.BookSummary
-import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 
 // Piso da redução automática do título (ver BookTitle). Abaixo disto o nome fica
 // pequeno demais em relação aos vizinhos e é melhor truncar com elipse.
@@ -106,7 +106,7 @@ private fun BookTitle(title: String) {
             .padding(horizontal = 2.dp)
             .drawWithContent { if (fits) drawContent() },
         style = style,
-        color = DeepBlueDark,
+        color = AppColors.textPrimary,
         textAlign = TextAlign.Center,
         softWrap = false,
         maxLines = 1,

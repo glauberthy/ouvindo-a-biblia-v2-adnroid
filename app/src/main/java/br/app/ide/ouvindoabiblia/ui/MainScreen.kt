@@ -77,7 +77,10 @@ import br.app.ide.ouvindoabiblia.ui.navigation.NavigationGraph
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.player.SharedPlayerScreen
+import br.app.ide.ouvindoabiblia.ui.theme.AppColors
+import br.app.ide.ouvindoabiblia.ui.theme.BrandNavy
 import br.app.ide.ouvindoabiblia.ui.theme.CreamBackground
+import br.app.ide.ouvindoabiblia.ui.theme.OnBrandNavy
 import br.app.ide.ouvindoabiblia.ui.theme.DeepBlueDark
 import br.app.ide.ouvindoabiblia.ui.theme.LavenderGray
 import br.app.ide.ouvindoabiblia.ui.theme.OuvindoABibliaTheme
@@ -188,6 +191,9 @@ fun MainScreen(
         val view = LocalView.current
         val isSystemDark = isSystemInDarkTheme()
 
+        // Lido na composição (getter @Composable) para poder ser usado dentro do SideEffect.
+        val pageBackgroundIsDark = AppColors.background.isDark()
+
         if (!view.isInEditMode) {
             SideEffect {
                 val window = (view.context as Activity).window
@@ -199,9 +205,10 @@ fun MainScreen(
                 val useDarkIcons = if (isVisuallyExpanded) {
                     !animatedArtworkColor.isDark() // Se a arte for clara, ícones escuros
                 } else {
-                    // Se estiver em economia de energia (fundo escuro), queremos ícones claros (!true = false)
-                    // Caso contrário, queremos ícones escuros (!false = true) para aparecer no CreamBackground
-                    !isPowerSaveMode
+                    // Ícones escuros SÓ quando o fundo da página é claro. Antes era
+                    // `!isPowerSaveMode`, que presumia fundo claro sempre — no tema escuro
+                    // isso deixava ícones escuros sobre fundo escuro (relógio ilegível).
+                    !(isPowerSaveMode || pageBackgroundIsDark)
                 }
 
                 controller.isAppearanceLightStatusBars = useDarkIcons
@@ -227,7 +234,8 @@ fun MainScreen(
                 contentWindowInsets = WindowInsets.navigationBars,
                 bottomBar = {
                     NavigationBar(
-                        containerColor = DeepBlueDark,
+                        // Superfície de marca: escura nos dois temas.
+                        containerColor = BrandNavy,
                         tonalElevation = 0.dp
                     ) {
                         val items = listOf(
@@ -291,12 +299,17 @@ fun MainScreen(
                                         restoreState = true
                                     }
                                 },
+                                // A barra é BrandNavy nos dois temas, então as cores aqui são
+                                // de marca (OnBrandNavy/LavenderGray), não do color scheme.
+                                // O alpha 0.6f dos inativos foi removido: dava 2,65:1 sobre a
+                                // navy, abaixo do mínimo até para ícone (3:1). Em alpha cheio
+                                // são 4,84:1, e seguem visivelmente mais apagados que o ativo.
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = CreamBackground,
+                                    selectedIconColor = OnBrandNavy,
                                     indicatorColor = SlateBlue,
-                                    selectedTextColor = CreamBackground,
-                                    unselectedIconColor = LavenderGray.copy(alpha = 0.6f),
-                                    unselectedTextColor = LavenderGray.copy(alpha = 0.6f)
+                                    selectedTextColor = OnBrandNavy,
+                                    unselectedIconColor = LavenderGray,
+                                    unselectedTextColor = LavenderGray
                                 )
                             )
                         }
@@ -342,7 +355,9 @@ fun MainScreen(
             }
 
             // --- DEGRADÊ DA STATUS BAR (SOFT SCRIM) ---
-            val baseColor = if (isPowerSaveMode) DeepBlueDark else CreamBackground
+            // Acompanha o fundo da página: no tema escuro o scrim precisa ser escuro,
+            // senão sobra uma faixa clara no topo. O modo economia segue forçando escuro.
+            val baseColor = if (isPowerSaveMode) BrandNavy else AppColors.background
 
             Box(
                 modifier = Modifier

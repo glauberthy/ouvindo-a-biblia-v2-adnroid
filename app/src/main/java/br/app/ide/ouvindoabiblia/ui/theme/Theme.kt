@@ -104,14 +104,14 @@ object AppColors {
 }
 
 /**
- * Interruptor do tema escuro.
+ * Interruptor do tema escuro. **Ligado**: todas as telas leem cor via [AppColors] ou via
+ * tokens de marca, e os dois temas foram conferidos no emulador tela por tela.
  *
- * Fica **desligado** até TODAS as telas lerem cor via [AppColors]/tokens de marca. Um app
- * meio-escuro e meio-creme é pior para o usuário do que um app só-claro — e hoje a maior
- * parte das telas ainda referencia as cores claras direto. Ligar antes de concluir a
- * migração entrega telas invertidas.
+ * Serve de trava para regressão: se alguma tela nova voltar a cravar cor clara, desligar
+ * aqui é melhor do que entregar um app meio-escuro e meio-creme, que é pior para o
+ * usuário do que um app só-claro.
  */
-const val DARK_THEME_ENABLED = false
+const val DARK_THEME_ENABLED = true
 
 @Composable
 fun OuvindoABibliaTheme(
