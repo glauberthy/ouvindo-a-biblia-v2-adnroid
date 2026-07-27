@@ -1051,6 +1051,137 @@ validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 
 ---
 
+## FASE 10 — Notificação de mídia e controles fora do app (aberta 2026-07-26)
+
+**Origem:** o dono mandou o print da própria notificação (`Gênesis 1` / `Ouvindo a Bíblia`,
+com anterior/play/próximo e seekbar) e perguntou o que caberia ali que ajudasse o usuário,
+já que o app é de áudio.
+
+**Levantamento (2026-07-26, verificado no código e reproduzido no emulador API 36):**
+
+1. **Não existe NENHUMA ação customizada.** Não há `setCustomLayout` nem `CommandButton` no
+   projeto: os três botões e a barra de progresso são o padrão do Media3. O espaço está livre.
+2. **A 2ª linha está desperdiçada.** A notificação usa `title` na linha 1 e `artist` na linha 2,
+   e o `artist` está fixo em `"Ouvindo a Bíblia"` — o nome do app, que o sistema já mostra pelo
+   ícone. O `subtitle` (onde mora a informação útil) **não é exibido**. Reproduzido: tocando um
+   momento de Colossenses a sombra mostrou `Colossenses 3` / `Ouvindo a Bíblia`, e o título do
+   momento ("Mortificar pecados; revestir…") não aparece em lugar nenhum. Nos Estudos é pior:
+   `title` = série e `subtitle` = aula, então **não há como saber qual aula está tocando**.
+3. **Media3 1.9.2 já traz o necessário** (conferido dentro do `.aar`): slots
+   `SLOT_BACK`/`SLOT_CENTRAL`/`SLOT_FORWARD` + `_SECONDARY` + `SLOT_OVERFLOW`, e ícones padrão
+   `ICON_SKIP_BACK_10`, `ICON_SKIP_FORWARD_30`, `ICON_PLAYBACK_SPEED_1_2/1_5/2_0`,
+   `ICON_HEART_FILLED/UNFILLED`, `ICON_BOOKMARK_*`. Não precisa desenhar ícone.
+4. **Orçamento de botões:** o controle do sistema mostra ~5 ações. Se −10s/+30s ocuparem as
+   laterais, anterior/próximo capítulo vão para os slots secundários (seguem visíveis na
+   notificação expandida e no Android Auto). Trade-off aceito pelo dono ao priorizar 10.A+10.B.
+5. **Não é bug:** os dois pontinhos sob o player no print são 2 sessões de mídia ativas —
+   a nossa e a do **Netflix** (`dumpsys media_session` no moto g53). Nada duplicado nosso.
+
+O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não só para a sombra.
+
+### ISSUE 10.A — ✅ FEITA (2026-07-26) — Contexto real na 2ª linha da notificação (em vez do nome do app)
+
+- **Feito:** funções puras em `playback/MediaNotificationText.kt` (`bibleNotificationLine`,
+  `studyNotificationLine`, `themeMomentNotificationLine`) aplicadas nos **5** pontos que montam
+  metadata: `PlayerViewModel` (Bíblia, Tema, Estudo) e `PlaybackService` (Estudo e Bíblia — os
+  caminhos de RETOMADA e do Android Auto, que precisavam espelhar para a mesma aula não aparecer
+  escrita de dois jeitos). `updatePlayerMetadata` usa `buildUpon()`, então favoritar preserva a
+  linha (verificado antes de mexer).
+- **Achado que sustentou a issue:** `artist` não tem NENHUM consumidor dentro do app (a UI e a
+  persistência leem `title`/`albumTitle`/`subtitle`), então a troca é isolada — nada de UI mudou.
+- **Validado no emulador API 36** (`dumpsys media_session`, metadata real):
+  - Bíblia → `Gênesis 1` / **`Capítulo 1 de 50`**
+  - Estudo → `Estudos Expositivos em Apocalipse` / **`Aula 1 de 28 · Características literárias
+    do Apocalipse`**; o "próximo" da própria notificação avançou para `Aula 2 de 28 · Principais
+    características do apocalipse` (numeração dinâmica, não fixa)
+  - Momento → `Mateus 6` / **`Providência do Pai vs. Ansiedade · Mateus 6:25-34`**
+- **Testes:** `MediaNotificationTextTest` (9 casos: 3 tipos, total desconhecido, campos vazios do
+  conteúdo remoto, e a regressão "nenhuma linha com conteúdo repete o nome do app"). **Esforço:** P.
+
+### (plano original) ISSUE 10.A — Contexto real na 2ª linha da notificação (em vez do nome do app)
+
+- **Problema:** `artist = "Ouvindo a Bíblia"` em 5 lugares (`PlayerViewModel.kt:149`, `:423`,
+  `:1078`; `PlaybackService.kt:361`, `:429`) ocupa a única linha de apoio da notificação com
+  informação que o usuário já tem. Em Estudo/Momento, o que ele escolheu ouvir (aula, momento)
+  fica invisível fora do app.
+- **Feito quando:** a 2ª linha carrega o contexto por tipo de conteúdo —
+  Bíblia → `Capítulo N de M`; Estudo → `Aula N de M · <título da aula>`;
+  Momento → `<título do momento> · <referência>`. O `subtitle` continua alimentando o app
+  (mini/full player não regridem).
+- **Como:** função pura de formatação (padrão da casa: testável sem Compose/Media3), aplicada
+  nos 5 pontos. O total (`M`) sai do tamanho da playlist quando conhecido; sem ele, cai para o
+  formato curto sem "de M" em vez de mentir um número.
+- **Testes:** unit da função pura cobrindo os 3 tipos, ausência de total, e título/referência
+  vazios. **Validação:** sombra nos 3 tipos no emulador.
+- **Esforço:** P.
+
+### ISSUE 10.B — ✅ FEITA (2026-07-26) — Botões −10s / +30s na notificação
+
+- **Feito:** `playback/MediaNotificationLayout.kt` declara 4 `CommandButton` — ±segundos nos slots
+  principais (`SLOT_BACK`/`SLOT_FORWARD`) e anterior/próximo nos secundários, cada um com
+  `SLOT_OVERFLOW` como 2ª opção para não desaparecer numa superfície sem o slot preferido.
+  Publicados no `onConnect` via **`setMediaButtonPreferences`** (e não `setCustomLayout`: no
+  Media3 1.9 é a API que casa com o modelo de slots). Ícones do próprio Media3
+  (`ICON_SKIP_BACK_10`/`ICON_SKIP_FORWARD_30`) — já vêm com 10/30 desenhados, sem drawable novo.
+  Rótulos NEUTROS ("Anterior", não "Capítulo anterior"): a mesma fila é capítulo, aula ou momento.
+- **Validado no emulador API 36:** os 4 botões aparecem na sombra (`dumpsys` confirma
+  `custom actions=[Voltar 10 segundos, Avançar 30 segundos, Anterior, Próximo]`) e MOVEM a
+  posição — +31,3s e −8,1s medidos com o áudio tocando (o excedente é o próprio playback durante
+  os ~2s da medição; `media dispatch pause` não existe na imagem playstore).
+- **Testes:** `MediaNotificationLayoutTest` (7 casos: quantidade, slots principais x secundários,
+  ícone coerente com o incremento do player, overflow em todos, rótulo neutro, comando válido).
+  `CommandButton` constrói na JVM (verificado por probe), então não precisou de Robolectric.
+- **Esforço:** P/M.
+
+### (plano original) ISSUE 10.B — Botões −10s / +30s na notificação
+
+- **Problema:** em palavra falada o controle mais usado é "volta um pouco, me distraí". Os
+  incrementos **já existem** no player (`MediaModule`: `seekBack` 10s / `seekForward` 30s) mas
+  não há como acioná-los fora do app — a notificação só oferece pular capítulo inteiro.
+- **Feito quando:** `setCustomLayout` com dois `CommandButton` de `COMMAND_SEEK_BACK` e
+  `COMMAND_SEEK_FORWARD` (`ICON_SKIP_BACK_10` / `ICON_SKIP_FORWARD_30`) em `SLOT_BACK`/
+  `SLOT_FORWARD`, e anterior/próximo movidos para `SLOT_BACK_SECONDARY`/`SLOT_FORWARD_SECONDARY`.
+- **Cuidado:** o layout é declarado no `onConnect` (`AcceptedResultBuilder.setCustomLayout`) e
+  vale para TODO cliente — sombra, Auto, tela de bloqueio. Não mexer nos comandos disponíveis
+  (`DEFAULT_SESSION_AND_LIBRARY_COMMANDS`), que a ISSUE 4.D já ajustou por causa do browse.
+- **Testes:** unit do layout (ordem/slots/comandos dos botões, sem subir sessão).
+  **Validação:** tocar os botões pela sombra e conferir salto de 10s/30s.
+- **Esforço:** P/M.
+
+### ISSUE 10.C — 🔲 Temporizador de sono na notificação
+
+- **Problema:** conteúdo bíblico é muito ouvido para dormir, e o timer só existe dentro do app
+  (`SleepTimerSheet`) — exige destravar o telefone e navegar, exatamente o que o usuário não quer
+  fazer na cama.
+- **Feito quando:** `CommandButton` com `SessionCommand` próprio; toque cicla os presets do app
+  (ou estende) e o `displayName` reflete o tempo restante. Cancelar acessível pelo mesmo botão.
+- **Cuidado:** a ISSUE 5.C já definiu que o timer conta tempo de REPRODUÇÃO, não wall-clock —
+  o botão tem de ler esse mesmo estado, não criar um segundo relógio.
+- **Esforço:** M.
+
+### ISSUE 10.D — 🔲 Favoritar pela notificação
+
+- **Problema:** favoritar exige abrir o app, embora o estado já esteja disponível: o
+  `is_favorite` **já viaja** nos extras do `MediaMetadata` e o `toggleFavorite` já existe.
+- **Feito quando:** `CommandButton` com `ICON_HEART_FILLED`/`ICON_HEART_UNFILLED` alternando pelo
+  estado do item atual, com o layout re-publicado a cada troca de faixa/toggle.
+- **Cuidado:** a ISSUE 6.G já mordeu aqui — o coração dessincronizava entre mini e full player.
+  Este botão é um terceiro consumidor do mesmo estado; tem de ler a MESMA fonte.
+- **Esforço:** M.
+
+### ISSUE 10.E — 🔲 Velocidade de reprodução na notificação
+
+- **Problema:** `SpeedSheet` só dentro do app; em pregação/estudo a troca de velocidade é
+  frequente.
+- **Feito quando:** `CommandButton` ciclando 1,0 → 1,2 → 1,5 → 2,0 com
+  `ICON_PLAYBACK_SPEED_1_2/1_5/2_0` — o ícone padrão **mostra a velocidade atual**, então o
+  botão comunica estado sem texto.
+- **Nota:** menor prioridade porque compete por slot com 10.C/10.D; provável destino é o
+  `SLOT_OVERFLOW`.
+- **Esforço:** P/M.
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
@@ -1103,6 +1234,11 @@ quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conte�
 **PUB-23** (vídeo FGS), **novela da chave** (Play App Signing legado 1024-bit → dupla assinatura),
 placeholders de Estudos no servidor (+ recaptura `04_estudos`) e testes no release
 **PUB-11/12/13/16**. Detalhes na seção FASE 8 acima.
+
+**FASE 10 (notificação de mídia):** 🔲 EM ANDAMENTO (2026-07-26) — `10.A ✅ → 10.B ✅ → 10.C → 10.D
+→ 10.E`. 10.A e 10.B feitas e validadas no emulador API 36. 10.C/10.D/10.E competem pelos ~5 slots
+do controle do sistema; agora que ±segundos ocupa as laterais e anterior/próximo os secundários,
+o destino provável das três é o `SLOT_OVERFLOW` — decidir caso a caso ao implementar.
 
 **FASES 0→7 CONCLUÍDAS; FASE 8 (publicação) ABERTA.** Backlog residual só-quando-religar: Cast (§6.1-6.4, abaixo),
 persistência estilo-Spotify (conflita c/ 4.A), validar Auto em DHU, busca por voz no Auto, 35 typos
