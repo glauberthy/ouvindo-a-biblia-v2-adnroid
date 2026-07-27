@@ -10,7 +10,13 @@ Dois públicos, dois textos — não misture:
 
 ---
 
-## 1.1 (versionCode 2) — 2026-07-26
+## 1.2 (versionCode 3) — 2026-07-27
+
+> Este release foi montado antes como **1.1 / vc2** e o vc2 **nunca chegou ao Console** (a última
+> versão ativa lá era o vc1/1.0). O vc3/1.2 tem o mesmo conteúdo funcional — entre os dois só
+> entraram o commit de documentação do README e o próprio bump. Ou seja: não existe um "1.1" do
+> ponto de vista do usuário, e o texto abaixo é o do 1.2. Pular o vc2 é permitido; o Play só exige
+> `versionCode` crescente.
 
 ### Texto para o Console — copiar como está (449/500 caracteres)
 
