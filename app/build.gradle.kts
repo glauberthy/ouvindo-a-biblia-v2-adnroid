@@ -30,8 +30,8 @@ android {
         // Regra operacional (Audit 01 §5): INCREMENTAR a cada upload no Console, mesmo em
         // trilha de teste — o Play rejeita versionCode repetido. O vc1/1.0 foi o AAB validado
         // localmente na decisão de publicar como app novo (dcbee84).
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
