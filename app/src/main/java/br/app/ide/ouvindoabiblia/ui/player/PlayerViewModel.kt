@@ -23,6 +23,9 @@ import br.app.ide.ouvindoabiblia.data.repository.domain.model.Lesson
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.playback.MAX_CAUSE_DEPTH
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
+import br.app.ide.ouvindoabiblia.playback.bibleNotificationLine
+import br.app.ide.ouvindoabiblia.playback.studyNotificationLine
+import br.app.ide.ouvindoabiblia.playback.themeMomentNotificationLine
 import br.app.ide.ouvindoabiblia.playback.classifyPlaybackError
 import br.app.ide.ouvindoabiblia.playback.playbackErrorText
 import br.app.ide.ouvindoabiblia.service.PlaybackService
@@ -146,7 +149,9 @@ class PlayerViewModel @Inject constructor(
                         .setTitle("${chapterInfo.bookName} ${chapterInfo.number}")
                         .setAlbumTitle(chapterInfo.bookName)
                         .setSubtitle("Capítulo ${chapterInfo.number}")
-                        .setArtist("Ouvindo a Bíblia")
+                        // ISSUE 10.A: `artist` é a 2ª linha da notificação (o `subtitle` não
+                        // aparece lá). Total = tamanho da playlist, que aqui é o livro inteiro.
+                        .setArtist(bibleNotificationLine(chapterInfo.number, chapters.size))
                         .setArtworkUri(chapterInfo.coverUrl?.toUri())
                         .setIsBrowsable(false)
                         .setIsPlayable(true)
@@ -420,7 +425,9 @@ class PlayerViewModel @Inject constructor(
                         .setTitle("$bookName ${moment.chapterNumber}")
                         .setAlbumTitle(themeTitle)
                         .setSubtitle("${moment.title} (${moment.reference})")
-                        .setArtist("Ouvindo a Bíblia")
+                        // ISSUE 10.A: sem isto, o momento escolhido pelo usuário não aparecia
+                        // em NENHUMA superfície fora do app (o `subtitle` não vai p/ notificação).
+                        .setArtist(themeMomentNotificationLine(moment.title, moment.reference))
                         .setArtworkUri(coverUrl.toUri())
                         .setIsBrowsable(false)
                         .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
@@ -1066,7 +1073,7 @@ class PlayerViewModel @Inject constructor(
 
         _uiState.update { it.copy(title = studyTitle, imageUrl = studyCoverUrl, isStudyMode = true) }
 
-        val studyMediaItems = lessons.map { lesson ->
+        val studyMediaItems = lessons.mapIndexed { index, lesson ->
             MediaItem.Builder()
                 .setMediaId(MediaContentId.Study(lesson.studyId, lesson.remoteId).raw)
                 .setUri(lesson.url)
@@ -1075,7 +1082,9 @@ class PlayerViewModel @Inject constructor(
                         .setTitle(studyTitle)
                         .setAlbumTitle(studyTitle)
                         .setSubtitle(lesson.title)
-                        .setArtist("Ouvindo a Bíblia")
+                        // ISSUE 10.A: o `title` é a SÉRIE; sem isto, a notificação não dizia
+                        // qual AULA estava tocando. Índice da playlist, não id remoto.
+                        .setArtist(studyNotificationLine(index + 1, lessons.size, lesson.title))
                         .setArtworkUri(studyCoverUrl.toUri())
                         .setIsBrowsable(false)
                         .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)

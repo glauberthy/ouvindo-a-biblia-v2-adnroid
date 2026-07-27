@@ -31,6 +31,9 @@ import br.app.ide.ouvindoabiblia.data.repository.domain.model.Chapter
 import br.app.ide.ouvindoabiblia.data.repository.BibleRepository
 import br.app.ide.ouvindoabiblia.data.repository.PlaybackState
 import br.app.ide.ouvindoabiblia.playback.MediaContentId
+import br.app.ide.ouvindoabiblia.playback.bibleNotificationLine
+import br.app.ide.ouvindoabiblia.playback.mediaButtonPreferences
+import br.app.ide.ouvindoabiblia.playback.studyNotificationLine
 import coil.ImageLoader
 import coil.request.ImageRequest
 import com.google.common.collect.ImmutableList
@@ -349,7 +352,7 @@ class PlaybackService : MediaLibraryService() {
                 val studyId = content.studyId
                 val studyData = repository.getStudyWithLessons(studyId).first()
 
-                val playlist = studyData.lessons.map { lesson ->
+                val playlist = studyData.lessons.mapIndexed { index, lesson ->
                     MediaItem.Builder()
                         .setMediaId(MediaContentId.Study(studyId, lesson.remoteId).raw)
                         .setUri(lesson.url)
@@ -358,7 +361,16 @@ class PlaybackService : MediaLibraryService() {
                                 .setTitle(studyData.title)
                                 .setAlbumTitle(studyData.title)
                                 .setSubtitle(lesson.title)
-                                .setArtist("Ouvindo a Bíblia")
+                                // ISSUE 10.A: espelha o PlayerViewModel. Este caminho é o da
+                                // RETOMADA e do Android Auto — se divergir, a mesma aula
+                                // aparece escrita de dois jeitos dependendo de como tocou.
+                                .setArtist(
+                                    studyNotificationLine(
+                                        lessonNumber = index + 1,
+                                        totalLessons = studyData.lessons.size,
+                                        lessonTitle = lesson.title
+                                    )
+                                )
                                 .setArtworkUri(studyData.imageUrl.toUri())
                                 .setIsBrowsable(false)
                                 .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
@@ -426,7 +438,8 @@ class PlaybackService : MediaLibraryService() {
                 .setTitle("${chapterInfo.bookName} ${chapterInfo.number}")
                 .setAlbumTitle(chapterInfo.bookName)
                 .setSubtitle("Capítulo ${chapterInfo.number}")
-                .setArtist("Ouvindo a Bíblia")
+                // ISSUE 10.A: espelha o PlayerViewModel (retomada + Android Auto).
+                .setArtist(bibleNotificationLine(chapterInfo.number, chapters.size))
                 .setArtworkUri(chapterInfo.coverUrl?.toUri())
                 .setIsBrowsable(false)
                 .setIsPlayable(true)
@@ -582,7 +595,13 @@ class PlaybackService : MediaLibraryService() {
             val sessionCommands =
                 MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon().build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                .setAvailableSessionCommands(sessionCommands).build()
+                .setAvailableSessionCommands(sessionCommands)
+                // ISSUE 10.B: −10s/+30s nos slots principais das superfícies de mídia
+                // (sombra, tela de bloqueio, Auto). Declarado aqui porque vale para TODO
+                // cliente que conectar. Não mexer nos comandos acima: a 4.D já ajustou
+                // esse conjunto por causa do browse do Android Auto.
+                .setMediaButtonPreferences(mediaButtonPreferences())
+                .build()
         }
 
         // AGORA REUTILIZA A LÓGICA DO RESTORE (DRY)
