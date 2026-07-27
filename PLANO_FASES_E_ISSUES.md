@@ -95,8 +95,9 @@ reconfirmar a linha exata ao pegar cada issue.
 - ✅ **Formulários do Play Console FEITOS (2026-07-18, pelo dono):** PUB-20 (política hospedada
   e informada), PUB-21 (Data Safety — o que derrubou o app em mai/2024), PUB-22 (rating L),
   PUB-24 (ficha, exceto `04_estudos`), PUB-25 e as 6 declarações de "Conteúdo do app"
-  ("Tudo em dia"). Detalhe na FASE 8. Restam: PUB-23 (vídeo FGS), novela da chave,
-  placeholders de Estudos e testes PUB-11/12/13/16 no release.
+  ("Tudo em dia") e PUB-23 (declaração FGS + vídeo, enviada na versão anterior — conferido em
+  2026-07-27). Detalhe na FASE 8. Restam: novela da chave, placeholders de Estudos e testes
+  PUB-11/12/13/16 no release.
 
 ---
 
@@ -785,10 +786,15 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-21 · Data Safety form** · ✅ FEITA (2026-07-18) — "nenhuma coleta de dados", criptografado em trânsito.
   *(Era o que derrubou o app em mai/2024 — resolvido.)*
 - **PUB-22 · Content Rating (IARC)** · ✅ FEITA (2026-07-18) — classificação "Livre"/L (herdada).
-- **PUB-23 · Declaração de Foreground Service** · 🔶 VÍDEO GRAVADO (2026-07-18) — o dono gravou
-  manualmente (com som e tela apagada; a via `adb screenrecord` foi tentada e descartada: não
-  capta áudio e para quando a tela apaga). Falta: enviar descrição + caso de uso + o vídeo no
-  Console. Código pronto.
+- **PUB-23 · Declaração de Foreground Service** · ✅ FEITA — **ENVIADA no Console na versão
+  anterior** (informado pelo dono em 2026-07-27): descrição, caso de uso e o vídeo (gravado
+  manualmente em 2026-07-18 com som e tela apagada; a via `adb screenrecord` foi descartada porque
+  não capta áudio e para quando a tela apaga).
+  **Não precisa reenviar a cada release:** a declaração é do APP, não da versão, e vale enquanto
+  os tipos declarados não mudarem. Conferido para o vc2/1.1 — o `AndroidManifest.xml` está
+  byte-idêntico ao do vc1 (`git diff dcbee84..HEAD`): mesma `FOREGROUND_SERVICE_MEDIA_PLAYBACK`,
+  mesmo `foregroundServiceType="mediaPlayback"` único. Se algum dia entrar um segundo tipo de FGS,
+  a declaração tem de ser atualizada (e provavelmente re-revisada).
 - **PUB-24 · Assets da ficha** · ✅ FEITA (2026-07-18; textos + imagens no Console) — EXCETO o screenshot
   `04_estudos`, bloqueado pelos placeholders de Estudos (ver 🟡 abaixo).
 - **PUB-25 · Declarar sem login/compras/anúncios** · ✅ FEITA (2026-07-18) — declarado no Console.
@@ -815,9 +821,10 @@ autocontidas com ids **PUB-XX**. Etiquetas: 🤖 **CÓDIGO** (Claude Code resolv
 - **PUB-35** 🤖 "Optimize Imports" antes do tag de release. *(Audit 03 §1)*
 - **Operacional:** incrementar `versionCode` a cada upload. *(Audit 01 §5)*
 
-**Go/No-Go (estado real 2026-07-18):** código ✅ pronto e assinado; formulários do Console ✅
-feitos. O que separa de publicar: (1) **enviar a declaração FGS + vídeo no Console** (PUB-23;
-vídeo já gravado manualmente em 2026-07-18), (2) **novela da chave**
+**Go/No-Go (estado real 2026-07-18; PUB-23 atualizada em 2026-07-27):** código ✅ pronto e
+assinado; formulários do Console ✅ feitos. **PUB-23 saiu da lista** — a declaração FGS + vídeo
+foram enviadas na versão anterior e valem para o vc2 (manifest inalterado). O que separa de
+publicar: (1) ~~declaração FGS~~ ✅, (2) **novela da chave**
 (Play App Signing legado), (3) **placeholders de Estudos** no servidor + recaptura do
 `04_estudos`, (4) repassar no release assinado os testes **PUB-11/12/13/16** (11/12/13 já
 validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
@@ -1229,9 +1236,11 @@ Véu creme com curva SMOOTHSTEP (7 stops, pico 0.80, status bar + 36dp) — íco
 sobre QUALQUER imagem, fade sem dobras; o dono pode produzir imagens LIMPAS daqui pra frente
 (ajuste fino mora só no componente: PEAK_ALPHA/FADE_TAIL/STOP_COUNT).
 
-**FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-18) — código e Console
-quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/24/25, declarações de conteúdo). Restam:
-**PUB-23** (vídeo FGS), **novela da chave** (Play App Signing legado 1024-bit → dupla assinatura),
+**FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-27) — código e Console
+quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/23/24/25, declarações de conteúdo). A **PUB-23
+saiu da lista**: declaração FGS + vídeo enviados na versão anterior, e a declaração é do APP (vale
+para o vc2, manifest inalterado). Restam:
+**novela da chave** (Play App Signing legado 1024-bit → dupla assinatura),
 placeholders de Estudos no servidor (+ recaptura `04_estudos`) e testes no release
 **PUB-11/12/13/16**. Detalhes na seção FASE 8 acima.
 
