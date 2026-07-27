@@ -55,7 +55,6 @@ import br.app.ide.ouvindoabiblia.ui.theme.AppColors
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Moment
 import br.app.ide.ouvindoabiblia.data.repository.domain.model.Theme
 import br.app.ide.ouvindoabiblia.ui.components.AppAsyncImage
-import br.app.ide.ouvindoabiblia.ui.components.StatusBarScrim
 import br.app.ide.ouvindoabiblia.ui.home.components.ErrorScreen
 import br.app.ide.ouvindoabiblia.ui.home.components.LoadingScreen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
@@ -278,10 +277,6 @@ private fun ThemeDetailsHeader(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-
-            // Protege os ícones (escuros) da status bar sobre qualquer imagem —
-            // substitui o degradê que era assado nas imagens do servidor.
-            StatusBarScrim(modifier = Modifier.align(Alignment.TopCenter))
 
             Surface(
                 modifier = Modifier

@@ -19,7 +19,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
@@ -73,6 +71,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import br.app.ide.ouvindoabiblia.ui.components.StatusBarScrim
 import br.app.ide.ouvindoabiblia.ui.navigation.NavigationGraph
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
@@ -123,7 +122,6 @@ fun MainScreen(
         val navController = rememberNavController()
         val playerViewModel: PlayerViewModel = hiltViewModel()
         val playerUiState by playerViewModel.uiState.collectAsState()
-        val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
         // Estado de expansão do player
         var isPlayerExpanded by remember { mutableStateOf(false) }
@@ -354,23 +352,18 @@ fun MainScreen(
                 }
             }
 
-            // --- DEGRADÊ DA STATUS BAR (SOFT SCRIM) ---
+            // --- SCRIM DA STATUS BAR (único do app) ---
             // Acompanha o fundo da página: no tema escuro o scrim precisa ser escuro,
-            // senão sobra uma faixa clara no topo. O modo economia segue forçando escuro.
-            val baseColor = if (isPowerSaveMode) BrandNavy else AppColors.background
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(statusBarPadding + 32.dp)
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            0.0f to baseColor.copy(alpha = 1f),
-                            0.1f to baseColor.copy(alpha = 0.7f),
-                            0.7f to baseColor.copy(alpha = 0.0f),
-                        )
-                    )
+            // senão sobra uma faixa clara no topo. O modo economia segue forçando escuro
+            // (é o mesmo caso em que `useDarkIcons` acima vira false).
+            //
+            // Era um degradê inline começando em alpha 1,0 aqui, e os headers de Tema/
+            // Estudo somavam um SEGUNDO véu (ISSUE 9.G) por cima — daí a faixa clara
+            // "viva" sobre foto escura. Agora existe um só, calibrado no limite de
+            // legibilidade dentro do próprio componente.
+            StatusBarScrim(
+                modifier = Modifier.align(Alignment.TopCenter),
+                color = if (isPowerSaveMode) BrandNavy else AppColors.background
             )
 
             // CAMADA 2: PLAYER FLUTUANTE (Persistent Overlay)
