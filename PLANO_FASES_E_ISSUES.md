@@ -1189,6 +1189,61 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 
 ---
 
+## FASE 11 — Barra inferior: ícones, rótulo e indicador (aberta 2026-07-28)
+
+### ISSUE 11.A — ✅ FEITA (2026-07-28) — Ícones contorno/preenchido, rótulo "Livros" e indicador deslizante
+
+- **Feito (ícones):** cada aba passou a ter par contorno (inativa) / preenchido (ativa), padrão
+  Material 3. `BottomNavItem` agora carrega `iconSelected` + `iconUnselected`. Trocas de glifo:
+  - **Livros** → **Bíblia desenhada à mão** em `res/drawable/ic_biblia_{outlined,filled}.xml`
+    (livro fechado, lombada, cruz na capa). O Material Symbols não tem glifo de Bíblia. Grid 24dp
+    e traço 1,7 dos vizinhos; a 1ª versão saiu mais alta que eles e foi reduzida para caixa óptica
+    de 18/24. Os dois arquivos compartilham geometria de propósito — mudar um exige mudar o outro,
+    senão a troca contorno→preenchido "pula".
+  - **Temas**: `LocalFlorist` → **`Spa`** (lótus). Escolha do dono entre 14 candidatos comparados
+    no emulador nos dois estados (Category, Style, Label, Interests, Bookmarks, Topic, Tag,
+    CollectionsBookmark, Sell, Explore, Lightbulb, GridView, Bookmark). Os descartados eram todos
+    objetos de organização; a aba trata de ansiedade, consolo e esperança.
+  - **Estudos**: `AutoStories` → **`MenuBook`** (livro ABERTO com linhas). A distinção com Livros
+    é fechado × aberto — por isso `Book` (fechado com marcador) foi descartado: colidia.
+  - **Mais** segue `Menu`, único sem variante preenchida (só o rótulo em negrito marca seleção).
+- **Feito (rótulo):** aba `Screen.Home` renomeada de **"Início" para "Livros"**. Era o único dos
+  cinco rótulos que nomeava uma *posição* em vez do conteúdo, e "Livros" é a palavra que o app já
+  usa para capítulos bíblicos no seletor de Favoritos (`FavoritesScreen.kt`). **A rota continua
+  `Screen.Home`** — navegação, deep link e `isSelected` intocados. `CLAUDE.md` atualizado.
+- **Feito (indicador deslizante):** a pílula do Material3 sumia numa aba e reaparecia na outra;
+  agora é desenhada uma vez atrás da barra e anima a posição (~230ms, mola `dampingRatio 0.75`).
+  Exigiu: `BrandNavy` migrar do `NavigationBar` para um `Box` externo (senão o container pinta por
+  cima da pílula), `indicatorColor = Color.Transparent` nos itens, e a seleção virar a função
+  `isSelectedFor(item)` — o indicador precisa saber QUAL aba está ativa, não só cada item sobre si.
+  A regra do `hasRoute` (imune ao R8) foi preservada.
+- **Achado que sustentou a issue — as duas coordenadas são MEDIDAS, não calculadas:** tentei as
+  duas por conta e errei as duas. (1) O passo real do `NavigationBar` é **220px** num aparelho de
+  1080, não os 216 de `largura/5` — o erro era 0 no meio e ±8px nas abas das pontas. (2) O topo da
+  pílula não é os `16.dp` que calibrei no olho: deixava-a **4dp abaixo** do ícone, com o glifo
+  vazando 7px por cima e 14px de folga embaixo. Ambas passaram a vir de `onGloballyPositioned`.
+  Não "simplificar" de volta para a conta.
+- **Validado no emulador API 36** (medição em pixels, não olhômetro): desvio pílula×ícone de
+  **0px em X e Y** nas abas Livros e Temas, +1px em X em Mais. Ícone selecionado 44×50px.
+- **Efeitos testados e DESCARTADOS pelo dono** (nenhum deixou rastro no código):
+  - *Barra flutuante* (margem 12dp + cantos 26dp + sombra): casava com o mini player, mas os dois
+    cartões ficavam desalinhados (player usa 8dp/16dp).
+  - *Pop do ícone na seleção* (mola com overshoot + 18% maior, medido 44×50→52×60px): aprovado e
+    depois removido a pedido; apertava o conjunto ícone+rótulo dentro dos 80dp.
+  - *Indicador na cor da capa* (reaproveitava `animatedArtworkColor`): funcionava (Malaquias 6,01:1,
+    Rute 4,32:1 contra o ícone `OnBrandNavy`), com trava de contraste WCAG ≥3:1 porque capa clara +
+    ícone claro some. **A trava nunca disparou nos testes** — o Palette prefere `vibrantSwatch` e
+    devolve tons saturados mesmo em capa quase branca. Se for religar, esse caminho segue não
+    exercitado.
+  - *Vidro fosco / blur de backdrop*: **não implementado**. Compose 1.7.6 (BOM 2024.12.01) não tem
+    API de backdrop; exigiria gravar a tela num `GraphicsLayer` + `RenderEffect` (API 31+, com
+    fallback para o `minSdk 26`) e fazer o conteúdo passar por baixo da barra, que hoje é empurrado
+    para cima. Único dos cinco que mexeria no layout de todas as telas.
+- **Pendência conhecida:** não há teste automatizado da barra — o alinhamento foi verificado por
+  medição de pixels em captura, manualmente. **Esforço:** M.
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).

@@ -24,15 +24,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -49,6 +54,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +64,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -71,6 +80,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.ui.components.StatusBarScrim
 import br.app.ide.ouvindoabiblia.ui.navigation.NavigationGraph
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
@@ -88,7 +98,15 @@ import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import br.app.ide.ouvindoabiblia.util.ShareUtils
 
-data class BottomNavItem(val title: String, val icon: ImageVector, val screen: Screen)
+// Padrão Material 3: contorno quando inativo, preenchido quando ativo.
+// `iconSelected` == `iconUnselected` é aceitável para glifos sem variante
+// preenchida (Menu), aí só o rótulo em negrito marca a seleção.
+data class BottomNavItem(
+    val title: String,
+    val iconSelected: ImageVector,
+    val iconUnselected: ImageVector,
+    val screen: Screen
+)
 
 @Composable
 fun MainScreen(
@@ -231,53 +249,179 @@ fun MainScreen(
             Scaffold(
                 contentWindowInsets = WindowInsets.navigationBars,
                 bottomBar = {
+                    val items = listOf(
+                        // Bíblia desenhada à mão (res/drawable/ic_biblia_*): a aba
+                        // É a Bíblia, e o Material Symbols não tem esse glifo.
+                        // Rótulo "Livros" (não "Início"): é a palavra que o app já usa
+                        // para capítulos bíblicos no seletor de Favoritos, e nomeia o
+                        // conteúdo em vez de uma posição.
+                        BottomNavItem(
+                            "Livros",
+                            ImageVector.vectorResource(R.drawable.ic_biblia_filled),
+                            ImageVector.vectorResource(R.drawable.ic_biblia_outlined),
+                            Screen.Home
+                        ),
+                        BottomNavItem(
+                            "Favoritos",
+                            Icons.Filled.Favorite,
+                            Icons.Outlined.FavoriteBorder,
+                            Screen.Favorites
+                        ),
+                        // Lótus (Spa): escolhido pelo autor entre Category, Style,
+                        // Label, Interests, Bookmarks, Topic, Tag, CollectionsBookmark,
+                        // Sell, Explore, Lightbulb, GridView e Bookmark, todos
+                        // comparados no emulador nos dois estados. O tom de
+                        // acolhimento casa com os temas (ansiedade, consolo,
+                        // esperança) e o preenchido fica sólido e legível.
+                        BottomNavItem(
+                            "Temas",
+                            Icons.Filled.Spa,
+                            Icons.Outlined.Spa,
+                            Screen.Themes
+                        ),
+                        // Livro aberto com linhas de texto (MenuBook): lê como
+                        // leitura/exposição. Não colide com Livros, que é um livro
+                        // FECHADO — comparado no emulador com AutoStories,
+                        // ImportContacts, LibraryBooks e Book; este é o mais nítido
+                        // nos dois estados, e Book é justamente o que se confunde
+                        // com a Bíblia.
+                        BottomNavItem(
+                            "Estudos",
+                            Icons.Filled.MenuBook,
+                            Icons.Outlined.MenuBook,
+                            Screen.Estudos
+                        ),
+                        BottomNavItem(
+                            "Mais",
+                            Icons.Filled.Menu,
+                            Icons.Outlined.Menu,
+                            Screen.More
+                        ),
+                    )
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentDestination = navBackStackEntry?.destination
+
+                    // BUG 1: seleção por hasRoute (compara pelo serialName do @Serializable,
+                    // imune à ofuscação do R8). Antes usava contains(::class.simpleName), que o
+                    // R8 renomeava no release -> match por substring casava vários itens.
+                    // Virou função porque agora o indicador deslizante também precisa saber
+                    // QUAL aba está ativa, não só cada item sobre si mesmo.
+                    fun isSelectedFor(item: BottomNavItem): Boolean =
+                        currentDestination?.hierarchy?.any { navDestination ->
+                            when (item.screen) {
+                                is Screen.Themes ->
+                                    navDestination.hasRoute(Screen.Themes::class) ||
+                                            navDestination.hasRoute(Screen.ThemeDetails::class)
+
+                                is Screen.Estudos ->
+                                    navDestination.hasRoute(Screen.Estudos::class) ||
+                                            navDestination.hasRoute(Screen.StudyDetails::class)
+
+                                // Sem isto a aba "Mais" perde o estado selecionado
+                                // dentro da sublista de direitos (mesmo BUG 1).
+                                is Screen.More ->
+                                    navDestination.hasRoute(Screen.More::class) ||
+                                            navDestination.hasRoute(Screen.MoreRights::class)
+
+                                else ->
+                                    navDestination.hasRoute(item.screen::class)
+                            }
+                        } == true
+
+                    // Indicador deslizante. A pílula do Material3 some numa aba e
+                    // reaparece na outra; aqui ela é desenhada UMA vez atrás da barra e
+                    // anima a posição, então corre entre as abas (~230ms, mola).
+                    // Para ficar atrás dos ícones, o BrandNavy sai do NavigationBar e vai
+                    // para este Box — senão o container pintaria por cima da pílula, e o
+                    // indicador nativo é desligado com indicatorColor = Transparent.
+                    //
+                    // As DUAS coordenadas são medidas via onGloballyPositioned, não
+                    // calculadas. Tentei os dois por conta e os dois erraram: o passo real
+                    // do NavigationBar é 220px num aparelho de 1080 (não os 216 de
+                    // largura/5), o que deixava a pílula 8px fora do ícone nas abas das
+                    // pontas; e o topo não é os 16dp que calibrei no olho, que a punham
+                    // 4dp abaixo do ícone. Medindo, funciona em qualquer largura e
+                    // sobrevive a mudanças de altura da barra ou do tamanho do ícone.
+                    val selectedIndex = items.indexOfFirst { isSelectedFor(it) }.coerceAtLeast(0)
+                    val pillWidth = 64.dp
+                    val pillHeight = 32.dp
+                    val itemCenters = remember { mutableStateMapOf<Int, Float>() }
+                    var barLeftPx by remember { mutableStateOf(0f) }
+                    var barTopPx by remember { mutableStateOf(0f) }
+                    var iconCenterYPx by remember { mutableStateOf<Float?>(null) }
+                    val density = LocalDensity.current
+                    val targetCenterPx = itemCenters[selectedIndex]
+                    val indicatorX by animateDpAsState(
+                        targetValue = with(density) {
+                            ((targetCenterPx ?: 0f).toDp() - pillWidth / 2)
+                        },
+                        animationSpec = spring(
+                            dampingRatio = 0.75f,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "IndicatorSlide"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(BrandNavy)
+                            .onGloballyPositioned {
+                                barLeftPx = it.positionInWindow().x
+                                barTopPx = it.positionInWindow().y
+                            }
+                    ) {
+                        val centerY = iconCenterYPx
+                        if (targetCenterPx != null && centerY != null) {
+                            Box(
+                                modifier = Modifier
+                                    .offset(
+                                        x = indicatorX,
+                                        y = with(density) { centerY.toDp() } - pillHeight / 2
+                                    )
+                                    .size(pillWidth, pillHeight)
+                                    .background(SlateBlue, CircleShape)
+                            )
+                        }
+
                     NavigationBar(
-                        // Superfície de marca: escura nos dois temas.
-                        containerColor = BrandNavy,
+                        containerColor = Color.Transparent,
                         tonalElevation = 0.dp
                     ) {
-                        val items = listOf(
-                            BottomNavItem("Início", Icons.Default.Home, Screen.Home),
-                            BottomNavItem("Favoritos", Icons.Default.Favorite, Screen.Favorites),
-                            BottomNavItem("Temas", Icons.Default.LocalFlorist, Screen.Themes),
-                            BottomNavItem("Estudos", Icons.Default.AutoStories, Screen.Estudos),
-                            BottomNavItem("Mais", Icons.Default.Menu, Screen.More),
-                        )
-                        val navBackStackEntry by navController.currentBackStackEntryAsState()
-                        val currentDestination = navBackStackEntry?.destination
+                        items.forEachIndexed { index, item ->
 
-                        items.forEach { item ->
-
-                            // BUG 1: seleção por hasRoute (compara pelo serialName do @Serializable,
-                            // imune à ofuscação do R8). Antes usava contains(::class.simpleName), que o
-                            // R8 renomeava no release -> match por substring casava vários itens.
-                            val isSelected = currentDestination?.hierarchy?.any { navDestination ->
-                                when (item.screen) {
-                                    is Screen.Themes ->
-                                        navDestination.hasRoute(Screen.Themes::class) ||
-                                                navDestination.hasRoute(Screen.ThemeDetails::class)
-
-                                    is Screen.Estudos ->
-                                        navDestination.hasRoute(Screen.Estudos::class) ||
-                                                navDestination.hasRoute(Screen.StudyDetails::class)
-
-                                    // Sem isto a aba "Mais" perde o estado selecionado
-                                    // dentro da sublista de direitos (mesmo BUG 1).
-                                    is Screen.More ->
-                                        navDestination.hasRoute(Screen.More::class) ||
-                                                navDestination.hasRoute(Screen.MoreRights::class)
-
-                                    else ->
-                                        navDestination.hasRoute(item.screen::class)
-                                }
-                            } == true
+                            val isSelected = isSelectedFor(item)
 
                             NavigationBarItem(
+                                modifier = Modifier.onGloballyPositioned { coords ->
+                                    itemCenters[index] =
+                                        coords.positionInWindow().x - barLeftPx +
+                                                coords.size.width / 2f
+                                },
                                 icon = {
                                     Icon(
-                                        imageVector = item.icon,
+                                        imageVector = if (isSelected) {
+                                            item.iconSelected
+                                        } else {
+                                            item.iconUnselected
+                                        },
                                         contentDescription = item.title,
-                                        modifier = Modifier.size(26.dp)
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            // Basta um item medir: as cinco caixas de
+                                            // ícone ficam na mesma altura.
+                                            .then(
+                                                if (index == 0) {
+                                                    Modifier.onGloballyPositioned { coords ->
+                                                        iconCenterYPx =
+                                                            coords.positionInWindow().y -
+                                                                    barTopPx +
+                                                                    coords.size.height / 2f
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
                                     )
                                 },
                                 label = {
@@ -304,13 +448,14 @@ fun MainScreen(
                                 // são 4,84:1, e seguem visivelmente mais apagados que o ativo.
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = OnBrandNavy,
-                                    indicatorColor = SlateBlue,
+                                    indicatorColor = Color.Transparent,
                                     selectedTextColor = OnBrandNavy,
                                     unselectedIconColor = LavenderGray,
                                     unselectedTextColor = LavenderGray
                                 )
                             )
                         }
+                    }
                     }
                 }
             ) { innerPadding ->
