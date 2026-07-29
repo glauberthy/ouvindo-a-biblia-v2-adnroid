@@ -79,6 +79,25 @@ android {
         // O AGP 8 não gera o BuildConfig por padrão, então precisa ser habilitado aqui.
         buildConfig = true
     }
+
+    lint {
+        // `./gradlew :app:lint` MORRIA inteiro com NoClassDefFoundError dentro do
+        // UnrememberedGetBackStackEntryDetector, do navigation-compose 2.8.5, cujo jar de
+        // lint foi compilado contra uma API de lint anterior à do AGP 8.13.2. Não era um
+        // aviso sobre o código: o driver abortava antes de reportar qualquer coisa, ou
+        // seja, o lint estava CEGO — nenhum problema real chegava até nós. Verificado que
+        // é anterior às mudanças da barra (reproduz no commit 4e7c2c0, num worktree).
+        //
+        // Isto desliga UMA regra, não o lint. A regra pega `getBackStackEntry()` chamado
+        // sem `remember` — este app usa destinos type-safe e não chama esse método em
+        // lugar nenhum (conferido por busca), então a cobertura perdida é zero.
+        //
+        // A correção de raiz é subir o navigation-compose (o jar de lint da 2.9.x já casa
+        // com o AGP 8.13). Ficou de fora de propósito: trocar dependência de navegação às
+        // vésperas de publicar troca um problema conhecido por um desconhecido. Ao subir,
+        // REMOVA esta linha e confirme que o lint roda limpo.
+        disable += "UnrememberedGetBackStackEntry"
+    }
 }
 
 dependencies {
