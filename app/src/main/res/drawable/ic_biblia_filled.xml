@@ -1,16 +1,29 @@
 <!--
-  Bíblia (preenchida) — aba "Livros" ativa. Par de ic_biblia_outlined.xml:
-  mesma capa/lombada/cruz, mas a capa é sólida e lombada e cruz viram vazados
-  (evenOdd), como nos filled do Material. Sobre o indicador SlateBlue os
-  vazados aparecem em #4A4E69 contra o ícone em #F2E9E4 — contraste de sobra.
+  Bíblia (preenchida) — aba "Livros" da bottom bar.
+  Não existe glifo de Bíblia no Material Symbols; este é desenhado à mão no
+  grid 24dp, com o recuo de 1,7 que dá a espessura de traço dos vizinhos
+  (Spa, MenuBook, Menu).
+  Par: ic_biblia_outlined.xml — a geometria é IDÊNTICA nos dois, de propósito: qualquer
+  diferença faz o glifo escorregar na troca contorno->preenchido.
+  Histórico do desenho, para não refazer o caminho:
+   - A lombada foi REMOVIDA dos dois. A 26dp ela e a moldura viravam duas
+     linhas paralelas coladas, e o contorno lia como borrão.
+   - Com a lombada fora, a cruz foi RECENTRADA em x=12 (antes ficava em 13,3,
+     centrada na capa à direita da lombada, e sobrava 3,5px torta).
+   - A capa é 17 x 17,5 (era 16 x 18): naquela proporção o ícone parecia magro
+     ao lado dos vizinhos.
+   - Cantos arredondados (r=3 na capa, 0,45/0,30 na cruz) a pedido.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Capa sólida com a cruz VAZADA (evenOdd). A cruz é um contorno único,
+         sem subcaminhos sobrepostos — com evenOdd, sobreposição viraria
+         preenchimento de volta no meio da cruz. -->
     <path
         android:fillColor="@android:color/white"
         android:fillType="evenOdd"
-        android:pathData="M5.5,3h13a1.5,1.5 0 0 1 1.5,1.5v15a1.5,1.5 0 0 1 -1.5,1.5h-13a1.5,1.5 0 0 1 -1.5,-1.5v-15a1.5,1.5 0 0 1 1.5,-1.5zM7.1,4.7H8.3V19.3H7.1ZM12.35,7.3H14.25V9.6H16.3V11.5H14.25V16.7H12.35V11.5H10.3V9.6H12.35Z" />
+        android:pathData="M6.50,3.25H17.50A3.00,3.00 0 0 1 20.50,6.25V17.75A3.00,3.00 0 0 1 17.50,20.75H6.50A3.00,3.00 0 0 1 3.50,17.75V6.25A3.00,3.00 0 0 1 6.50,3.25ZM11.50,7.30L12.50,7.30A0.45,0.45 0 0 1 12.95,7.75L12.95,9.30A0.30,0.30 0 0 0 13.25,9.60L14.55,9.60A0.45,0.45 0 0 1 15.00,10.05L15.00,11.05A0.45,0.45 0 0 1 14.55,11.50L13.25,11.50A0.30,0.30 0 0 0 12.95,11.80L12.95,16.25A0.45,0.45 0 0 1 12.50,16.70L11.50,16.70A0.45,0.45 0 0 1 11.05,16.25L11.05,11.80A0.30,0.30 0 0 0 10.75,11.50L9.45,11.50A0.45,0.45 0 0 1 9.00,11.05L9.00,10.05A0.45,0.45 0 0 1 9.45,9.60L10.75,9.60A0.30,0.30 0 0 0 11.05,9.30L11.05,7.75A0.45,0.45 0 0 1 11.50,7.30Z" />
 </vector>
