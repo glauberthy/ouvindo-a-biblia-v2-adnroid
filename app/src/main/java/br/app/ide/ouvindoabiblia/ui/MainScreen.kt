@@ -54,6 +54,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +73,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -97,6 +99,7 @@ import br.app.ide.ouvindoabiblia.ui.theme.SlateBlue
 import br.app.ide.ouvindoabiblia.ui.theme.extractDominantColorFromUrl
 import br.app.ide.ouvindoabiblia.ui.theme.isDark
 import br.app.ide.ouvindoabiblia.util.ShareUtils
+import kotlin.math.roundToInt
 
 // Padrão Material 3: contorno quando inativo, preenchido quando ativo.
 // `iconSelected` == `iconUnselected` é aceitável para glifos sem variante
@@ -346,8 +349,8 @@ fun MainScreen(
                     val pillWidth = 64.dp
                     val pillHeight = 32.dp
                     val itemCenters = remember { mutableStateMapOf<Int, Float>() }
-                    var barLeftPx by remember { mutableStateOf(0f) }
-                    var barTopPx by remember { mutableStateOf(0f) }
+                    var barLeftPx by remember { mutableFloatStateOf(0f) }
+                    var barTopPx by remember { mutableFloatStateOf(0f) }
                     var iconCenterYPx by remember { mutableStateOf<Float?>(null) }
                     val density = LocalDensity.current
                     val targetCenterPx = itemCenters[selectedIndex]
@@ -375,10 +378,18 @@ fun MainScreen(
                         if (targetCenterPx != null && centerY != null) {
                             Box(
                                 modifier = Modifier
-                                    .offset(
-                                        x = indicatorX,
-                                        y = with(density) { centerY.toDp() } - pillHeight / 2
-                                    )
+                                    // Overload de LAMBDA do offset, não o de Dp: aqui o X
+                                    // vem de uma animação, e a versão com argumento força
+                                    // RECOMPOSIÇÃO a cada quadro do deslize. Com a lambda o
+                                    // valor é lido na fase de layout — a barra inteira
+                                    // deixa de recompor 60x por segundo durante a troca de
+                                    // aba. (lint: UseOfNonLambdaOffsetOverload)
+                                    .offset {
+                                        IntOffset(
+                                            x = indicatorX.roundToPx(),
+                                            y = (centerY - pillHeight.toPx() / 2f).roundToInt()
+                                        )
+                                    }
                                     .size(pillWidth, pillHeight)
                                     .background(SlateBlue, CircleShape)
                             )
