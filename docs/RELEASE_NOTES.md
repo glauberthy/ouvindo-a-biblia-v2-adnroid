@@ -10,27 +10,39 @@ Dois públicos, dois textos — não misture:
 
 ---
 
-## 1.2 (versionCode 3) — 2026-07-27
+## 1.2 (versionCode 3) — AAB gerado em 2026-07-29
 
 > Este release foi montado antes como **1.1 / vc2** e o vc2 **nunca chegou ao Console** (a última
 > versão ativa lá era o vc1/1.0). O vc3/1.2 tem o mesmo conteúdo funcional — entre os dois só
 > entraram o commit de documentação do README e o próprio bump. Ou seja: não existe um "1.1" do
 > ponto de vista do usuário, e o texto abaixo é o do 1.2. Pular o vc2 é permitido; o Play só exige
 > `versionCode` crescente.
+>
+> **O vc3 também não chegou a ser enviado** (confirmado pelo dono em 2026-07-29), então o
+> `versionCode` foi mantido e o AAB foi **regerado** para incluir a barra inferior (FASE 11) e as
+> correções de lint/recomposição. Um AAB de 28/07 que ficou em `app/build/outputs/` ficou obsoleto
+> — o `make release` limpa antes de gerar, justamente para não subir sobra.
 
-### Texto para o Console — copiar como está (449/500 caracteres)
+### Texto para o Console — copiar como está (498/500 caracteres)
 
 ```text
-Tema escuro: o app agora acompanha o tema do sistema.
+Tema escuro: o app acompanha o tema do sistema.
 
-Notificação melhor: mostra em que capítulo ou aula você está e ganhou botões de voltar 10s e avançar 30s.
+Barra inferior nova: ícones redesenhados, indicador deslizante e a aba "Início" virou "Livros".
+
+Notificação melhor: mostra em que capítulo ou aula você está, com botões de voltar 10s e avançar 30s.
 
 Correções:
-• O botão "anterior" do fone/Bluetooth volta a faixa, em vez de reiniciar
-• Menos falhas ao trocar de faixa rápido, com avisos claros quando a rede ou o servidor falha
-• Fechar o app pelos recentes agora encerra o áudio
-• Textos e áreas de toque maiores em Favoritos e Estudos
+• O botão "anterior" do fone/Bluetooth volta a faixa, não reinicia
+• Menos falhas ao trocar de faixa rápido, com aviso claro quando a rede falha
+• Fechar o app pelos recentes encerra o áudio
+• Áreas de toque maiores em Favoritos e Estudos
 ```
+
+> **O limite de 500 é por idioma e é apertado.** Este texto está a 2 caracteres do teto, então
+> qualquer item novo obriga a encurtar outro — foi o que aconteceu aqui (a barra inferior entrou e
+> três linhas foram enxugadas). Se o Console reclamar do tamanho, corte da lista de correções, de
+> baixo para cima: o que o usuário nota primeiro está no topo.
 
 ### O que ficou de fora do texto do Console, e por quê
 
@@ -40,9 +52,25 @@ Correções:
 | ExoPlayer deixou de ser `@Singleton` | Interno; o efeito (não travar ao retomar) já é invisível de tão básico |
 | Migrações Room explícitas | Interno; o efeito é NÃO perder favoritos — só apareceria se quebrasse |
 | `MediaContentId`, `Resource<T>`, tokens de cor | Refatoração; zero superfície para o usuário |
+| `offset` por lambda na pílula (`4aa1794`) | Interno; o efeito (barra fluida) já era o esperado |
+| Lint destravado (`85136d4`) | Ferramenta de desenvolvimento; nenhuma superfície no app |
 | Atualizações de `CLAUDE.md` / plano | Documentação |
 
-### Changelog completo (18 commits desde `dcbee84`, o vc1)
+### Changelog completo (23 commits desde `dcbee84`, o vc1)
+
+**Barra inferior (FASE 11, entrou depois do AAB de 27/07)**
+- `2fd316c` — ISSUE 11.A: par contorno/preenchido em cada aba (padrão Material 3); Bíblia
+  desenhada à mão para "Livros" (o Material Symbols não tem o glifo); Temas passa a lótus (`Spa`)
+  e Estudos a livro aberto (`MenuBook`); aba "Início" renomeada para **"Livros"** — era o único
+  rótulo que nomeava posição em vez de conteúdo, e a ROTA não mudou; indicador que **desliza**
+  entre as abas em vez de sumir e reaparecer.
+- `4090469` — ajuste do desenho do ícone a pedido do dono: lombada removida (a 26dp virava borrão),
+  cruz recentrada, capa menos magra, cantos arredondados.
+- `4aa1794` — a pílula do indicador usa o `offset` por lambda: a barra deixa de recompor a cada
+  quadro do deslize (`mutableFloatStateOf` nas coordenadas medidas, de passagem).
+- `85136d4` — **o `:app:lint` voltou a rodar**: o detector do navigation-compose 2.8.5 lançava
+  `NoClassDefFoundError` e abortava o driver inteiro, ou seja o lint estava cego. Uma regra
+  desligada, cobertura perdida zero (ver comentário em `app/build.gradle.kts`).
 
 **Conteúdo e aparência**
 - `eb87882`, `c95a3f5`, `6949bcf` — tema escuro completo, com contrastes medidos (WCAG) nos dois

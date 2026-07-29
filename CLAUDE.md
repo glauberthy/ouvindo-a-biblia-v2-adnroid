@@ -10,16 +10,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Code comments reference issues by number (`ISSUE 2.A`, `ISSUE 9.G`, `DIAGNOSTICO_02 §5.1`, `PUB-01`). Those numbers resolve to:
 
-- **`PLANO_FASES_E_ISSUES.md`** — the live backlog/issue log by phase (FASES 0→9 done, FASE 8 = publicação Play Store still open). Each issue records problem → files → acceptance criteria → validation, and is marked ✅ with date/commit when closed. **When you close something non-trivial, update the matching issue here.**
+- **`PLANO_FASES_E_ISSUES.md`** — the live backlog/issue log by phase (FASES 0→11 closed, **except FASE 8 = publicação Play Store, still open**; FASE 10 = notificação de mídia, FASE 11 = barra inferior). Each issue records problem → files → acceptance criteria → validation, and is marked ✅ with date/commit when closed. **When you close something non-trivial, update the matching issue here.**
 - **`DIAGNOSTICO_01_ARQUITETURA.md`** / **`DIAGNOSTICO_02_PLAYER.md`** — the audits that most of the current design decisions cite.
 - **`ROADMAP.md`** — prioritized remaining work; **`README.md`** — short public overview + player lifecycle summary.
-- **`docs/`** — privacy policy, Play Store listing text. **`docs/archive/`** — superseded plans (`ANALISE_MODULARIZACAO_PLAYER.md`, `REFACTOR_MEDIA3_TODO.md`, auditorias, smoke tests). Historical record, not current state.
+- **`docs/`** — privacy policy, Play Store listing text, `RELEASE_NOTES.md` (the "o que há de novo" text per version, already trimmed to the Console's 500-char limit). **`docs/archive/`** — superseded plans (`ANALISE_MODULARIZACAO_PLAYER.md`, `REFACTOR_MEDIA3_TODO.md`, auditorias, smoke tests). Historical record, not current state.
+- **`Makefile`** (repo root) — the build/release cycle; **`store-assets/screenshots/`** — the Play listing screenshots. See *Release build* below.
 
-Release status: the app ships as a **new** app (not a reactivation of the old listing — see the `applicationId` gotcha), `versionCode = 1` / `versionName = "1.0"`. FASE 8 (publicação) is still open — check `PLANO_FASES_E_ISSUES.md` for what's left instead of assuming it's live.
+Release status: the app ships as a **new** app (not a reactivation of the old listing — see the `applicationId` gotcha), currently `versionCode = 3` / `versionName = "1.2"`. Operational rule: **bump `versionCode` on every Console upload, even on a test track** — the Play rejects a repeated one. History behind the gap: vc1/1.0 was the AAB validated locally when the "publish as a new app" decision was made, vc2/1.1 was built but **never uploaded**, so the release is labeled 1.2/vc3. FASE 8 (publicação) is still open — check `PLANO_FASES_E_ISSUES.md` for what's left (mainly the 🔬 tests on the signed release APK, PUB-11/12/13/16) instead of assuming it's live.
 
 ## Build & test commands
 
-Use the Gradle wrapper (`./gradlew`). There is no separate lint/format step configured beyond the Android defaults.
+Use the Gradle wrapper (`./gradlew`) for day-to-day work; the root `Makefile` wraps it for the release cycle (see *Release build*). There is no separate format step configured beyond the Android defaults.
 
 ```bash
 ./gradlew assembleDebug              # build debug APK
@@ -41,7 +42,7 @@ Run a single unit test class/method:
 
 The meaningful JVM tests all lock **pure decision functions** extracted from bigger classes precisely because that logic used to hide bugs — treat them as the spec:
 
-- `:app` — `service/TaskRemovalPolicyTest` (swipe nos recentes), `playback/{AudioRetryPolicyTest, MediaContentIdTest, PlaybackErrorMessageTest}`, `ui/player/*` (progresso do mini player, `isStudyMediaId`, timeline), `ui/studies/VisibleLessonDescriptionTest`.
+- `:app` — `service/TaskRemovalPolicyTest` (swipe nos recentes), `playback/{AudioRetryPolicyTest, MediaContentIdTest, PlaybackErrorMessageTest, MediaNotificationTextTest, MediaNotificationLayoutTest}`, `ui/player/*` (progresso do mini player, `isStudyMediaId`, timeline), `ui/studies/VisibleLessonDescriptionTest`, `ui/components/StatusBarScrimContrastTest`.
 - `:data:remote` — `error/NetworkErrorKindTest`, `StudyDtoParseTest`.
 - `:data:repository` — `SyncErrorMessageTest`.
 - Instrumented: `:app` `PlaybackServiceLifecycleTest` / `AndroidAutoBrowseTest`, `:data:local` `MigrationTest` / `StudyLessonRefreshTest`.
@@ -50,7 +51,26 @@ The `ExampleUnitTest`/`ExampleInstrumentedTest` files in every module are the te
 
 Note: all modules use `compileSdk = 36` and the app `targetSdk = 36` (unified). `minSdk` is 26 (app) / 24 (libraries). KSP (not kapt) drives Room and Hilt code generation — a clean build after touching entities/DAOs/`@Module`s may need `./gradlew clean`. Toolchain: AGP 8.13.2, Kotlin 2.0.21, JVM target 11, Media3 1.9.2, Room 2.6.1, Hilt 2.51.1 (all pinned in `gradle/libs.versions.toml`).
 
-Release build: `assembleRelease`/`bundleRelease` are signed via `signingConfigs.release`, which reads `keystore.properties` (repo root, git-ignored; see `keystore.properties.example`). Without that file the release builds unsigned but doesn't break `assembleDebug`.
+**Android lint has one rule disabled, on purpose.** `lint { disable += "UnrememberedGetBackStackEntry" }` in `app/build.gradle.kts`: navigation-compose 2.8.5 ships a lint jar built against a pre-AGP-8.13.2 lint API, and its `UnrememberedGetBackStackEntryDetector` threw `NoClassDefFoundError` that **aborted the whole lint driver** — lint was blind, no real issue reached us. Coverage lost is zero (the app uses type-safe destinations and never calls `getBackStackEntry()`). The root fix is bumping navigation-compose to 2.9.x; when you do, **remove that line** and confirm lint runs clean.
+
+### Release build
+
+`assembleRelease`/`bundleRelease` are signed via `signingConfigs.release`, which reads `keystore.properties` (repo root, git-ignored; see `keystore.properties.example`). Without that file the release builds **unsigned without failing** (Gradle just omits the signingConfig) but `assembleDebug` still works.
+
+Prefer the `Makefile` over raw Gradle here — it exists because of two traps in this environment: `ANDROID_HOME`/PATH aren't exported (so it resolves `adb`/`apksigner`/`emulator` by absolute path), and stale outputs in `app/build/outputs/` may carry an old identity (`ag.uny.*`, see the `applicationId` gotcha), so `release` always cleans first.
+
+```bash
+make help                                  # lista os alvos
+make version                               # versionCode/versionName atuais
+make check                                 # ./gradlew test + :app:lint
+make release                               # guard-keystore → clean → check → AAB assinado (é o que sobe no Console)
+make aab / make apk                        # só o artefato, sem clean/check
+make verify                                # keytool -printcert do AAB, comparado com EXPECTED_SHA256
+make install-release SERIAL=emulator-5554  # instala o APK de release e abre com componente explícito
+make devices / make emulator               # lista aparelhos / sobe o AVD OuvindoBiblia_API36
+```
+
+Two things baked in: `guard-keystore` fails early instead of letting an unsigned artifact reach the Console, and `verify` compares the signer against the **upload key** fingerprint hard-coded as `EXPECTED_SHA256` (starts with `84:2D:3A:33`) — signing with the wrong key only surfaces at upload time, after the whole build. If the key ever rotates, that target fails loudly; update the value then. Targets that touch `adb` require an explicit `SERIAL=` (there's usually more than one device attached).
 
 ## Rodando no emulador
 
@@ -125,12 +145,19 @@ This is the most intricate part — read `PlaybackService.kt` and `PlayerViewMod
 - **Lifecycle / swipe nos recentes:** the service survives the `MainActivity` being destroyed and the app going to background (it's started + foreground while playing), but **not** task removal. `onTaskRemoved` decides via the pure function `decideOnTaskRemoval` (`service/TaskRemovalPolicy.kt`, locked by `TaskRemovalPolicyTest`): **playing → stop** (save position synchronously, pause, release player + session, `stopForeground(STOP_FOREGROUND_REMOVE)`, `stopSelf()`); **paused after having played → keep** the dismissible notification (ISSUE 4.A); **restored-but-never-played → stop** (BUG B, no orphan notification). It deliberately does **not** call `super.onTaskRemoved()` — Media3's default only stops when *not* playing, the opposite of what's needed.
 - **`onPlaybackResumption`** is implemented: it honors `shouldBlockDatabaseResumption()`, then serves the in-memory playlist if the player still has items, else rebuilds from Room via `buildPlaylistFromState`; failures are logged and answered with an empty list instead of crashing. It returns the same `MediaItemsWithStartPosition` regardless of the (deprecated) `isForPlayback` flag — the framework decides whether to actually play.
 - The shutdown path must save the position with `saveCurrentStateBlocking()`, not `saveCurrentState()`: the latter writes on `serviceScope`, which `onDestroy` cancels (`serviceJob.cancel()`), so a `stopSelf()` right after would drop the write and resume would jump back to the start of the chapter. For the same reason the swipe path captures a synchronous `PlaybackSnapshot` before releasing the player — reading `player.currentPosition` inside the IO coroutine would read a released player.
+- **Media notification / system controls (FASE 10).** The notification, the system control, the lock screen and Auto all render `MediaMetadata.title` on line 1 and **`artist`** on line 2 — `subtitle` is **not displayed**.
+  - **Line 2 is built by the pure functions in `playback/MediaNotificationText.kt`** (ISSUE 10.A) — `bibleNotificationLine` ("Capítulo 3 de 50"), `studyNotificationLine` ("Aula 2 de 28 · <título da aula>"), `themeMomentNotificationLine`. `artist` used to be hard-coded to the app name, so outside the app you couldn't tell *which* lesson or moment was playing. They're applied at **all five** metadata-building points — three in `PlayerViewModel`, two in `PlaybackService` (resume + Android Auto); miss one and the same lesson reads two different ways depending on how playback started. `artist` has no consumer inside the app (UI and persistence read `title`/`albumTitle`/`subtitle`), and `updatePlayerMetadata` uses `buildUpon()`, so favoriting preserves the line. Unknown total degrades to the short form instead of inventing a number; empty remote fields fall back to `NOTIFICATION_FALLBACK_LINE` rather than leaving a hole.
+  - **Buttons come from `playback/MediaNotificationLayout.kt`** (ISSUE 10.B), published with **`setMediaButtonPreferences`** (not `setCustomLayout` — in Media3 1.9 that's the API matching the slot model). Four `CommandButton`s: −10s/+30s in the primary slots (`SLOT_BACK`/`SLOT_FORWARD`) because spoken word needs "back up a bit", not "skip the whole lesson"; previous/next in the secondary slots. **Every button also declares `SLOT_OVERFLOW`** so it moves to the menu instead of vanishing on a surface without its preferred slot. Labels stay neutral ("Anterior", not "Capítulo anterior") — the same queue can be a chapter, a lesson or a moment.
 - **Android Auto** is wired through the browse tree (`onGetLibraryRoot`/`onGetChildren`/`onGetItem`) and declared via `@xml/automotive_app_desc`; `AndroidAutoBrowseTest` covers it. The service is declared with `foregroundServiceType="mediaPlayback"` and needs `POST_NOTIFICATIONS` (without it the audio plays but the user gets no controls).
 
 ## UI conventions
 
 - Single-Activity (`MainActivity`, `AppCompatActivity`, `@AndroidEntryPoint`) hosting Compose. `MainScreen` holds the bottom nav + the shared/expandable player (`SharedPlayerScreen`) and a single shared `PlayerViewModel`. The notification deep-link (`OPEN_PLAYER_FROM_NOTIF` intent extra) drives opening the player.
 - Navigation uses **type-safe Navigation-Compose** with `@Serializable` destinations defined in `Screen` (`AppNavigation.kt`); routes are built in `NavigationGraph.kt`. Add a destination by adding a `Screen` subtype and a `composable<Screen.X>` block. Five bottom-nav tabs: `Home` ("Livros"), `Favorites`, `Themes`, `Estudos`, `More` ("Mais") — note the destination is still `Screen.Home`, only the label changed; sub-destinations are `ThemeDetails`, `StudyDetails`, `MoreRights`, `MoreSection`.
+- **Bottom bar (FASE 11 / ISSUE 11.A) — three details that look "simplifiable" and aren't.**
+  - `BottomNavItem` carries **`iconSelected` + `iconUnselected`** (M3: filled when active, outlined when not). `iconSelected == iconUnselected` is acceptable for glyphs with no filled variant (`Menu`, on "Mais") — there only the bold label marks selection. Livros uses the **hand-drawn `res/drawable/ic_biblia_{outlined,filled}.xml`** (Material Symbols has no Bible glyph), loaded via `ImageVector.vectorResource`. **The geometry of the two files is identical on purpose** — any difference makes the glyph jump on the outlined→filled swap, so edit both or neither. The header comment records what was already tried and rejected (spine removed, cross re-centred at x=12, cover resized to 17×17.5); don't redo that path.
+  - **The sliding indicator is drawn once behind the bar and animates its position** (~230ms spring) instead of using M3's own pill, which disappears on one tab and reappears on the other. That required `BrandNavy` moving from the `NavigationBar` to an outer `Box` (otherwise the container paints over the pill), `indicatorColor = Color.Transparent` on the items, and the selection rule extracted into `isSelectedFor(item)` — still `hasRoute`-based, still R8-safe.
+  - **Both pill coordinates are measured via `onGloballyPositioned`, never computed.** Computing them was tried and wrong twice: the real `NavigationBar` step is 220px on a 1080-wide device (not `largura/5` = 216, which missed by ±8px on the edge tabs), and the icon top isn't the eyeballed `16.dp` (that put the pill 4dp low). Don't "simplify" back to arithmetic. The pill also uses the **lambda overload of `offset`**, not the `Dp` one: the X comes from an animation, and the argument version recomposes the whole bar every frame of the slide (lint: `UseOfNonLambdaOffsetOverload`).
 - Screens follow an MVI-ish **LCE pattern**: a `*Contract.kt` defines a sealed `UiState` (`Loading`/`Error`/`Success`) and a sealed `Intent`; the `*ViewModel` exposes a `StateFlow` and a single `handle(intent)`. Mirror this for new screens — including the two idioms `HomeViewModel` shows: map `Resource` → `UiState` in a private extension, and `stateIn(started = SharingStarted.WhileSubscribed(5_000))` (revisit under 5s reuses the stream; over 5s intentionally re-checks `meta.version`, which is cheap because sync is version-gated). Local UI state that must not re-trigger a sync (e.g. the testament filter) is `combine`d *on top of* the resource flow.
 - **Favorites** are local-only: `toggleFavorite(chapterId, …)` for Bible chapters and `toggleStudyFavorite(studyId, lessonId, …)` for study lessons, surfaced by `getFavorites()` / `getFavoriteStudyLessons()`. There is no server copy — see the migration rule above.
 - **Dark theme is ON** (`DARK_THEME_ENABLED = true` in `ui/theme/Theme.kt`, following `isSystemInDarkTheme()`; both schemes were checked screen by screen on the emulator). The flag exists as a regression brake: if a new screen hard-codes light colors, turning it off beats shipping a half-cream/half-dark app.
