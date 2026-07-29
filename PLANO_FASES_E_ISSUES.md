@@ -1242,6 +1242,30 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 - **Pendência conhecida:** não há teste automatizado da barra — o alinhamento foi verificado por
   medição de pixels em captura, manualmente. **Esforço:** M.
 
+#### Desdobramentos de 2026-07-29 (fechados junto, no caminho do release vc3/1.2)
+
+- **O `:app:lint` estava CEGO — destravado em `85136d4`.** Ao rodar `make check` para o release,
+  `./gradlew :app:lint` morreu com `NoClassDefFoundError` dentro do
+  `UnrememberedGetBackStackEntryDetector`: o jar de lint do navigation-compose 2.8.5 foi compilado
+  contra uma API de lint anterior à do AGP 8.13.2 e **abortava o driver inteiro**, então nenhum
+  problema real chegava ao relatório. Confirmado que é anterior a esta issue (reproduz em `4e7c2c0`,
+  num worktree) — não foi a barra que quebrou o lint. Uma regra desligada em `app/build.gradle.kts`,
+  cobertura perdida zero (o app usa destinos type-safe e não chama `getBackStackEntry()`). **Raiz:**
+  subir para navigation-compose 2.9.x e REMOVER a linha — deixado de fora às vésperas de publicar.
+- **`4aa1794` — o aviso que o lint cego escondia era da própria pílula:**
+  `UseOfNonLambdaOffsetOverload`. O X vem de `animateDpAsState`, e o overload
+  `offset(x =, y =)` recompõe a barra inteira a cada quadro do deslize; trocado pelo overload de
+  lambda (valor lido na fase de layout). `mutableStateOf(0f)` → `mutableFloatStateOf` nas duas
+  coordenadas medidas. Nada muda visualmente; as coordenadas seguem MEDIDAS.
+- **`4090469` — redesenho do ícone da Bíblia, a pedido do dono:** lombada REMOVIDA dos dois arquivos
+  (a 26dp ela e a moldura viravam duas linhas coladas e o contorno lia como borrão), cruz
+  RECENTRADA em x=12 (estava em 13,3, centrada na capa à direita da lombada, 3,5px torta), capa
+  16×18 → 17×17,5 (o ícone parecia magro ao lado dos vizinhos) e cantos arredondados (r=3 na capa,
+  0,45/0,30 na cruz). Geometria segue idêntica nos dois arquivos.
+- **Resultado no release:** `make release` verde (340 testes JVM, lint sem errors, AAB assinado com
+  a chave de upload `84:2D:3A:33…`, vc3/1.2). Notas em `docs/RELEASE_NOTES.md` — a barra inferior
+  entrou no texto do Console (498/500 caracteres).
+
 ---
 
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
