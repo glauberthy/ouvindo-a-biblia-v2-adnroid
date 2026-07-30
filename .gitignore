@@ -29,6 +29,11 @@ release/
 *.jks
 *.keystore
 keystore.properties
+# Sobras da "novela da chave" (chave legada de 2013, abandonada em dcbee84 quando se decidiu
+# publicar como app NOVO). O `.bak` pode conter a senha da keystore legada e ficava FORA dos
+# padrões acima — o `keystore.properties` só casa com o nome exato. Padrão com prefixo para o
+# arquivo não aparecer como não rastreado e virar commit por acidente num `git add -A`.
+legacy-keystore.properties*
 
 # Ferramentas
 .codex
