@@ -62,6 +62,22 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // SEM bloco `ndk { debugSymbolLevel = ... }`, de propósito — TESTADO em 2026-07-29.
+            // O Console avisa que "o App Bundle contém código nativo e você não fez upload dos
+            // símbolos de depuração". O código nativo não é nosso: são dois .so que entram por
+            // dependências AndroidX — libandroidx.graphics.path.so (Compose UI) e
+            // libdatastore_shared_counter.so (DataStore), em 4 ABIs.
+            //
+            // Com `debugSymbolLevel = "SYMBOL_TABLE"` o AGP roda de fato o
+            // `extractReleaseNativeSymbolTables` sobre os 8 .so, e a saída sai VAZIA: eles
+            // chegam já stripped da AndroidX (`readelf -SW` mostra só `.dynsym`, sem `.symtab`
+            // nem `.debug_info`), então não há tabela para extrair e NADA é adicionado ao
+            // bundle — o aviso do Console continua igual. Manter o bloco só daria a impressão
+            // falsa de que o assunto foi resolvido.
+            //
+            // Ou seja: aviso NÃO acionável enquanto o app não tiver código nativo próprio. Se
+            // um dia tiver (CMake/NDK aqui dentro), aí sim adicione o bloco — a partir daí ele
+            // passa a produzir símbolos de verdade.
             // Assina o release só quando a keystore existe (ver bloco signingConfigs acima).
             if (hasReleaseKeystore) {
                 signingConfig = signingConfigs.getByName("release")

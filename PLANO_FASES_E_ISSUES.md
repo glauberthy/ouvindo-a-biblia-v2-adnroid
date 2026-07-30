@@ -1271,6 +1271,45 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 
 ---
 
+## FASE 12 — Avisos do Play Console e otimização do R8 (aberta 2026-07-29)
+
+### ISSUE 12.A — ❌ NÃO ACIONÁVEL (investigada e fechada em 2026-07-29) — "código nativo sem símbolos de depuração"
+
+- **Aviso do Console** (no vc4): *"Este App Bundle contém código nativo, e você não fez upload dos
+  símbolos de depuração."* É **aviso, não bloqueio** — a versão sobe e publica com ele.
+- **De onde vem o código nativo:** não é nosso. São dois `.so` que entram por dependências AndroidX,
+  em 4 ABIs (8 arquivos): `libandroidx.graphics.path.so` (Compose UI) e
+  `libdatastore_shared_counter.so` (DataStore). O projeto não tem CMake/NDK.
+- **A correção padrão foi TESTADA e não funciona aqui.** Com
+  `release { ndk { debugSymbolLevel = "SYMBOL_TABLE" } }` o AGP roda de fato o
+  `extractReleaseNativeSymbolTables` sobre os 8 `.so` — e a saída sai **vazia**
+  (`app/build/intermediates/native_symbol_tables/.../out` sem nenhum arquivo), então **nada** é
+  adicionado ao bundle e o aviso continua idêntico. Causa: os `.so` chegam já stripped da AndroidX —
+  `readelf -SW` mostra só `.dynsym`, sem `.symtab` nem `.debug_info`; não há o que extrair.
+- **Decisão:** bloco `ndk {}` REMOVIDO do `build.gradle.kts` (deixá-lo daria a impressão falsa de
+  que o assunto foi tratado) e o achado registrado no comentário do próprio arquivo. Reabrir só se o
+  app passar a ter código nativo próprio.
+
+### ISSUE 12.B — 🟡 ABERTA — `android.r8.optimizedResourceShrinking` vale 1,07 MB (11,6%)
+
+- **Estado atual do R8, conferido contra a checklist oficial:** `isMinifyEnabled = true` ✅ ·
+  `isShrinkResources = true` ✅ · full mode ligado (não existe `android.enableR8.fullMode=false` no
+  `gradle.properties`; é o default desde o AGP 8.0) ✅ · `proguard-android-optimize.txt` (e não o
+  `proguard-android.txt`, que traz `-dontoptimize`) ✅ · `proguard-rules.pro` **sem nenhuma regra
+  ativa** (750 bytes, tudo comentário), ou seja nada de keep rule largo travando otimização ✅ ·
+  baseline profile presente no bundle (`BUNDLE-METADATA/.../baseline.prof`) ✅.
+- **A única lacuna** é a redução OTIMIZADA de recursos, que no AGP 8.12/8.13 é opt-in (vira default
+  no 9.0): `android.r8.optimizedResourceShrinking=true` no `gradle.properties`.
+- **MEDIDO (2026-07-29), não estimado:** AAB de **9.725.343 → 8.598.738 bytes**, isto é
+  **−1,07 MiB (−11,6%)** no mesmo commit, só ligando a flag.
+- **Por que não entrou no vc4:** muda QUAIS recursos são embarcados — um drawable/string referenciado
+  só de forma indireta pode ser removido, e isso aparece em runtime, não no build. Ligar exige
+  smoke test no APK de release (`make install-release SERIAL=…`): as 5 abas, as 3 fontes de áudio,
+  notificação e as sheets do player. Como PUB-11/12/13/16 já estão pendentes, o barato é ligar a
+  flag e validar tudo numa passada só. **Esforço:** P (a flag) + M (validação).
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
