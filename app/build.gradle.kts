@@ -28,10 +28,14 @@ android {
         minSdk = 26
         targetSdk = 36
         // Regra operacional (Audit 01 §5): INCREMENTAR a cada upload no Console, mesmo em
-        // trilha de teste — o Play rejeita versionCode repetido. O vc1/1.0 foi o AAB validado
-        // localmente na decisão de publicar como app novo (dcbee84).
-        versionCode = 3
-        versionName = "1.2"
+        // trilha de teste — o Play rejeita versionCode repetido. E o número QUEIMA no upload:
+        // basta o AAB ter subido uma vez, mesmo que a versão seja depois DESCARTADA, para o
+        // Console recusar ("O código de versão 3 já foi usado"). Foi o que aconteceu com o vc3.
+        // Histórico: vc1/1.0 = AAB validado localmente na decisão de publicar como app novo
+        // (dcbee84); vc2/1.1 nunca subiu; vc3/1.2 subiu e foi descartado. Nenhum deles chegou a
+        // usuário — a versão ativa na loja segue sendo outra.
+        versionCode = 4
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -10,18 +10,25 @@ Dois públicos, dois textos — não misture:
 
 ---
 
-## 1.2 (versionCode 3) — AAB gerado em 2026-07-29
+## 1.3 (versionCode 4) — AAB gerado em 2026-07-29
 
-> Este release foi montado antes como **1.1 / vc2** e o vc2 **nunca chegou ao Console** (a última
-> versão ativa lá era o vc1/1.0). O vc3/1.2 tem o mesmo conteúdo funcional — entre os dois só
-> entraram o commit de documentação do README e o próprio bump. Ou seja: não existe um "1.1" do
-> ponto de vista do usuário, e o texto abaixo é o do 1.2. Pular o vc2 é permitido; o Play só exige
-> `versionCode` crescente.
+> **Por que o número pulou de 1.0 para 1.3.** Este release é o mesmo conteúdo funcional desde o
+> vc1/1.0, que é o que está na loja; os dois códigos do meio se perderam por motivos diferentes:
 >
-> **O vc3 também não chegou a ser enviado** (confirmado pelo dono em 2026-07-29), então o
-> `versionCode` foi mantido e o AAB foi **regerado** para incluir a barra inferior (FASE 11) e as
-> correções de lint/recomposição. Um AAB de 28/07 que ficou em `app/build/outputs/` ficou obsoleto
-> — o `make release` limpa antes de gerar, justamente para não subir sobra.
+> | Versão | O que aconteceu |
+> |---|---|
+> | vc1 / 1.0 | AAB validado localmente na decisão de publicar como app novo (`dcbee84`) |
+> | vc2 / 1.1 | Montado em 27/07 e **nunca enviado** ao Console |
+> | vc3 / 1.2 | **Enviado e descartado** — o Console recusa reenvio: "O código de versão 3 já foi usado" |
+> | vc4 / 1.3 | Este. Mesmo conteúdo do vc3 + a barra inferior (FASE 11) e as correções de lint/recomposição |
+>
+> **A lição operacional:** o `versionCode` **queima no upload**, não na publicação. Descartar a
+> versão no Console não devolve o número. Então, ao subir de novo, bumpe sempre — e não presuma que
+> um AAB parado em `app/build/outputs/` ainda serve (o `make release` limpa antes de gerar
+> justamente por isso).
+>
+> Nada disso é visível para o usuário: nenhum dos códigos intermediários chegou a um aparelho, então
+> o texto abaixo continua descrevendo tudo o que mudou desde o que está instalado.
 
 ### Texto para o Console — copiar como está (498/500 caracteres)
 
@@ -56,7 +63,7 @@ Correções:
 | Lint destravado (`85136d4`) | Ferramenta de desenvolvimento; nenhuma superfície no app |
 | Atualizações de `CLAUDE.md` / plano | Documentação |
 
-### Changelog completo (23 commits desde `dcbee84`, o vc1)
+### Changelog completo (30 commits desde `dcbee84`, o vc1 — incluindo docs e os dois bumps)
 
 **Barra inferior (FASE 11, entrou depois do AAB de 27/07)**
 - `2fd316c` — ISSUE 11.A: par contorno/preenchido em cada aba (padrão Material 3); Bíblia
