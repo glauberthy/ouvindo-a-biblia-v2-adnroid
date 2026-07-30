@@ -1262,9 +1262,12 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
   RECENTRADA em x=12 (estava em 13,3, centrada na capa à direita da lombada, 3,5px torta), capa
   16×18 → 17×17,5 (o ícone parecia magro ao lado dos vizinhos) e cantos arredondados (r=3 na capa,
   0,45/0,30 na cruz). Geometria segue idêntica nos dois arquivos.
-- **Resultado no release:** `make release` verde (340 testes JVM, lint sem errors, AAB assinado com
-  a chave de upload `84:2D:3A:33…`, vc3/1.2). Notas em `docs/RELEASE_NOTES.md` — a barra inferior
-  entrou no texto do Console (498/500 caracteres).
+- **Resultado no release:** `make release` verde — **85 testes JVM, 0 falhas** (`./gradlew test`
+  roda cada um nas duas variantes, daí os 170 XMLs em `*/build/test-results/`), lint sem errors,
+  AAB assinado com a chave de upload `84:2D:3A:33…`. Notas em `docs/RELEASE_NOTES.md` — a barra
+  inferior entrou no texto do Console (498/500 caracteres).
+- **Rodada de upload (2026-07-29):** o vc3/1.2 subiu, foi DESCARTADO no Console e o número queimou
+  ("O código de versão 3 já foi usado"). Regerado como **vc4/1.3** (`9808e58`), conteúdo idêntico.
 
 ---
 
