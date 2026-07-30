@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Code comments reference issues by number (`ISSUE 2.A`, `ISSUE 9.G`, `DIAGNOSTICO_02 §5.1`, `PUB-01`). Those numbers resolve to:
 
-- **`PLANO_FASES_E_ISSUES.md`** — the live backlog/issue log by phase (FASES 0→11 closed, **except FASE 8 = publicação Play Store, still open**; FASE 10 = notificação de mídia, FASE 11 = barra inferior). Each issue records problem → files → acceptance criteria → validation, and is marked ✅ with date/commit when closed. **When you close something non-trivial, update the matching issue here.**
+- **`PLANO_FASES_E_ISSUES.md`** — the live backlog/issue log by phase (FASES 0→11 closed, **except FASE 8 = publicação Play Store, still open**; FASE 10 = notificação de mídia, FASE 11 = barra inferior, FASE 12 = avisos do Console/R8 with 12.B open). Each issue records problem → files → acceptance criteria → validation, and is marked ✅ with date/commit when closed. **When you close something non-trivial, update the matching issue here.**
 - **`DIAGNOSTICO_01_ARQUITETURA.md`** / **`DIAGNOSTICO_02_PLAYER.md`** — the audits that most of the current design decisions cite.
 - **`ROADMAP.md`** — prioritized remaining work; **`README.md`** — short public overview + player lifecycle summary.
 - **`docs/`** — privacy policy, Play Store listing text, `RELEASE_NOTES.md` (the "o que há de novo" text per version, already trimmed to the Console's 500-char limit). **`docs/archive/`** — superseded plans (`ANALISE_MODULARIZACAO_PLAYER.md`, `REFACTOR_MEDIA3_TODO.md`, auditorias, smoke tests). Historical record, not current state.
@@ -72,6 +72,11 @@ make devices / make emulator               # lista aparelhos / sobe o AVD Ouvind
 
 Two things baked in: `guard-keystore` fails early instead of letting an unsigned artifact reach the Console, and `verify` compares the signer against the **upload key** fingerprint hard-coded as `EXPECTED_SHA256` (starts with `84:2D:3A:33`) — signing with the wrong key only surfaces at upload time, after the whole build. If the key ever rotates, that target fails loudly; update the value then. Targets that touch `adb` require an explicit `SERIAL=` (there's usually more than one device attached).
 
+Two Console findings worth not re-deriving (both investigated 2026-07-29, detail in **FASE 12** of `PLANO_FASES_E_ISSUES.md`):
+
+- **"App Bundle contém código nativo sem símbolos de depuração" is not actionable here — don't retry it.** The native code isn't ours: two `.so` from AndroidX deps (`libandroidx.graphics.path`, `libdatastore_shared_counter`) across 4 ABIs. The textbook fix, `release { ndk { debugSymbolLevel = "SYMBOL_TABLE" } }`, was tried: AGP does run `extractReleaseNativeSymbolTables`, and the output is **empty** — those `.so` arrive stripped (`readelf -SW` shows only `.dynsym`), so nothing lands in the bundle and the warning is unchanged. The block was removed on purpose rather than left as decoration; the reasoning lives in `app/build.gradle.kts`. Revisit only if the app gains its own native code.
+- **R8 is already at the recommended settings** (`isMinifyEnabled`, `isShrinkResources`, full mode on by AGP-8 default with no `android.enableR8.fullMode=false`, `proguard-android-optimize.txt`, and a `proguard-rules.pro` with zero active keep rules). The one gap is `android.r8.optimizedResourceShrinking=true` (opt-in on AGP 8.13, default on 9.0), **measured at −1,07 MiB / −11,6%** on the same commit. It's not enabled because it changes *which* resources ship — a resource reached only indirectly can be dropped, and that fails at runtime, not at build. Turn it on together with the pending release smoke tests (ISSUE 12.B), never on its own right before an upload.
+
 ## Rodando no emulador
 
 O SDK está em `~/Android/Sdk`, mas `ANDROID_HOME`/PATH **não** estão exportados no shell (daí `adb: command not found`). Exporte antes de qualquer coisa:
@@ -100,10 +105,19 @@ avdmanager create avd -n OuvindoBiblia_API36 -d pixel_8 \
 # hw.ramSize=4096  vm.heapSize=512  disk.dataPartition.size=8G  hw.gpu.enabled=yes  hw.gpu.mode=host  hw.keyboard=yes
 ```
 
-Duas armadilhas:
+Três armadilhas:
 
 - **Sempre passe `-s <serial>` para o `adb`.** Costuma haver um celular físico (moto g53 5G, API 34) pareado por ADB/WiFi ao mesmo tempo; sem `-s` o adb responde `error: more than one device/emulator`. Ter os dois é útil: API 34 real + API 36 emulada em paralelo.
 - **Não abra o app com `monkey -c android.intent.category.LAUNCHER`.** O debug build inclui LeakCanary, que registra a própria `LeakLauncherActivity` como launcher, e o monkey abre ela em vez da `MainActivity`. Use o `am start` com componente explícito acima.
+- **O celular físico tem DOIS perfis de usuário, e o segundo esconde instalações.** `pm list users` no moto g53 devolve `0:Glauberthy` e `10:Vault Profile`. Desinstalar pelo perfil principal **não** remove o APK do `/data/app` se o outro perfil ainda tiver o app — o pacote fica `installed=false` no user 0 e `installed=true` no user 10, e o resto some da UI mas continua no dispositivo. Consequência que já morreu meia hora de investigação (2026-07-29): **a instalação pela Play falha** enquanto o resquício estiver lá, porque o APK local é assinado com a chave de UPLOAD e a loja entrega assinado com a chave de assinatura do app (Play App Signing) — assinador diferente do que já está no aparelho, o Android recusa. Diagnóstico e limpeza:
+
+```bash
+adb -s <serial> shell dumpsys package br.app.ide.ouvindoabiblia | grep -E "User [0-9]+:|versionCode|signatures"
+adb -s <serial> shell "pm list packages -u | grep ouvindo"   # -u mostra desinstalado-com-registro
+adb -s <serial> shell pm uninstall --user 10 br.app.ide.ouvindoabiblia
+```
+
+  Regra prática: um aparelho por finalidade. Se o celular físico é o que testa pela **loja**, não instale build local nele por `adb` — reinstalar recria o conflito. Build local vai para o emulador.
 
 A imagem é `google_apis_playstore`, ou seja **sem `adb root`** — para inspecionar o Room use `adb -s emulator-5554 shell run-as br.app.ide.ouvindoabiblia ...` (funciona porque o debug build é `debuggable`).
 
