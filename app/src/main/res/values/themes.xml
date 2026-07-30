@@ -16,8 +16,11 @@
         <item name="windowNoTitle">true</item>
         <item name="windowActionBar">false</item>
 
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!--
+          SEM android:statusBarColor / android:navigationBarColor: descontinuados no Android 15
+          (API 35) e ignorados com targetSdk = 36. A transparência vem do enableEdgeToEdge()
+          na MainActivity. Ver FASE 12 / ISSUE 12.C.
+        -->
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

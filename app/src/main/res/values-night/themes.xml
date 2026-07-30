@@ -3,9 +3,12 @@
     <style name="Theme.OuvindoABiblia" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/dark_background</item>
 
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
 
+        <!--
+          SEM android:statusBarColor / android:navigationBarColor: ver values/themes.xml.
+        -->
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

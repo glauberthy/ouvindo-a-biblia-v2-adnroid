@@ -8,7 +8,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -146,8 +145,12 @@ fun OuvindoABibliaTheme(
         SideEffect {
             val window = (view.context as Activity).window
 
-            // Define a cor da barra de status como transparente para efeito Edge-to-Edge
-            window.statusBarColor = Color.Transparent.toArgb()
+            // NÃO cravar `window.statusBarColor` aqui. A API foi descontinuada no Android 15
+            // (API 35) e, com `targetSdk = 36`, o sistema simplesmente IGNORA o valor — quem
+            // deixa a barra transparente é o `enableEdgeToEdge()` da MainActivity. O Console
+            // apontava esta linha (frame `m9.b.a` → ThemeKt:150) como a única API descontinuada
+            // que era nossa; os outros 4 frames do aviso são de biblioteca (androidx.activity,
+            // androidx.core, Material). Ver FASE 12 / ISSUE 12.C.
 
             // Controla a cor dos ícones da barra de status
             // Se o tema for escuro, os ícones devem ser claros (isAppearanceLightStatusBars = false)

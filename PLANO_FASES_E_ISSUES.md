@@ -1271,7 +1271,15 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 
 ---
 
-## FASE 12 — Avisos do Play Console e otimização do R8 (aberta 2026-07-29)
+## FASE 12 — Avisos do Play Console e otimização do R8 (aberta 2026-07-29; 12.B/12.C/12.D fechadas 2026-07-30)
+
+> **Sobre o 3º aviso, "A exibição de ponta a ponta pode não estar disponível para todos os
+> usuários":** é **advisory genérico de `targetSdk ≥ 35`, não defeito detectado.** O app já chama
+> `enableEdgeToEdge()` (`MainActivity.kt:39`) — literalmente o que o texto do aviso sugere — e as 11
+> telas consomem insets via `WindowInsets.statusBars`/`navigationBars`. Não foi aberta issue para
+> ele. **Lacuna real que sobra:** ninguém usa `safeDrawing`/`displayCutout`, e como o
+> `enableEdgeToEdge()` liga `SHORT_EDGES`, em paisagem com notch o conteúdo pode entrar sob o
+> recorte. Isso só se fecha olhando — cabe em PUB-11/12/13/16.
 
 ### ISSUE 12.A — ❌ NÃO ACIONÁVEL (investigada e fechada em 2026-07-29) — "código nativo sem símbolos de depuração"
 
@@ -1290,7 +1298,7 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
   que o assunto foi tratado) e o achado registrado no comentário do próprio arquivo. Reabrir só se o
   app passar a ter código nativo próprio.
 
-### ISSUE 12.B — 🟡 ABERTA — `android.r8.optimizedResourceShrinking` vale 1,07 MB (11,6%)
+### ISSUE 12.B — ✅ FECHADA (2026-07-30) — `android.r8.optimizedResourceShrinking` vale 1,07 MB (11,6%)
 
 - **Estado atual do R8, conferido contra a checklist oficial:** `isMinifyEnabled = true` ✅ ·
   `isShrinkResources = true` ✅ · full mode ligado (não existe `android.enableR8.fullMode=false` no
@@ -1307,6 +1315,78 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
   smoke test no APK de release (`make install-release SERIAL=…`): as 5 abas, as 3 fontes de áudio,
   notificação e as sheets do player. Como PUB-11/12/13/16 já estão pendentes, o barato é ligar a
   flag e validar tudo numa passada só. **Esforço:** P (a flag) + M (validação).
+- **LIGADA em 2026-07-30**, com a validação feita. O que sustentou a decisão:
+  - **O risco foi medido antes, não assumido.** O perigo da flag é recurso alcançado só
+    indiretamente. Varredura em `app/` e `data/` por `getIdentifier`, `Resources.getSystem` e
+    string literal `"@drawable/…"`: **zero ocorrências**. Toda referência é estática via `R`, que o
+    shrinker consegue enxergar — por isso não foi preciso `res/raw/keep.xml`.
+  - **Ganho confirmado no artefato:** AAB 9,3 MiB → **8,3 MiB**; APK de release 4,3 MiB. Bate com a
+    medição de 29/07.
+  - **Prova de que os recursos certos ficaram:** `mapping/release/resources.txt` mostra
+    `color:dark_background … reachable from style:Theme_OuvindoABiblia` e o `aapt2 dump resources`
+    do APK traz `style/Theme.OuvindoABiblia` nas duas configs (`()` e `(night)`) com o
+    `windowBackground` correto em cada.
+  - **Smoke test no APK de RELEASE assinado** (`make install-release SERIAL=emulator-5554`), tema
+    claro e escuro: 5 abas navegam, capas carregam, bottom bar com o pill deslizante e o
+    `ic_biblia` desenhado à mão, playback de Gênesis 1 com `PlaybackState=PLAYING(3)` e posição
+    avançando, notificação de mídia com `title="Gênesis 1"` / `text="Capítulo 1 de 50"` (ISSUE
+    10.A) e os 4 botões "Voltar 10 segundos"/Pause/"Avançar 30 segundos"/"Próximo" (ISSUE 10.B),
+    ícones resolvidos por id. Zero `NotFoundException` no logcat.
+- **AGP 9.0 NÃO foi subido** (a outra recomendação do mesmo painel do Console). Exige Gradle 9.x
+  (estamos no 8.13) e é major com quebras que obrigariam a revalidar Kotlin 2.0.21/KSP, Room e
+  Hilt. Não traria ganho: o 9.0 só torna **default** a flag acima, que já está ligada. Bump é
+  tarefa própria, não efeito colateral de fechar aviso do Console.
+- **Ressalva:** isso NÃO substitui PUB-11/12/13/16, que seguem pendentes — o smoke test aqui cobriu
+  o caminho principal no emulador, não a matriz inteira daquelas issues.
+
+### ISSUE 12.C — ✅ FECHADA (2026-07-30) — "APIs descontinuadas para exibição de ponta a ponta"
+
+- **Aviso do Console** (no painel da versão de produção): o app usa `Window.setStatusBarColor`,
+  `Window.setNavigationBarColor` e `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`, descontinuadas no
+  Android 15. O Console lista 5 "lugares onde começam", todos ofuscados.
+- **Os 5 frames foram desofuscados com `mapping/release/mapping.txt`. Só 1 era nosso:**
+
+  | Frame do Console | Código real | Nosso? |
+  |---|---|---|
+  | `m9.b.a` | `ui/theme/Theme.kt:150` → `window.statusBarColor = Transparent` | **SIM** |
+  | `d.r.b` | `androidx.activity.EdgeToEdgeApi26.setUp` | não |
+  | `d.t.b` | `androidx.activity.EdgeToEdgeApi29.setUp` | não |
+  | `a4.j.n` | `androidx.core.view.DisplayCutoutCompat` (synthetic do R8) | não |
+  | `…material.datepicker.p.z` | `MaterialDatePicker.onStart()` | não (o app não usa DatePicker: `grep` = 0) |
+
+- **A ironia:** `d.r`/`d.t` são as entranhas do próprio `enableEdgeToEdge()`, que é justamente o que
+  o Console recomenda chamar no aviso vizinho. `SHORT_EDGES` vem do mesmo lugar
+  (`EdgeToEdgeBase.adjustLayoutInDisplayCutoutMode`, `EdgeToEdge.kt:225`). Nada disso sai sem bump
+  de `androidx.activity`/Material — e mesmo depois a lib mantém as chamadas para compat < API 35.
+- **Correção aplicada** (só o que é nosso, e é no-op de comportamento): removida a linha de
+  `Theme.kt` e os `android:statusBarColor`/`android:navigationBarColor` dos dois `themes.xml`. Com
+  `targetSdk = 36` o sistema já ignorava esses valores, e abaixo da API 35 eram redundantes — quem
+  deixa a barra transparente é o `enableEdgeToEdge()`.
+- **Verificado no dex de release**, não só no fonte: enumerando os chamadores de
+  `Landroid/view/Window;.setStatusBarColor`/`setNavigationBarColor`, sobraram **exatamente dois**,
+  `d/r` e `d/t` (= `EdgeToEdgeApi26`/`Api29`). O `ThemeKt` (agora `c9.b`) não chama nenhuma das
+  duas. Antes eram 5 pontos, 1 nosso; agora 0 nossos.
+- **O aviso do Console vai continuar aparecendo** enquanto os frames de biblioteca existirem. Isso
+  é esperado e não é acionável do nosso lado — não reabrir para "tentar de novo".
+
+### ISSUE 12.D — ✅ FECHADA (2026-07-30) — `values-night/themes.xml` estava um diretório fundo demais (tema escuro do `windowBackground` morto)
+
+- Achado ao investigar 12.C. O arquivo estava em **`res/values/values-night/themes.xml`**, e
+  qualificador de recurso tem que ser filho **direto** de `res/`. Nunca foi compilado: `grep
+  OuvindoABiblia` no `values-night-v8` merged do release dava **0**, e o blame do merger não tinha
+  entrada da nossa fonte. O build nunca reclamou.
+- **Dois bugs se escondendo:** por estar fora do caminho, a referência a `@color/dark_background`
+  nunca foi resolvida — e essa cor **não existia** em `colors.xml` (só `cream_background`). Se o
+  arquivo estivesse no lugar certo desde o início, teria falhado no build.
+- **Efeito real (modesto):** no tema escuro o `android:windowBackground` continuava
+  `cream_background`, ou seja um flash creme na abertura/transições antes do Compose desenhar. As
+  cores das telas vinham certas — quem manda nelas é `DARK_THEME_ENABLED` + `AppColors`, não o XML.
+- **Correção:** arquivo movido para `res/values-night/`, `dark_background` (`#17161F`) criada em
+  `colors.xml` espelhando `DarkBackground` de `ui/theme/Color.kt`, e `windowNoTitle`/`windowActionBar`
+  replicados na variante night (o `values-night` substitui o style inteiro, não faz merge item a item).
+- **Validado no APK de release:** `aapt2 dump resources` mostra `style/Theme.OuvindoABiblia` com
+  config `()` → `windowBackground=@color/cream_background`, `windowLightStatusBar=true` e config
+  `(night)` → `@color/dark_background`, `false`. Antes a config `(night)` não existia.
 
 ---
 

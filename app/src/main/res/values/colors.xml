@@ -3,4 +3,8 @@
     <!-- Cores XML (a paleta da UI vive em ui/theme/Color.kt no Compose).
          Mantida só a usada por themes.xml/windowBackground; as demais eram órfãs. -->
     <color name="cream_background">#F2E9E4</color>
+    <!-- Espelha DarkBackground de ui/theme/Color.kt (0xFF17161F). Se um mudar, mude o outro:
+         este é o windowBackground do tema escuro (values-night/themes.xml), e uma divergência
+         aparece como um flash de cor errada antes do Compose desenhar. -->
+    <color name="dark_background">#17161F</color>
 </resources>
