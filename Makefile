@@ -30,6 +30,13 @@ PKG      := br.app.ide.ouvindoabiblia
 ACTIVITY := $(PKG)/$(PKG).MainActivity
 AVD      ?= OuvindoBiblia_API36
 
+# Serial(es) de emulador rodando o AVD $(AVD) — vazio se nenhum. Pergunta ao adb qual AVD
+# cada emulador carrega, em vez de procurar o processo.
+# NÃO troque por `pgrep -f "qemu-system.*-avd $(AVD)"`: esse padrão entra na linha de comando
+# do shell da PRÓPRIA receita, o pgrep casa consigo mesmo e o alvo passa a jurar que o
+# emulador está de pé mesmo com ele morto. Já aconteceu.
+AVD_SERIALS = $(ADB) devices | grep '^emulator-' | cut -f1 | while read s; do [ "$$($(ADB) -s $$s emu avd name 2>/dev/null | head -1 | tr -d '\r')" = "$(AVD)" ] && echo $$s; done
+
 AAB          := app/build/outputs/bundle/release/app-release.aab
 APK_RELEASE  := app/build/outputs/apk/release/app-release.apk
 KEYSTORE_CFG := keystore.properties
@@ -154,10 +161,10 @@ install-release: guard-serial apk
 #  3. E "device" != "pronto": o adb enxerga o aparelho muito antes do boot terminar, então
 #     um `installDebug` logo depois falhava. Quem libera é `sys.boot_completed`.
 emulator:
-	@if pgrep -f "qemu-system.*-avd $(AVD)" >/dev/null 2>&1; then \
-		echo "O AVD $(AVD) JÁ está rodando — nada a fazer."; \
+	@running=$$($(AVD_SERIALS)); \
+	if [ -n "$$running" ]; then \
+		echo "O AVD $(AVD) JÁ está rodando em $$running — nada a fazer."; \
 		echo "(Sem janela na tela? O Android Studio o abre embutido, com -qt-hide-window.)"; \
-		$(ADB) devices | grep '^emulator-' || true; \
 		exit 0; \
 	fi; \
 	log=/tmp/emulator-$(AVD).log; \
@@ -175,9 +182,17 @@ emulator:
 	echo " pronto."; \
 	$(ADB) devices | grep '^emulator-'
 
+# `adb emu kill` derruba a própria conexão ao matar o emulador e sai NÃO-ZERO mesmo tendo
+# funcionado — ler o exit code como "não havia emulador" reporta o oposto do que aconteceu.
+# Por isso aqui se decide pelo ANTES e se confirma pelo DEPOIS, nunca pelo código de saída.
 emulator-kill:
-	@if $(ADB) -e emu kill >/dev/null 2>&1; then \
-		echo "Emulador derrubado."; \
-	else \
-		echo "Nenhum emulador rodando."; \
-	fi
+	@running=$$($(AVD_SERIALS)); \
+	if [ -z "$$running" ]; then echo "Nenhum emulador rodando com o AVD $(AVD)."; exit 0; fi; \
+	for s in $$running; do $(ADB) -s $$s emu kill >/dev/null 2>&1 || true; done; \
+	for i in $$(seq 1 15); do \
+		[ -z "$$($(AVD_SERIALS))" ] && break; sleep 1; \
+	done; \
+	if [ -n "$$($(AVD_SERIALS))" ]; then \
+		echo "ERRO: $(AVD) ainda responde depois de 15s."; exit 1; \
+	fi; \
+	echo "Emulador derrubado ($$running)."
