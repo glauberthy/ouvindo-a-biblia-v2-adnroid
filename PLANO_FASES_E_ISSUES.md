@@ -1415,6 +1415,102 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 
 ---
 
+## FASE 13 — Navegação por swipe nas abas internas (aberta 2026-08-01)
+
+> **Decisão de layout tomada pelo dono em 2026-08-01, vale para as duas issues:** o
+> `HorizontalPager` entra como container **externo**, e **cabeçalho + barra de filtro saem da
+> lista rolável e ficam FIXOS no topo**. O conteúdo é que desliza sob eles, seguindo o dedo, com
+> snap. É o padrão de abas do mercado — o filtro fica de referência enquanto o conteúdo se move.
+> **Custo aceito:** hoje o título sai de cena ao rolar; com o cabeçalho fixo ele passa a ocupar
+> ~110dp permanentes. Se na tela isso apertar demais, o meio-termo é fixar só a barra de filtro e
+> deixar o título rolar — mas isso é decisão de quem vê, não de quem implementa.
+
+> **Por que o pager tem de ser externo (não é preferência de estilo):** um `HorizontalPager`
+> dentro de um `LazyVerticalGrid`/`LazyColumn` que rola na vertical não funciona — o pager precisa
+> de altura limitada e o item de lista lhe dá altura infinita, além do conflito de nested scroll.
+> Ou seja: não existe versão "com arrasto" que preserve o layout atual. Quem quiser preservar o
+> layout tem de abrir mão do arrasto (era a 3ª opção avaliada, descartada).
+
+> **Sem conflito com o player:** o único `draggable` do app é o do contêiner do player
+> (`MainScreen.kt:566`) e é `Orientation.Vertical` — abrir/fechar por arrasto vertical continua
+> intacto. Vale revalidar mesmo assim, porque o mini player fica por cima do conteúdo paginado.
+
+### ISSUE 13.A — 🔲 ABERTA — Home: swipe entre "Todos / Antigo / Novo"
+
+- **Problema:** os três segmentos do `BookFilterBar` só respondem a **toque**. Arrastar para os
+  lados é o gesto que o usuário já traz de outros apps de aba, e hoje não faz nada — a única forma
+  de trocar de testamento é acertar um alvo no topo da tela, que fica longe do polegar.
+- **Arquivos:** `ui/home/HomeScreen.kt` (o `HomeContent`, que hoje põe `HomeHeader` e
+  `BookFilterBar` como `item(span = maxLineSpan)` do grid), `ui/home/components/BookFilter.kt`,
+  `ui/home/HomeViewModel.kt` e `ui/home/HomeContract.kt`.
+- **Reestruturação:** `HomeContent` deixa de ser um `LazyVerticalGrid` único e passa a
+  `Column { HomeHeader(); BookFilterBar(); HorizontalPager(3) { página -> LazyVerticalGrid(só os
+  livros) } }`.
+- **O contrato do estado precisa mudar, e essa é a parte não-óbvia.** Hoje
+  `HomeUiState.Success.filteredBooks` chega **já filtrado** pelo ViewModel (o filtro é `combine`ado
+  por cima do resource flow, ver ISSUE 3.B). Com pager, as **3 páginas coexistem** — a de trás
+  precisa estar montada para deslizar. Duas saídas: (a) o `Success` passa a expor a lista completa
+  e cada página filtra localmente, ou (b) o VM expõe as 3 listas. **(a) é a preferida**: mantém um
+  flow só e o filtro vira função pura sobre a lista. Seja qual for, `filteredBooks` sai do contrato
+  atual.
+- **Sincronia bidirecional sem laço de realimentação:** toque no filtro → `animateScrollToPage`;
+  swipe → `HomeIntent.SelectFilter`. Disparar o intent a partir de **`pagerState.settledPage`**, não
+  de `currentPage` — `currentPage` muda no meio do arrasto e produziria uma enxurrada de intents (e
+  o filtro "piscando") antes de o dedo levantar.
+- **Função pura + teste, no padrão da casa:** o mapeamento índice ↔ `TestamentFilter` vira
+  `TestamentFilter.fromPageIndex(i)` / `.pageIndex`, com teste em `ui/home/`. É exatamente o tipo de
+  lógica de 3 linhas que este projeto já extraiu em outros lugares porque escondia bug (ver
+  `MediaContentIdTest`, `TaskRemovalPolicyTest`).
+- **Armadilhas de layout que a divisão cria:**
+  - **Insets se separam:** o `contentPadding` de hoje mistura `statusBars` (topo) e
+    `navigationBars + mini player` (base) num lugar só. Dividido, o topo vai para o cabeçalho fixo e
+    a base para as listas *de dentro*. Errar isso põe conteúdo sob a barra de status ou atrás do
+    mini player.
+  - **Uma `rememberLazyGridState()` POR página** — com um estado só, rolar numa aba move as outras.
+  - **Loading/Error:** hoje a Home troca a **tela inteira** (`LoadingScreen`/`ErrorScreen`), então
+    nem cabeçalho nem filtro aparecem. Os Favoritos fazem o oposto — "header + seletor ficam sempre
+    visíveis; só a região de conteúdo troca". Com o cabeçalho fixo, a Home naturalmente converge
+    para o comportamento dos Favoritos; **decidir de propósito**, não por acidente da refatoração.
+- **Critério de aceitação:** arrastar para a esquerda/direita troca o filtro com o conteúdo seguindo
+  o dedo e dando snap; os botões continuam funcionando e **continuam sendo o caminho primário**
+  (swipe não é descobrível sozinho — não removê-los); o pill do segmento acompanha o swipe; cada aba
+  preserva sua rolagem; nenhuma requisição de rede nova é disparada ao paginar (o filtro é local,
+  ISSUE 3.B).
+- **Validação:** emulador nos **dois temas**, as 3 abas nos dois sentidos + swipe além da borda (não
+  deve saltar); rolar até o fim de uma aba, trocar e voltar (posição preservada); logcat sem GET
+  novo ao paginar; abrir/fechar o player por arrasto vertical com o pager na tela.
+- **Esforço:** M.
+
+### ISSUE 13.B — 🔲 ABERTA — Favoritos: swipe entre "Livros / Estudos"
+
+- **Problema:** mesmo gesto faltando no `FavoritesSegmentedSelector` (2 abas).
+- **Arquivos:** `ui/favorites/FavoritesScreen.kt` (o `FavoritesScreenContent`, hoje um `LazyColumn`
+  com header e seletor como `item`).
+- **Diferenças em relação à 13.A, que evitam copiar a solução sem pensar:**
+  - **O estado é local, não do ViewModel:** `selectedTab` é um `rememberSaveable` na
+    `FavoritesScreen` (linha 79). Continua podendo ser local — mas quem passa a mandar é o
+    `pagerState`, e o `rememberSaveable` existe para sobreviver a rotação/morte de processo; o
+    `rememberPagerState` precisa preservar isso.
+  - **O subtítulo depende da aba** ("Sua coleção de capítulos bíblicos" × "Suas lições de estudos
+    favoritas") e fica **no cabeçalho fixo**. Ele tem de trocar junto com o swipe — e trocar no
+    `settledPage`, senão o texto pisca no meio do arrasto.
+  - **Esta tela já mantém header + seletor visíveis em Loading/Error**, então aqui a divisão é mais
+    natural que na Home. O `resolvedBottomPadding` (que só reserva espaço do mini player quando há
+    `Success`) desce para dentro de cada página.
+  - **Vazio por aba:** `EmptyFavorites` é por aba, não da tela. Com pager, deslizar para uma aba
+    vazia tem de mostrar o estado vazio ocupando a página inteira, não um bloco espremido.
+- **Critério de aceitação e validação:** os mesmos da 13.A, mais: com **uma** aba vazia e a outra
+  cheia, o swipe funciona nos dois sentidos e o estado vazio ocupa a página; desfavoritar o último
+  item de uma aba não quebra o pager.
+- **Esforço:** M.
+
+### 13.C — reservada
+
+Terceira melhoria mencionada pelo dono em 2026-08-01, ainda **não descrita**. Anotada aqui para não
+se perder; preencher antes de atacar a fase.
+
+---
+
 ## ❌ FORA DE ESCOPO desta versão — Cast (desligado via kill-switch; reativar no futuro)
 
 - Desligado em 2026-07-14 via `CastConfig.ENABLED=false` (código dormente no repo).
@@ -1472,6 +1568,10 @@ para o vc2, manifest inalterado). Restam:
 **novela da chave** (Play App Signing legado 1024-bit → dupla assinatura),
 placeholders de Estudos no servidor (+ recaptura `04_estudos`) e testes no release
 **PUB-11/12/13/16**. Detalhes na seção FASE 8 acima.
+
+**FASE 13 (swipe nas abas internas):** 🔲 ABERTA (2026-08-01) — `13.A` Home (Todos/Antigo/Novo)
+e `13.B` Favoritos (Livros/Estudos), as duas com `HorizontalPager` externo e cabeçalho FIXO
+(decisão do dono). `13.C` reservada, ainda não descrita. Detalhes na seção FASE 13.
 
 **FASE 10 (notificação de mídia):** 🔲 EM ANDAMENTO (2026-07-26) — `10.A ✅ → 10.B ✅ → 10.C → 10.D
 → 10.E`. 10.A e 10.B feitas e validadas no emulador API 36. 10.C/10.D/10.E competem pelos ~5 slots
