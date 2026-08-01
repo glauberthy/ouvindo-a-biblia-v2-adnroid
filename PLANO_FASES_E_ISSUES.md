@@ -1581,6 +1581,21 @@ nunca chegou a ser dita. Fica anotada só para não se perder — **não é trab
   `review_prefs.preferences_pb` convive com `bible_settings.preferences_pb` em `files/datastore/`.
   **O que continua NÃO verificado: o cartão renderizando.** Só numa trilha interna.
 
+- **REGRESSÃO PEGA PELO `make release`, não pelo `make check` (2026-08-01):** com a dependência
+  nova, `minifyReleaseWithR8` **FALHOU** — `Missing class
+  com.google.android.gms.common.annotation.NoNullnessRewrite`, referenciada pelo wrapper SAM do
+  `ReviewManagerKtxKt`. Causa: o `review-ktx:2.0.2` foi compilado contra um `play-services-tasks`
+  mais velho; o Cast puxa o `tasks` para 18.3.2, onde `OnSuccessListener.onSuccess` passou a ser
+  anotado com `@NoNullnessRewrite`. **Lição operacional:** `./gradlew test` e `:app:lint` são
+  caminho de DEBUG e o R8 só roda no release — os 92 testes e o lint passaram verdes com o build de
+  release quebrado. Depois de mexer em dependência, `make release` antes de dizer que validou.
+  **Correção:** o `-dontwarn` que o próprio AGP gera em `missing_rules.txt`, agora a única linha
+  ativa do `proguard-rules.pro`. Seguro por definição — a anotação é de retenção CLASS, não existe
+  em runtime. NÃO é keep rule, então a checklist da 12.B (R8 sem regra que trave otimização)
+  continua de pé. Sai sozinha quando o `review-ktx` for recompilado contra o tasks novo.
+- **Release verde depois da correção:** AAB **8,3 MiB**, vc5/1.4, assinado com `84:2D:3A:33…`
+  (o `make verify` confere), lintVital sem errors.
+
 - **PENDENTE:** subir em trilha de teste interno (versionCode **5** — o 4 queimou) e confirmar com o
   olho que o cartão aparece. Atenção ao celular físico: se sobrar build local nele, a instalação
   pela Play falha por assinador diferente, inclusive escondido no perfil `Vault Profile` (user 10)
