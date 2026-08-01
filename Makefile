@@ -42,7 +42,7 @@ KEYSTORE_CFG := keystore.properties
 EXPECTED_SHA256 ?= 84:2D:3A:33:F3:FE:24:05:66:2A:CF:4A:73:F9:54:7D:1C:A2:B5:3F:5D:A8:77:1D:99:FF:48:72:2C:01:A0:E5
 
 .PHONY: help version check test lint clean aab apk release verify \
-        install-release devices emulator guard-keystore guard-serial
+        install-release devices emulator emulator-kill guard-keystore guard-serial
 
 help:
 	@echo "Alvos disponíveis:"
@@ -56,7 +56,8 @@ help:
 	@echo "  verify            imprime quem assinou o AAB"
 	@echo "  install-release   instala o APK de release  (SERIAL=<serial>)"
 	@echo "  devices           lista aparelhos conectados"
-	@echo "  emulator          sobe o AVD $(AVD)"
+	@echo "  emulator          sobe o AVD $(AVD) (no-op se já estiver rodando)"
+	@echo "  emulator-kill     derruba o emulador em execução"
 	@echo "  clean             ./gradlew clean"
 
 version:
@@ -142,6 +143,41 @@ install-release: guard-serial apk
 	@echo "Abrindo com componente explícito (o monkey abriria a LeakLauncherActivity do LeakCanary):"
 	$(ADB) -s $(SERIAL) shell am start -n $(ACTIVITY)
 
+# Três armadilhas, todas já vividas:
+#  1. O MESMO AVD não roda em duas instâncias — a segunda morre com "Running multiple
+#     emulators with the same AVD ... Please use -read-only flag". E o Android Studio sobe
+#     este AVD com `-qt-hide-window` (a aba "Running Devices", embutida na IDE), ou seja ele
+#     pode estar DE PÉ sem janela nenhuma na tela. Por isso o alvo checa antes de tentar.
+#  2. `adb wait-for-device` SEM escopo volta no primeiro aparelho qualquer: com o celular
+#     físico pareado ele retornava imediatamente, sem o emulador ter subido. `-e` restringe
+#     ao emulador.
+#  3. E "device" != "pronto": o adb enxerga o aparelho muito antes do boot terminar, então
+#     um `installDebug` logo depois falhava. Quem libera é `sys.boot_completed`.
 emulator:
-	$(EMULATOR) -avd $(AVD) -gpu host -no-boot-anim & \
-	$(ADB) wait-for-device
+	@if pgrep -f "qemu-system.*-avd $(AVD)" >/dev/null 2>&1; then \
+		echo "O AVD $(AVD) JÁ está rodando — nada a fazer."; \
+		echo "(Sem janela na tela? O Android Studio o abre embutido, com -qt-hide-window.)"; \
+		$(ADB) devices | grep '^emulator-' || true; \
+		exit 0; \
+	fi; \
+	log=/tmp/emulator-$(AVD).log; \
+	echo "Subindo $(AVD)... (log em $$log)"; \
+	$(EMULATOR) -avd $(AVD) -gpu host -no-boot-anim >$$log 2>&1 & \
+	$(ADB) -e wait-for-device; \
+	printf "Aguardando boot"; \
+	for i in $$(seq 1 60); do \
+		[ "$$($(ADB) -e shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break; \
+		printf "."; sleep 2; \
+	done; \
+	if [ "$$($(ADB) -e shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; then \
+		echo " TIMEOUT (120s). Ver $$log"; exit 1; \
+	fi; \
+	echo " pronto."; \
+	$(ADB) devices | grep '^emulator-'
+
+emulator-kill:
+	@if $(ADB) -e emu kill >/dev/null 2>&1; then \
+		echo "Emulador derrubado."; \
+	else \
+		echo "Nenhum emulador rodando."; \
+	fi
