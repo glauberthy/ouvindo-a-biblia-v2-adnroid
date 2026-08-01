@@ -72,11 +72,16 @@ make check                                 # ./gradlew test + :app:lint
 make release                               # guard-keystore → clean → check → AAB assinado (é o que sobe no Console)
 make aab / make apk                        # só o artefato, sem clean/check
 make verify                                # keytool -printcert do AAB, comparado com EXPECTED_SHA256
+make run                                   # ciclo de dev: sobe o AVD + installDebug + abre o app
+make uninstall                             # remove o app do emulador (APAGA favoritos/posição)
 make install-release SERIAL=emulator-5554  # instala o APK de release e abre com componente explícito
 make devices / make emulator               # lista aparelhos / sobe o AVD OuvindoBiblia_API36
+make emulator-kill                         # derruba o emulador
 ```
 
-Two things baked in: `guard-keystore` fails early instead of letting an unsigned artifact reach the Console, and `verify` compares the signer against the **upload key** fingerprint hard-coded as `EXPECTED_SHA256` (starts with `84:2D:3A:33`) — signing with the wrong key only surfaces at upload time, after the whole build. If the key ever rotates, that target fails loudly; update the value then. Targets that touch `adb` require an explicit `SERIAL=` (there's usually more than one device attached).
+Two things baked in: `guard-keystore` fails early instead of letting an unsigned artifact reach the Console, and `verify` compares the signer against the **upload key** fingerprint hard-coded as `EXPECTED_SHA256` (starts with `84:2D:3A:33`) — signing with the wrong key only surfaces at upload time, after the whole build. If the key ever rotates, that target fails loudly; update the value then. `install-release` requires an explicit `SERIAL=` (there's usually more than one device attached); `run`/`uninstall` don't, because they resolve the emulator's serial themselves and deliberately never touch the physical phone.
+
+**`make run` is the everyday loop** — `emulator` + `installDebug` + `am start`. It scopes Gradle with `ANDROID_SERIAL` because a bare `./gradlew installDebug` installs on *every* connected device, and the physical phone must not get local builds (that's what breaks installing from the Play Store later — different signer). If it fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, what's on the emulator was signed with another key (typically the release APK from `install-release`) — `make uninstall` first, accepting that favorites and the resume position die with it (local-only data, no server copy).
 
 Two Console findings worth not re-deriving (both investigated 2026-07-29, detail in **FASE 12** of `PLANO_FASES_E_ISSUES.md`):
 

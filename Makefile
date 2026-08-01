@@ -49,7 +49,7 @@ KEYSTORE_CFG := keystore.properties
 EXPECTED_SHA256 ?= 84:2D:3A:33:F3:FE:24:05:66:2A:CF:4A:73:F9:54:7D:1C:A2:B5:3F:5D:A8:77:1D:99:FF:48:72:2C:01:A0:E5
 
 .PHONY: help version check test lint clean aab apk release verify \
-        install-release devices emulator emulator-kill guard-keystore guard-serial
+        install-release run uninstall devices emulator emulator-kill guard-keystore guard-serial
 
 help:
 	@echo "Alvos disponíveis:"
@@ -61,6 +61,8 @@ help:
 	@echo "  aab               só o AAB assinado (sem clean/check)"
 	@echo "  apk               APK de release assinado (para instalar e testar)"
 	@echo "  verify            imprime quem assinou o AAB"
+	@echo "  run               emulador + installDebug + abre o app (ciclo de dev)"
+	@echo "  uninstall         remove o app do emulador (APAGA favoritos/posição)"
 	@echo "  install-release   instala o APK de release  (SERIAL=<serial>)"
 	@echo "  devices           lista aparelhos conectados"
 	@echo "  emulator          sobe o AVD $(AVD) (no-op se já estiver rodando)"
@@ -149,6 +151,45 @@ install-release: guard-serial apk
 	$(ADB) -s $(SERIAL) install -r $(APK_RELEASE)
 	@echo "Abrindo com componente explícito (o monkey abriria a LeakLauncherActivity do LeakCanary):"
 	$(ADB) -s $(SERIAL) shell am start -n $(ACTIVITY)
+
+# Ciclo de dev numa tacada: sobe o AVD (no-op se já estiver de pé), compila+instala o debug
+# e abre o app. Não pede SERIAL — ele mesmo descobre o do emulador.
+#
+# Dois cuidados embutidos:
+#  - `./gradlew installDebug` cru instala em TODO aparelho conectado, e aqui costuma haver o
+#    celular físico junto — que não deve receber build local (a instalação pela Play quebra
+#    depois, ver CLAUDE.md). `ANDROID_SERIAL` prende o Gradle no emulador.
+#  - abre por componente EXPLÍCITO: com `monkey -c LAUNCHER` o debug abriria a
+#    LeakLauncherActivity do LeakCanary, não a MainActivity.
+run: emulator
+	@serial=$$($(AVD_SERIALS) | head -1); \
+	if [ -z "$$serial" ]; then echo "ERRO: o emulador não subiu."; exit 1; fi; \
+	echo "==> Instalando o debug em $$serial"; \
+	if ! ANDROID_SERIAL=$$serial $(GRADLE) installDebug; then \
+		if $(ADB) -s $$serial shell pm list packages 2>/dev/null | grep -q '$(PKG)'; then \
+			echo; \
+			echo "-- O pacote $(PKG) JÁ está instalado neste emulador."; \
+			echo "   Se o erro acima é INSTALL_FAILED_UPDATE_INCOMPATIBLE, o que está lá foi"; \
+			echo "   assinado com OUTRA chave — tipicamente o APK de release do"; \
+			echo "   'make install-release'. O debug usa a chave de debug e o Android recusa."; \
+			echo "   Saída: 'make uninstall' e rodar de novo."; \
+			echo "   ATENÇÃO: apaga favoritos e a posição de 'continuar ouvindo' — são dados"; \
+			echo "   LOCAIS, sem cópia no servidor."; \
+		fi; \
+		exit 1; \
+	fi; \
+	echo "==> Abrindo $(ACTIVITY)"; \
+	$(ADB) -s $$serial shell am start -n $(ACTIVITY)
+
+# DESTRUTIVO. Favoritos (capítulos e aulas) e a posição de "continuar ouvindo" só existem no
+# Room do aparelho — não há cópia no servidor, desinstalar apaga de vez. Só toca no emulador:
+# no celular físico o alvo se recusa, porque lá build local conflita com a instalação da Play
+# (assinadores diferentes, ver CLAUDE.md).
+uninstall:
+	@serial=$$($(AVD_SERIALS) | head -1); \
+	if [ -z "$$serial" ]; then echo "Nenhum emulador com o AVD $(AVD) rodando."; exit 1; fi; \
+	echo "Desinstalando $(PKG) de $$serial (apaga favoritos e posição salva)..."; \
+	$(ADB) -s $$serial uninstall $(PKG)
 
 # Três armadilhas, todas já vividas:
 #  1. O MESMO AVD não roda em duas instâncias — a segunda morre com "Running multiple
