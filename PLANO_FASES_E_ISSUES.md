@@ -829,6 +829,31 @@ publicar: (1) ~~declaração FGS~~ ✅, (2) **novela da chave**
 `04_estudos`, (4) repassar no release assinado os testes **PUB-11/12/13/16** (11/12/13 já
 validados no debug). Painel completo em `docs/archive/CHECKLIST_PUBLICACAO.md`.
 
+### Estado do envio — vc4/1.3 EM ANÁLISE no Console (2026-08-01)
+
+- **Situação:** o AAB `versionCode = 4` / `versionName = "1.3"` foi enviado e está **em análise**.
+  Não está publicado, nenhum usuário recebeu. Sai disso de dois jeitos: aprovado (vira a primeira
+  versão viva do app) ou devolvido para ajuste.
+- **Marcado no git:** tag anotada **`v1.3-vc4`** em `5e3213c` + branch **`release/1.3-vc4`** do mesmo
+  commit. A mensagem da tag guarda o artefato (chave de upload `84:2D:3A:33…`, 85 testes JVM, lint
+  limpo), o conteúdo do release desde 1.0 e o histórico dos números queimados.
+- **Por que a tag não está no HEAD — importa se o Console reclamar de algo.** O AAB saiu de
+  `9808e58`; `1b5f517`, `2aa4ea8`, `14e9858` e `5e3213c` são docs, `.gitignore` e comentários, código
+  idêntico ao enviado. Já `c7e9b92` é **mudança de código pós-envio** (FASE 12: R8
+  `optimizedResourceShrinking` ligado, `statusBarColor` fora do `Theme.kt`, `values-night/themes.xml`
+  no caminho certo) e **não está no binário em análise**. Qualquer aviso do Console sobre esta versão
+  se lê contra a tag, não contra a `analise-media3`.
+- **O vc4 também queimou.** Se voltar para ajuste, o próximo envio é **vc5** — e o
+  `app/build.gradle.kts` ainda diz `versionCode = 4`. Subir o número **antes** do `make release`,
+  senão o build inteiro roda e só o upload reprova.
+- **Se aprovar:** o `c7e9b92` é o conteúdo natural do vc5 — já validado com smoke test no APK de
+  release assinado, tema claro e escuro (ISSUE 12.B), e vale −1,07 MiB (−11,6%) no AAB.
+- **Convenção de marcação, para repetir no próximo upload:** tag anotada
+  `v<versionName>-vc<versionCode>` no commit exato que gerou o AAB enviado + branch
+  `release/<versionName>-vc<versionCode>` do mesmo ponto, para receber correção de revisão sem
+  arrastar o que andou depois. A `analise-media3` segue como linha de desenvolvimento (a `main` está
+  213 commits atrás, não é a linha atual). A tag `v1.0.0-rc1` é anterior a esta convenção.
+
 ---
 
 ## FASE 9 — Features de conteúdo (aberta 2026-07-18)
@@ -1437,7 +1462,10 @@ Véu creme com curva SMOOTHSTEP (7 stops, pico 0.80, status bar + 36dp) — íco
 sobre QUALQUER imagem, fade sem dobras; o dono pode produzir imagens LIMPAS daqui pra frente
 (ajuste fino mora só no componente: PEAK_ALPHA/FADE_TAIL/STOP_COUNT).
 
-**FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-07-27) — código e Console
+**FASE 8 (publicação Play Store):** 🔲 EM ANDAMENTO (atualizada 2026-08-01) — **o vc4/1.3 está EM
+ANÁLISE no Console**, marcado pela tag `v1.3-vc4` (`5e3213c`) + branch `release/1.3-vc4`; ainda não
+publicado. Detalhe, e a armadilha de que o HEAD ≠ o que foi enviado, na seção
+*"Estado do envio — vc4/1.3 EM ANÁLISE"* da FASE 8. Código e Console
 quase todos ✅ (PUB-01/02/03/04/10, PUB-20/21/22/23/24/25, declarações de conteúdo). A **PUB-23
 saiu da lista**: declaração FGS + vídeo enviados na versão anterior, e a declaração é do APP (vale
 para o vc2, manifest inalterado). Restam:
