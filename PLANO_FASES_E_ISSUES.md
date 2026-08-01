@@ -1415,7 +1415,19 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 
 ---
 
-## FASE 13 — Navegação por swipe nas abas internas (aberta 2026-08-01)
+## FASE 13 — Navegação por swipe nas abas internas (aberta e DESCARTADA em 2026-08-01)
+
+> ### ❌ NÃO VAI SER FEITA — decisão do dono em 2026-08-01, custo/benefício
+>
+> **Não reabrir sem um motivo novo.** O ganho é um gesto *alternativo* para algo que já funciona
+> com um toque; o custo é reestruturar as duas telas. Medido antes de decidir, não estimado:
+> ~200 linhas em `HomeScreen.kt` (~70 de 131), `FavoritesScreen.kt` (~80 do
+> `FavoritesScreenContent`), `HomeViewModel.kt`, `HomeContract.kt` + 1 teste novo. O contrato
+> `HomeUiState.Success.filteredBooks` teria de mudar, e **essas duas telas não têm teste nenhum
+> hoje** — a validação seria só olhar no emulador.
+>
+> O texto abaixo fica como registro do que foi analisado: se um dia o assunto voltar, a decisão de
+> layout, as armadilhas e o raio de alcance já estão levantados.
 
 > **Decisão de layout tomada pelo dono em 2026-08-01, vale para as duas issues:** o
 > `HorizontalPager` entra como container **externo**, e **cabeçalho + barra de filtro saem da
@@ -1435,7 +1447,7 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
 > (`MainScreen.kt:566`) e é `Orientation.Vertical` — abrir/fechar por arrasto vertical continua
 > intacto. Vale revalidar mesmo assim, porque o mini player fica por cima do conteúdo paginado.
 
-### ISSUE 13.A — 🔲 ABERTA — Home: swipe entre "Todos / Antigo / Novo"
+### ISSUE 13.A — ❌ DESCARTADA (2026-08-01) — Home: swipe entre "Todos / Antigo / Novo"
 
 - **Problema:** os três segmentos do `BookFilterBar` só respondem a **toque**. Arrastar para os
   lados é o gesto que o usuário já traz de outros apps de aba, e hoje não faz nada — a única forma
@@ -1481,7 +1493,7 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
   novo ao paginar; abrir/fechar o player por arrasto vertical com o pager na tela.
 - **Esforço:** M.
 
-### ISSUE 13.B — 🔲 ABERTA — Favoritos: swipe entre "Livros / Estudos"
+### ISSUE 13.B — ❌ DESCARTADA (2026-08-01) — Favoritos: swipe entre "Livros / Estudos"
 
 - **Problema:** mesmo gesto faltando no `FavoritesSegmentedSelector` (2 abas).
 - **Arquivos:** `ui/favorites/FavoritesScreen.kt` (o `FavoritesScreenContent`, hoje um `LazyColumn`
@@ -1504,10 +1516,75 @@ O mesmo `setCustomLayout` vale para **Android Auto e tela de bloqueio**, não s�
   item de uma aba não quebra o pager.
 - **Esforço:** M.
 
-### 13.C — reservada
+### 13.C — reservada, nunca descrita
 
-Terceira melhoria mencionada pelo dono em 2026-08-01, ainda **não descrita**. Anotada aqui para não
-se perder; preencher antes de atacar a fase.
+O dono mencionou três melhorias em 2026-08-01 e descreveu duas (as descartadas acima). A terceira
+nunca chegou a ser dita. Fica anotada só para não se perder — **não é trabalho pendente**.
+
+---
+
+## FASE 14 — Avaliação in-app do Google Play (aberta e implementada 2026-08-01)
+
+### ISSUE 14.A — ✅ FEITA (2026-08-01) — cartão de estrelas via In-App Review API
+
+- **O que é:** o cartão de 1–5 estrelas que o **próprio Play desenha** por cima do app
+  (`com.google.android.play:review` + `review-ktx` 2.0.2). Não é tela nossa — não dá para
+  estilizar, mover nem saber o que o usuário respondeu.
+- **Arquivos novos:** `review/ReviewPromptPolicy.kt` (decisão pura),
+  `review/ReviewPreferences.kt` (DataStore), `review/InAppReviewManager.kt` (a API),
+  `review/ReviewModule.kt` (DI + qualificador), `review/ReviewPromptEffect.kt` (ligação Compose) e
+  o teste `ReviewPromptPolicyTest`. Tocados: `MainScreen.kt` (~12 linhas), `libs.versions.toml`,
+  `app/build.gradle.kts`.
+
+- **AS TRÊS COISAS QUE A API NÃO FAZ — é o que explica todo o desenho:**
+  1. **Não informa se o cartão apareceu.** Cegueira deliberada, anti-abuso: se o app soubesse que
+     não apareceu, tentaria até aparecer. Por isso o código conta **TENTATIVA**, não exibição.
+  2. **Em build que não veio da Play, nunca aparece.** Instalação por `adb` — que é como este
+     projeto testa — completa em silêncio, sem erro e sem log. **Só se vê numa trilha de teste
+     interno ou Internal App Sharing.**
+  3. **A cota é do Google e é invisível.** Insistir não aumenta a chance, só gasta tentativa.
+
+- **Gate próprio (`shouldAskForReview`), porque a cota é cega:** só pede a quem **tocou áudio**
+  (abrir o app 50 vezes sem ouvir nada não gera opinião sobre app de áudio), a partir de **4
+  aberturas**, no máximo **3 vezes na vida da instalação** e com **60 dias** entre tentativas.
+  Relógio andando para trás reprova junto com "cedo demais" — deixar de mostrar um cartão é muito
+  melhor que mostrá-lo toda vez que a data recuar. **7 testes** travam essas regras.
+
+- **Política da Play embutida no desenho (não são detalhes — reprovam):** não pode ser disparado
+  por botão (um "Avaliar o app" tem de abrir a ficha por URL), não pode haver pergunta antes
+  ("Está gostando?"), e não pode interromper tarefa — daí o atraso de 15s (para não competir com a
+  abertura nem com o diálogo de `POST_NOTIFICATIONS` da 5.A) e a recusa em abrir com o player
+  expandido.
+
+- **Duas armadilhas técnicas que custaram tempo e não estão na documentação:**
+  - **O pacote das extensões `suspend` é `com.google.android.play.core.ktx`**, e NÃO
+    `...core.review.ktx` como o nome do artefato (`review-ktx`) sugere. Conferido com `javap`
+    dentro do próprio `.aar` depois de o build quebrar. Não adivinhe: inspecione o artefato.
+  - **O `:data:local` já publica um `DataStore<Preferences>` SEM qualificador** (`bible_settings`),
+    visível no `:app` pelo classpath transitivo do repository. Um segundo binding sem qualificador
+    quebra o Hilt com binding duplicado — daí o `@ReviewDataStore`.
+
+- **Por que o DataStore mora no `:app`, contrariando "toda persistência vive no `:data:local`":** o
+  `:app` não pode depender do `:data:local` (corte da FASE 3.A), então o caminho seria expor
+  métodos de avaliação no `BibleRepository` — orquestração de CONTEÚDO bíblico. Quatro escalares de
+  engajamento de UI não têm o que fazer no domínio.
+
+- **O sinal é "tocou de fato", não `hasMedia`.** `hasMedia` fica verdadeiro só por restaurar a
+  sessão salva no cold start, sem o usuário ter ouvido nada — pediria nota a quem não usou.
+
+- **VALIDADO até onde é possível (2026-08-01, emulador API 36):** 92 testes JVM verdes (eram 85),
+  lint sem errors, e a corrente inteira exercitada ao vivo. Como a imagem é `google_apis_playstore`,
+  o **PlayCore conectou de verdade**: `ReviewService : requestInAppReview (br.app.ide...)` →
+  `ServiceConnectionImpl.onServiceConnected(...InAppReviewService)` → `Fluxo de avaliação
+  disparado`. Nenhum cartão apareceu, como previsto para instalação fora da Play. Reabrindo, o gate
+  passou a reprovar com `promptCount=1` — ou seja a tentativa **persistiu** —, e
+  `review_prefs.preferences_pb` convive com `bible_settings.preferences_pb` em `files/datastore/`.
+  **O que continua NÃO verificado: o cartão renderizando.** Só numa trilha interna.
+
+- **PENDENTE:** subir em trilha de teste interno (versionCode **5** — o 4 queimou) e confirmar com o
+  olho que o cartão aparece. Atenção ao celular físico: se sobrar build local nele, a instalação
+  pela Play falha por assinador diferente, inclusive escondido no perfil `Vault Profile` (user 10)
+  — ver CLAUDE.md.
 
 ---
 
@@ -1569,9 +1646,9 @@ para o vc2, manifest inalterado). Restam:
 placeholders de Estudos no servidor (+ recaptura `04_estudos`) e testes no release
 **PUB-11/12/13/16**. Detalhes na seção FASE 8 acima.
 
-**FASE 13 (swipe nas abas internas):** 🔲 ABERTA (2026-08-01) — `13.A` Home (Todos/Antigo/Novo)
-e `13.B` Favoritos (Livros/Estudos), as duas com `HorizontalPager` externo e cabeçalho FIXO
-(decisão do dono). `13.C` reservada, ainda não descrita. Detalhes na seção FASE 13.
+**FASE 13 (swipe nas abas internas):** ❌ DESCARTADA no mesmo dia (2026-08-01) — muita
+reestruturação (~200 linhas em 2 telas sem cobertura de teste) para um gesto que só duplica o que
+o toque já faz. Análise preservada na seção FASE 13; não é trabalho pendente.
 
 **FASE 10 (notificação de mídia):** 🔲 EM ANDAMENTO (2026-07-26) — `10.A ✅ → 10.B ✅ → 10.C → 10.D
 → 10.E`. 10.A e 10.B feitas e validadas no emulador API 36. 10.C/10.D/10.E competem pelos ~5 slots
