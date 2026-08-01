@@ -49,7 +49,8 @@ KEYSTORE_CFG := keystore.properties
 EXPECTED_SHA256 ?= 84:2D:3A:33:F3:FE:24:05:66:2A:CF:4A:73:F9:54:7D:1C:A2:B5:3F:5D:A8:77:1D:99:FF:48:72:2C:01:A0:E5
 
 .PHONY: help version check test lint clean aab apk release verify \
-        install-release run uninstall devices emulator emulator-kill guard-keystore guard-serial
+        install-release run uninstall devices emulator emulator-kill \
+        theme-light theme-dark theme-auto guard-keystore guard-serial
 
 help:
 	@echo "Alvos disponíveis:"
@@ -67,6 +68,9 @@ help:
 	@echo "  devices           lista aparelhos conectados"
 	@echo "  emulator          sobe o AVD $(AVD) (no-op se já estiver rodando)"
 	@echo "  emulator-kill     derruba o emulador em execução"
+	@echo "  theme-light       tema claro no emulador (o app segue o sistema)"
+	@echo "  theme-dark        tema escuro no emulador"
+	@echo "  theme-auto        tema conforme o sistema"
 	@echo "  clean             ./gradlew clean"
 
 version:
@@ -190,6 +194,20 @@ uninstall:
 	if [ -z "$$serial" ]; then echo "Nenhum emulador com o AVD $(AVD) rodando."; exit 1; fi; \
 	echo "Desinstalando $(PKG) de $$serial (apaga favoritos e posição salva)..."; \
 	$(ADB) -s $$serial uninstall $(PKG)
+
+# O app NÃO tem seletor de tema: `OuvindoABibliaTheme` segue `isSystemInDarkTheme()`
+# (ui/theme/Theme.kt). Então trocar o tema é trocar o night mode do SISTEMA — vale ao vivo,
+# sem reinstalar nem reabrir. Não confundir com `DARK_THEME_ENABLED`, que é freio de
+# regressão em código (força o claro sempre, ignorando o sistema).
+theme-light theme-dark theme-auto:
+	@serial=$$($(AVD_SERIALS) | head -1); \
+	if [ -z "$$serial" ]; then echo "Nenhum emulador com o AVD $(AVD) rodando."; exit 1; fi; \
+	case "$@" in \
+		theme-light) mode=no ;; \
+		theme-dark)  mode=yes ;; \
+		theme-auto)  mode=auto ;; \
+	esac; \
+	$(ADB) -s $$serial shell cmd uimode night $$mode
 
 # Três armadilhas, todas já vividas:
 #  1. O MESMO AVD não roda em duas instâncias — a segunda morre com "Running multiple
