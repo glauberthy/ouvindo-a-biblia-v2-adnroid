@@ -32,10 +32,10 @@ android {
         // basta o AAB ter subido uma vez, mesmo que a versão seja depois DESCARTADA, para o
         // Console recusar ("O código de versão 3 já foi usado"). Foi o que aconteceu com o vc3.
         // Histórico: vc1/1.0 = AAB validado localmente na decisão de publicar como app novo
-        // (dcbee84); vc2/1.1 nunca subiu; vc3/1.2 subiu e foi descartado. Nenhum deles chegou a
-        // usuário — a versão ativa na loja segue sendo outra.
-        versionCode = 4
-        versionName = "1.3"
+        // (dcbee84); vc2/1.1 nunca subiu; vc3/1.2 subiu e foi descartado; vc4/1.3 subiu e ficou
+        // EM ANÁLISE (tag `v1.3-vc4`), queimando o 4. Nenhum deles chegou a usuário.
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -175,6 +175,8 @@ dependencies {
     implementation(libs.androidx.concurrent.futures)
     // --- Google Cast ---
     implementation(libs.play.services.cast.framework)
+    implementation(libs.play.review)
+    implementation(libs.play.review.ktx)
 
 
     // --- Testing & Debug ---

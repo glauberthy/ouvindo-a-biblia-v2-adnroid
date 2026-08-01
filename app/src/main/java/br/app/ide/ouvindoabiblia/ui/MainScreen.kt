@@ -86,6 +86,7 @@ import br.app.ide.ouvindoabiblia.R
 import br.app.ide.ouvindoabiblia.ui.components.StatusBarScrim
 import br.app.ide.ouvindoabiblia.ui.navigation.NavigationGraph
 import br.app.ide.ouvindoabiblia.ui.navigation.Screen
+import br.app.ide.ouvindoabiblia.review.ReviewPromptEffect
 import br.app.ide.ouvindoabiblia.ui.player.PlayerViewModel
 import br.app.ide.ouvindoabiblia.ui.player.SharedPlayerScreen
 import br.app.ide.ouvindoabiblia.ui.theme.AppColors
@@ -147,6 +148,19 @@ fun MainScreen(
         // Estado de expansão do player
         var isPlayerExpanded by remember { mutableStateOf(false) }
         val hasMedia = playerUiState.title.isNotEmpty()
+
+        // Avaliação in-app. O sinal é "tocou de fato", com trava — NÃO dá para usar `hasMedia`,
+        // que fica verdadeiro só por restaurar a sessão salva no cold start, sem o usuário ter
+        // ouvido nada. Ver review/InAppReviewManager.kt para por que este caminho não é
+        // verificável no emulador.
+        var hasPlayedAudioThisSession by remember { mutableStateOf(false) }
+        LaunchedEffect(playerUiState.isPlaying) {
+            if (playerUiState.isPlaying) hasPlayedAudioThisSession = true
+        }
+        ReviewPromptEffect(
+            hasPlayedAudio = hasPlayedAudioThisSession,
+            isPlayerExpanded = isPlayerExpanded
+        )
 
         val miniPlayerHeight = 64.dp
         val playerFloatMargin = 26.dp
